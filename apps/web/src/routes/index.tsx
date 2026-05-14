@@ -1,5 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  component: () => <div>Home</div>
+  component: () => (
+    <Link to="/solicitarTurno" className="button button-primary">
+      Solicitar turno
+    </Link>
+  )
 });
