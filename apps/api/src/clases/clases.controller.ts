@@ -1,5 +1,6 @@
-import { Controller, Get } from "@nestjs/common";
+import { Controller, Get, Post, Body } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
+import { CreateClaseDto } from "./dto/create-clase.dto";
 
 @Controller("clases")
 export class ClasesController {
@@ -8,5 +9,10 @@ export class ClasesController {
   @Get()
   async findAll() {
     return this.clasesService.findAll();
+  }
+
+  @Post()
+  async create(@Body() payload: CreateClaseDto) {
+    return this.clasesService.create(payload as any);
   }
 }
