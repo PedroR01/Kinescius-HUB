@@ -5,12 +5,26 @@ import { SupabaseService } from "../integrations/supabase.service";
 export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async findAll() {
-    const { data, error } = await this.supabaseService.client
+  async findAll(startDate?: string, endDate?: string) {
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      throw new BadRequestException("La fecha inicial no puede ser posterior a la fecha final");
+    }
+
+    let query = this.supabaseService.client
       .from("Clase")
       .select("*")
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
+
+    if (startDate) {
+      query = query.gte("fecha", startDate);
+    }
+
+    if (endDate) {
+      query = query.lte("fecha", endDate);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new InternalServerErrorException(

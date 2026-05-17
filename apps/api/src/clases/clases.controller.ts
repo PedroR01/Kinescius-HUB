@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from "@nestjs/common";
+import { Controller, Get, Post, Body, Query } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateClaseDto } from "./dto/create-clase.dto";
 
@@ -7,8 +7,11 @@ export class ClasesController {
   constructor(private readonly clasesService: ClasesService) {}
 
   @Get()
-  async findAll() {
-    return this.clasesService.findAll();
+  async findAll(
+    @Query("startDate") startDate?: string,
+    @Query("endDate") endDate?: string
+  ) {
+    return this.clasesService.findAll(startDate, endDate);
   }
 
   @Post()

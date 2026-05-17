@@ -1,6 +1,17 @@
+import { IsOptional, IsString } from "class-validator";
+
 export class CreateClaseDto {
-  fecha!: string
-  hora!: string
-  tipo?: string | null
-  profesorDni?: string | null
+  @IsString()
+  fecha!: string;
+
+  @IsString()
+  hora!: string;
+
+  @IsOptional()
+  @IsString()
+  tipo?: string | null;
+
+  @IsOptional()
+  @IsString()
+  profesorDni?: string | null;
 }

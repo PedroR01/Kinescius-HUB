@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerClasesRouteImport } from './routes/verClases'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as CrearClaseRouteImport } from './routes/crearClase'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VerClasesRoute = VerClasesRouteImport.update({
+  id: '/verClases',
+  path: '/verClases',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
   id: '/solicitarTurno',
   path: '/solicitarTurno',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/crearClase': typeof CrearClaseRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/crearClase': typeof CrearClaseRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/crearClase': typeof CrearClaseRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/verClases': typeof VerClasesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/crearClase' | '/solicitarTurno'
+  fullPaths: '/' | '/crearClase' | '/solicitarTurno' | '/verClases'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/crearClase' | '/solicitarTurno'
-  id: '__root__' | '/' | '/crearClase' | '/solicitarTurno'
+  to: '/' | '/crearClase' | '/solicitarTurno' | '/verClases'
+  id: '__root__' | '/' | '/crearClase' | '/solicitarTurno' | '/verClases'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CrearClaseRoute: typeof CrearClaseRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
+  VerClasesRoute: typeof VerClasesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verClases': {
+      id: '/verClases'
+      path: '/verClases'
+      fullPath: '/verClases'
+      preLoaderRoute: typeof VerClasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solicitarTurno': {
       id: '/solicitarTurno'
       path: '/solicitarTurno'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CrearClaseRoute: CrearClaseRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
+  VerClasesRoute: VerClasesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
