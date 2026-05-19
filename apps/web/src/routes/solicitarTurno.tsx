@@ -50,17 +50,19 @@ function RouteComponent() {
   const [selectedSlot, setSelectedSlot] = useState<AppointmentSlot | null>(null)
   const [enrollments, setEnrollments] = useState<string[]>([])
   const [waitList, setWaitList] = useState<string[]>([])
+  const API_BASE = "http://localhost:3000"
+  // TODO: reemplazar por el id real del cliente/autenticación
+  const CLIENTE_ID = 1
 
   useEffect(() => {
     const fetchClasses = async () => {
       setLoading(true)
       setError(null)
 
-      const apiBase = "http://localhost:3000"
-      console.log("solicitarTurno: fetching clases from", apiBase || '/clases')
+      console.log("solicitarTurno: fetching clases from", API_BASE || '/clases')
 
       try {
-        const response = await fetch(`${apiBase}/clases`)
+        const response = await fetch(`${API_BASE}/clases`)
         console.log("solicitarTurno: fetch response", response.status, response.statusText)
 
         if (!response.ok) {
@@ -182,10 +184,30 @@ function RouteComponent() {
     }
 
     if (apply) {
-      setPhase('completed')
-      const entry = `${selectedSlot.date} ${selectedSlot.time} ${selectedSlot.className}`
-      setEnrollments((list) => [...list, entry])
-      setMessage(`Turno solicitado. Se aplicó el monto a favor de $${selectedSlot.favorAmount}.`)
+      // aplicar monto a favor y crear inscripción en backend
+      (async () => {
+        try {
+          setMessage('Enviando inscripción...')
+          const res = await fetch(`${API_BASE}/clases/${selectedSlot.source.id}/turnos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clienteId: CLIENTE_ID, estado: 'pagado' }),
+          })
+
+          if (!res.ok) {
+            const txt = await res.text()
+            throw new Error(`Error al crear turno: ${res.status} ${txt}`)
+          }
+
+          await res.json()
+          setPhase('completed')
+          const entry = `${selectedSlot.date} ${selectedSlot.time} ${selectedSlot.className}`
+          setEnrollments((list) => [...list, entry])
+          setMessage(`Turno solicitado. Se aplicó el monto a favor de $${selectedSlot.favorAmount}.`)
+        } catch (err) {
+          setMessage(err instanceof Error ? err.message : 'Error al crear turno')
+        }
+      })()
       return
     }
 
@@ -193,16 +215,33 @@ function RouteComponent() {
     setMessage(`Monto a pagar $${priceToPay}. Seleccione un método de pago.`)
   }
 
-  const handlePayment = (method: string) => {
+  const handlePayment = async (method: string) => {
     if (!selectedSlot) {
       setMessage('Seleccione la clase antes de elegir un método de pago.')
       return
     }
 
-    const appointmentKey = `${selectedSlot.date} ${selectedSlot.time} ${selectedSlot.className}`
-    setPhase('completed')
-    setEnrollments((list) => [...list, appointmentKey])
-    setMessage(`Turno solicitado. Método de pago: ${method}.`)
+    try {
+      setMessage('Procesando pago...')
+      const res = await fetch(`${API_BASE}/clases/${selectedSlot.source.id}/turnos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clienteId: CLIENTE_ID, estado: 'pagado' }),
+      })
+
+      if (!res.ok) {
+        const txt = await res.text()
+        throw new Error(`Error al crear turno: ${res.status} ${txt}`)
+      }
+
+      await res.json()
+      const appointmentKey = `${selectedSlot.date} ${selectedSlot.time} ${selectedSlot.className}`
+      setPhase('completed')
+      setEnrollments((list) => [...list, appointmentKey])
+      setMessage(`Turno solicitado. Método de pago: ${method}.`)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Error al procesar pago')
+    }
   }
 
   return (
