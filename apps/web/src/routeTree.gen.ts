@@ -10,11 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
+import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as IniciarSesionRouteImport } from './routes/iniciarSesion'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
   id: '/solicitarTurno',
   path: '/solicitarTurno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IniciarSesionRoute = IniciarSesionRouteImport.update({
+  id: '/iniciarSesion',
+  path: '/iniciarSesion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,27 +37,35 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/iniciarSesion': typeof IniciarSesionRoute
+  '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/iniciarSesion': typeof IniciarSesionRoute
+  '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/iniciarSesion': typeof IniciarSesionRoute
+  '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/solicitarTurno'
+  fullPaths: '/' | '/iniciarSesion' | '/registro' | '/solicitarTurno'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/solicitarTurno'
-  id: '__root__' | '/' | '/solicitarTurno'
+  to: '/' | '/iniciarSesion' | '/registro' | '/solicitarTurno'
+  id: '__root__' | '/' | '/iniciarSesion' | '/registro' | '/solicitarTurno'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  IniciarSesionRoute: typeof IniciarSesionRoute
+  RegistroRoute: typeof RegistroRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
 }
 
@@ -56,6 +76,20 @@ declare module '@tanstack/react-router' {
       path: '/solicitarTurno'
       fullPath: '/solicitarTurno'
       preLoaderRoute: typeof SolicitarTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/iniciarSesion': {
+      id: '/iniciarSesion'
+      path: '/iniciarSesion'
+      fullPath: '/iniciarSesion'
+      preLoaderRoute: typeof IniciarSesionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,6 +104,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  IniciarSesionRoute: IniciarSesionRoute,
+  RegistroRoute: RegistroRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
 }
 export const routeTree = rootRouteImport
