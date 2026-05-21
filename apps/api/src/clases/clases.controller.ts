@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query } from "@nestjs/common";
+import { Controller, Get, Post, Body, Query, BadRequestException } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateClaseDto } from "./dto/create-clase.dto";
 
@@ -12,6 +12,23 @@ export class ClasesController {
     @Query("endDate") endDate?: string
   ) {
     return this.clasesService.findAll(startDate, endDate);
+  }
+
+  @Get("clientes")
+  async findClientes() {
+    return this.clasesService.getClientes();
+  }
+
+  @Get("inscriptos")
+  async findInscriptos(
+    @Query("fecha") fecha?: string,
+    @Query("tipo") tipo?: string
+  ) {
+    if (!fecha || !tipo) {
+      throw new BadRequestException("Los parámetros fecha y clase son obligatorios");
+    }
+
+    return this.clasesService.getInscriptos(fecha, tipo);
   }
 
   @Post()

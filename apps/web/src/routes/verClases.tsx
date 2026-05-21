@@ -10,6 +10,15 @@ type Clase = {
   cupo?: number | null
 }
 
+type Inscripto = {
+  clienteId: number
+  estado: string | null
+  nombre: string | null
+  apellido: string | null
+  dni: string | null
+  mail: string | null
+}
+
 function formatDate(fecha: string) {
   const date = new Date(fecha)
   if (Number.isNaN(date.getTime())) return fecha
@@ -31,6 +40,12 @@ function RouteComponent() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [inscriptosDate, setInscriptosDate] = useState('')
+  const [inscriptosTipo, setInscriptosTipo] = useState('')
+  const [inscriptos, setInscriptos] = useState<Inscripto[]>([])
+  const [inscriptosMessage, setInscriptosMessage] = useState<string | null>(null)
+  const [inscriptosError, setInscriptosError] = useState<string | null>(null)
+  const [inscriptosLoading, setInscriptosLoading] = useState(false)
 
   const viewClasses = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -62,6 +77,42 @@ function RouteComponent() {
       setClasses([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const viewInscriptos = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setInscriptosLoading(true)
+    setInscriptosMessage(null)
+    setInscriptosError(null)
+    setInscriptos([])
+
+    if (!inscriptosDate || !inscriptosTipo) {
+      setInscriptosError('Ingrese fecha y clase para ver los inscriptos.')
+      setInscriptosLoading(false)
+      return
+    }
+
+    try {
+      const url = new URL('http://localhost:3000/clases/inscriptos')
+      url.searchParams.append('fecha', inscriptosDate)
+      url.searchParams.append('tipo', inscriptosTipo)
+
+      const response = await fetch(url.toString())
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? `Error ${response.status}`)
+      }
+
+      const result = data as { message?: string; inscriptos?: Inscripto[] }
+      setInscriptos(result.inscriptos ?? [])
+      setInscriptosMessage(result.message ?? (result.inscriptos?.length ? null : 'No hay inscriptos en esa clase.'))
+    } catch (fetchError) {
+      setInscriptosError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
+      setInscriptos([])
+    } finally {
+      setInscriptosLoading(false)
     }
   }
 
@@ -120,6 +171,67 @@ function RouteComponent() {
             </Link>
           </div>
         </form>
+
+        <form className="field-column" onSubmit={viewInscriptos}>
+          <h2>Ver inscriptos</h2>
+          <div className="field-row">
+            <label>
+              Fecha
+              <input
+                type="date"
+                value={inscriptosDate}
+                onChange={(event) => setInscriptosDate(event.target.value)}
+              />
+            </label>
+            <label>
+              Clase
+              <input
+                type="text"
+                value={inscriptosTipo}
+                onChange={(event) => setInscriptosTipo(event.target.value)}
+                placeholder="Ej: clase 1"
+              />
+            </label>
+          </div>
+
+          <div className="actions-row">
+            <button className="button button-primary" type="submit" disabled={inscriptosLoading}>
+              {inscriptosLoading ? 'Cargando...' : 'Ver inscriptos'}
+            </button>
+          </div>
+        </form>
+
+        {inscriptosError ? <p className="status-badge full">{inscriptosError}</p> : null}
+        {inscriptosMessage ? <p className="status-badge success">{inscriptosMessage}</p> : null}
+
+        {inscriptos.length > 0 ? (
+          <div className="table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente ID</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>DNI</th>
+                  <th>Mail</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inscriptos.map((inscripto) => (
+                  <tr key={`${inscripto.clienteId}-${inscripto.dni || inscripto.mail}`}>
+                    <td>{inscripto.clienteId}</td>
+                    <td>{inscripto.nombre ?? 'N/A'}</td>
+                    <td>{inscripto.apellido ?? 'N/A'}</td>
+                    <td>{inscripto.dni ?? 'N/A'}</td>
+                    <td>{inscripto.mail ?? 'N/A'}</td>
+                    <td>{inscripto.estado ?? 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
 
         {error ? <p className="status-badge full">{error}</p> : null}
         {message ? <p className="status-badge success">{message}</p> : null}

@@ -1,4 +1,10 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, IsNumber, Min, IsEnum } from "class-validator";
+
+enum TipoClase {
+  ZONA_MEDIA = "zona media",
+  ZONA_SUPERIOR = "zona superior",
+  ZONA_INFERIOR = "zona inferior",
+}
 
 export class CreateClaseDto {
   @IsString()
@@ -8,10 +14,15 @@ export class CreateClaseDto {
   hora!: string;
 
   @IsOptional()
-  @IsString()
-  tipo?: string | null;
+  @IsEnum(TipoClase, { message: "El tipo debe ser: zona media, zona superior o zona inferior" })
+  tipo?: TipoClase | null;
 
   @IsOptional()
   @IsString()
   profesorDni?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1, { message: "El cupo debe ser mayor a 0" })
+  cupo?: number;
 }

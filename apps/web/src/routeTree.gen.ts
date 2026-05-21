@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerClasesRouteImport } from './routes/verClases'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as CrearClaseRouteImport } from './routes/crearClase'
+import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VerClasesRoute = VerClasesRouteImport.update({
@@ -29,6 +30,11 @@ const CrearClaseRoute = CrearClaseRouteImport.update({
   path: '/crearClase',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,12 +43,14 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/clientes': typeof ClientesRoute
   '/crearClase': typeof CrearClaseRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/clientes': typeof ClientesRoute
   '/crearClase': typeof CrearClaseRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
@@ -50,20 +58,33 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/clientes': typeof ClientesRoute
   '/crearClase': typeof CrearClaseRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/crearClase' | '/solicitarTurno' | '/verClases'
+  fullPaths:
+    | '/'
+    | '/clientes'
+    | '/crearClase'
+    | '/solicitarTurno'
+    | '/verClases'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/crearClase' | '/solicitarTurno' | '/verClases'
-  id: '__root__' | '/' | '/crearClase' | '/solicitarTurno' | '/verClases'
+  to: '/' | '/clientes' | '/crearClase' | '/solicitarTurno' | '/verClases'
+  id:
+    | '__root__'
+    | '/'
+    | '/clientes'
+    | '/crearClase'
+    | '/solicitarTurno'
+    | '/verClases'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClientesRoute: typeof ClientesRoute
   CrearClaseRoute: typeof CrearClaseRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
   VerClasesRoute: typeof VerClasesRoute
@@ -92,6 +113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrearClaseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +132,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClientesRoute: ClientesRoute,
   CrearClaseRoute: CrearClaseRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
   VerClasesRoute: VerClasesRoute,
