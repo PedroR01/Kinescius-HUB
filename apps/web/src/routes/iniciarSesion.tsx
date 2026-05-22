@@ -83,8 +83,8 @@ const IniciarSesion = () => {
         <br />
 
         <label>Contraseña:</label>
-        <input type="password" name="contraseña" value={formData.passwd} onChange={handleChange} required/> 
-
+        <input type="password" name="passwd" value={formData.passwd} onChange={handleChange} required/>
+        
         <div style={{ marginTop: '1rem' }}>
           <button type="button" onClick={handleInicio} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
             {isProcessing ? 'Verificando...' : 'Iniciar Sesión'} {/*Texto que muestra el botón en base al sistema*/}

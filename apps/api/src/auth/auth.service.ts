@@ -2,13 +2,17 @@ import { Injectable, BadRequestException, InternalServerErrorException, Unauthor
 import { SupabaseService } from "../integrations/supabase.service";
 import { RegistroDto } from './dto/registro.dto';
 import { InicioDto } from './dto/inicio.dto';
+import { EmailService } from '../email/email.service';
 import * as crypto from 'crypto';
 
 // El decorador @Injectable() indica que esta clase tiene servicios que otros archivos pueden usar 
 @Injectable()
 export class AuthService {
-  //Conexión a supabase
-  constructor(private readonly supabaseService: SupabaseService) {}
+  //Conexión a supabase y al servicio de emails
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly emailService: EmailService
+  ) {}
 
   //Generación de contraseña aleatoria para el registro
   private generarPasswordAleatoria(longitud: number = 8): string {
@@ -57,6 +61,11 @@ export class AuthService {
       throw new BadRequestException(`No se pudieron registrar los datos: ${error.message}`);
     }
     console.log(`¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}`); //Esto es lo que se debería enviar por mail
+    await this.emailService.enviarCorreo(
+      datos.email, // Recuerda usar tu mail de registro en Resend para las pruebas
+      '¡Bienvenido a la plataforma!',
+      '<h2>Gracias por registrarte</h2><p>Tu cuenta ha sido creada con éxito.</p>'
+    );
 
     return {
       //con success y mensaje, Typescript arma el mensaje HTTP para devolver
@@ -67,7 +76,6 @@ export class AuthService {
   } catch (err) {
     // Si ya es un error de NestJS que lanzamos arriba, lo dejamos pasar
     if (err instanceof BadRequestException) {
-      console.log(`Error encontrado! Linea 70 de auth.service`);
       throw err;
     }
     // Si es un error desconocido (se cayó el internet, etc), lanzamos un 500 (Internal Server Error)

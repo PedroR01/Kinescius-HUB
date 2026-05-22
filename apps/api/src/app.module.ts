@@ -6,6 +6,7 @@ import { AppService } from "./app.service";
 import { SupabaseModule } from "./integrations/supabase.module";
 import { ClasesModule } from "./clases/clases.module";
 import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { AuthModule } from './auth/auth.module';
     }),
     SupabaseModule,
     AuthModule,
-    ClasesModule
+    ClasesModule,
+    EmailModule
   ],
   controllers: [AppController],
   providers: [AppService]
