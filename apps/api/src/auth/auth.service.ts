@@ -46,7 +46,7 @@ export class AuthService {
           user_id: authData.user.id, //Acá se vincula la entrada de la tabla con el sistema de auth
           nombre: datos.nombre,
           apellido: datos.apellido,
-          email: datos.email,
+          mail: datos.email,
           dni: datos.dni,
           telefono: datos.telefono || null //Si el teléfono viene vacío, se guarda como null
         }
@@ -67,6 +67,7 @@ export class AuthService {
   } catch (err) {
     // Si ya es un error de NestJS que lanzamos arriba, lo dejamos pasar
     if (err instanceof BadRequestException) {
+      console.log(`Error encontrado! Linea 70 de auth.service`);
       throw err;
     }
     // Si es un error desconocido (se cayó el internet, etc), lanzamos un 500 (Internal Server Error)
