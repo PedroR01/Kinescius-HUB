@@ -4,6 +4,6 @@ import { EmailService } from './email.service';
 
 @Module({
   providers: [EmailService],
-  exports: [EmailService] // <-- ESTO ES CLAVE
+  exports: [EmailService] 
 })
 export class EmailModule {}

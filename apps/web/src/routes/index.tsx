@@ -28,16 +28,19 @@ const PaginaPrincipal = () => {
       {/* Reemplacé la etiqueta <body> por <h1> y <p>. 
           En React, la etiqueta <body> ya existe en tu index.html principal, 
           por lo que acá adentro usamos divs o textos normales */}
-      <h1>Bienvenido</h1>
+      <h1>Bienvenidos a Kinescius</h1>
       <p>Kinescius es un centro de rehabilitación</p>
 
       <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
         
-        {/* LA MAGIA CONDICIONAL: Si el interruptor está prendido (?) ve una cosa, si no (:) ve otra */}
+        {/*Si el interruptor está prendido (?) ve una cosa, si no (:) ve otra */}
         {estaLogueado ? (
           <>
             <Link to="/solicitarTurno" className="button button-primary">
               Solicitar turno
+            </Link>
+            <Link to="/cambiarPasswd" className="button button-primary">
+              Cambiar contraseña
             </Link>
             <button onClick={cerrarSesion} className="button">
               Cerrar sesión
@@ -54,6 +57,12 @@ const PaginaPrincipal = () => {
           </>
         )}
 
+      </div>
+      <div></div>
+      <div>
+        En Kinescius trabajamos para brindarte una atención profesional, cercana y organizada, acompañándote en cada etapa de tu recuperación y bienestar físico. A través de nuestra plataforma vas a poder gestionar tus turnos de manera simple, rápida y segura, sin necesidad de llamadas ni largas esperas.
+        Desde este sitio podrás reservar nuevos turnos online, consultar tus próximos horarios, realizar el seguimiento de tus asistencias y administrar tus sesiones de tratamiento de forma cómoda y accesible. Además, los clientes abonados podrán gestionar sus cuotas y mantener al día toda la información relacionada con su plan de atención.
+        Nuestro objetivo es ofrecer una experiencia moderna y práctica, facilitando la organización de cada paciente y permitiéndote enfocarte en lo más importante: tu salud y tu bienestar.
       </div>
     </div>
   );
