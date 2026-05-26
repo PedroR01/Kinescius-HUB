@@ -39,7 +39,7 @@ export class EmailService {
       const { error } = await this.resend.emails.send({
         from: 'Kinescius-HUB <onboarding@resend.dev>', // Usamos el correo de prueba de Resend
         to: emailDestino,
-        subject: 'Recuperación de contraseña - Kinescius-HUB',
+        subject: 'Recuperación de contraseña de Kinescius-HUB',
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px;">
             <h2>¡Hola!</h2>

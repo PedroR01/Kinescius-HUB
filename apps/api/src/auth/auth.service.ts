@@ -66,8 +66,8 @@ export class AuthService {
         datos.email, //Hay que usar el mail carlo.castro247390@alumnos.info.unlp.edu.ar para el testeo
         '¡Bienvenido a Kinescius-HUB!',
         `<h2>Gracias por registrarte</h2>
-         <p>Tu cuenta ha sido creada con éxito.</p>
-         <p>Tu contraseña temporal es: <strong>${passwordBase}</strong></p>`
+         <p>Tu cuenta ha sido creada con éxito, y tu contraseña es: <strong>${passwordBase}</strong></p>
+         <p>Puedes cambiar tu contraseña cuando quieras luego de iniciar sesión en el sistema. Que tenga un buen día!</p>`
       );
     } catch (emailError) {
       // Si el correo falla, lo anotamos en la consola, pero NO lanzamos el error
