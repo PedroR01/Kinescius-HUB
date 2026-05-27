@@ -159,7 +159,7 @@ import { CambiarTurnoDto } from './dto/cambiar-turno-dto';
 import { CancelarTurnoDto } from './dto/cancelar-turno-dto';
 import { CancelacionNoAbonadoStrategy } from './strategies/cancelacion-no-abonado.strategy';
 import { NotificacionEsperaService } from '../confirmarTurno/notificacion-espera.service'; // 👈
-
+import { MisClasesResponseDto } from './dto/ver-clases.dto';
 @Injectable()
 export class ShiftsService {
   constructor(
@@ -307,4 +307,30 @@ export class ShiftsService {
       message: 'Turno cambiado exitosamente.' 
     };
   }
+
+  async obtenerClasesPorCliente(idCliente: number): Promise<MisClasesResponseDto[]> {
+    const { data, error } = await this.supabase.client
+      .from('Se_inscribe')
+      .select(`
+        id_cliente,
+        id_clase,
+        Clase (
+          id,
+          fecha,
+          hora,
+          tipo
+        )
+      `)
+      .eq('id_cliente', idCliente)
+      .gte('Clase.fecha', new Date().toISOString().split('T')[0]);
+
+    if (error) {
+      throw new InternalServerErrorException('Error al recuperar las clases: ' + error.message);
+    }
+
+    return data as unknown as MisClasesResponseDto[];
+  }
+
+
+
 }

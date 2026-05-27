@@ -1,8 +1,9 @@
 
-import { Controller, Get, Patch, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, ParseIntPipe } from '@nestjs/common';
 import { CambiarTurnoDto } from './dto/cambiar-turno-dto';
 import { ShiftsService } from './shifts.service';
 import { CancelarTurnoDto } from './dto/cancelar-turno-dto';
+import { MisClasesResponseDto } from './dto/ver-clases.dto';
 
 @Controller('shifts')
 export class ShiftsController {
@@ -22,6 +23,16 @@ export class ShiftsController {
   @Patch('cancelar')
   async cancelarTurno(@Body() cancelarTurnoDto: CancelarTurnoDto) {
     return this.shiftsService.cancelar(cancelarTurnoDto);
+  }
+
+  @Get('mis-clases/:idCliente')
+  async getMisClases(
+    @Param('idCliente', ParseIntPipe) idCliente: number
+  ): Promise<MisClasesResponseDto[]> {
+    return await this.shiftsService.obtenerClasesPorCliente(idCliente);
+  }
 }
 
-}
+
+
+

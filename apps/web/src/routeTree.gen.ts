@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerClasesRouteImport } from './routes/verClases'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as MisClasesRouteImport } from './routes/mis-clases'
 import { Route as ListaEsperaRouteImport } from './routes/listaEspera'
 import { Route as IniciarSesionRouteImport } from './routes/iniciarSesion'
 import { Route as CrearClaseRouteImport } from './routes/crearClase'
@@ -34,6 +35,11 @@ const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisClasesRoute = MisClasesRouteImport.update({
+  id: '/mis-clases',
+  path: '/mis-clases',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListaEsperaRoute = ListaEsperaRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/mis-clases': typeof MisClasesRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/mis-clases': typeof MisClasesRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/mis-clases': typeof MisClasesRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/mis-clases'
     | '/registro'
     | '/solicitarTurno'
     | '/verClases'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/mis-clases'
     | '/registro'
     | '/solicitarTurno'
     | '/verClases'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/mis-clases'
     | '/registro'
     | '/solicitarTurno'
     | '/verClases'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   CrearClaseRoute: typeof CrearClaseRoute
   IniciarSesionRoute: typeof IniciarSesionRoute
   ListaEsperaRoute: typeof ListaEsperaRoute
+  MisClasesRoute: typeof MisClasesRoute
   RegistroRoute: typeof RegistroRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
   VerClasesRoute: typeof VerClasesRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-clases': {
+      id: '/mis-clases'
+      path: '/mis-clases'
+      fullPath: '/mis-clases'
+      preLoaderRoute: typeof MisClasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/listaEspera': {
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   CrearClaseRoute: CrearClaseRoute,
   IniciarSesionRoute: IniciarSesionRoute,
   ListaEsperaRoute: ListaEsperaRoute,
+  MisClasesRoute: MisClasesRoute,
   RegistroRoute: RegistroRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
   VerClasesRoute: VerClasesRoute,
