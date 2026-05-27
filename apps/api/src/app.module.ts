@@ -7,6 +7,7 @@ import { SupabaseModule } from "./integrations/supabase.module";
 import { ClasesModule } from "./clases/clases.module";
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
+import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { EmailModule } from './email/email.module';
     SupabaseModule,
     AuthModule,
     ClasesModule,
-    EmailModule
+    EmailModule,
+    ListaEsperaModule
   ],
   controllers: [AppController],
   providers: [AppService]

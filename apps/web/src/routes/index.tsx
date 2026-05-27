@@ -39,6 +39,9 @@ const PaginaPrincipal = () => {
             <Link to="/solicitarTurno" className="button button-primary">
               Solicitar turno
             </Link>
+             <Link to="/listaEspera" className="button button-primary">
+       Ver lista de espera
+    </Link>
             <Link to="/cambiarPasswd" className="button button-primary">
               Cambiar contraseña
             </Link>

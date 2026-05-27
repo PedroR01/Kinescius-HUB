@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  ConflictException,
+} from "@nestjs/common";
 import { SupabaseService } from "../integrations/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 
@@ -26,8 +30,29 @@ export class ClasesService {
     const payload = {
       id_cliente: dto.clienteId,
       id_clase: claseId,
-      estado: dto.estado ?? 'pendiente',
+      estado: dto.estado ?? "pendiente",
     };
+
+    const { data: existing, error: selectError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .select("id_cliente,id_clase")
+      .eq("id_cliente", dto.clienteId)
+      .eq("id_clase", claseId)
+      .limit(1);
+
+    if (selectError) {
+      throw new InternalServerErrorException(
+        `Error al verificar inscripción existente: ${selectError.message}`
+      );
+    }
+
+    const alreadyInscribed = Array.isArray(existing)
+      ? existing.length > 0
+      : Boolean(existing);
+
+    if (alreadyInscribed) {
+      throw new ConflictException("Ya estás inscripto en esta clase.");
+    }
 
     const { data, error } = await this.supabaseService.client
       .from("Se_inscribe")
@@ -36,6 +61,13 @@ export class ClasesService {
       .single();
 
     if (error) {
+      if (
+        error.message?.includes("duplicate key value") ||
+        error.code === "23505"
+      ) {
+        throw new ConflictException("Ya estás inscripto en esta clase.");
+      }
+
       throw new InternalServerErrorException(
         `Error al crear inscripcion: ${error.message}`
       );

@@ -13,6 +13,7 @@ import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as IniciarSesionRouteImport } from './routes/iniciarSesion'
 import { Route as CambiarPasswdRouteImport } from './routes/cambiarPasswd'
+import { Route as ListaEsperaRouteImport } from './routes/listaEspera'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
@@ -33,6 +34,9 @@ const IniciarSesionRoute = IniciarSesionRouteImport.update({
 const CambiarPasswdRoute = CambiarPasswdRouteImport.update({
   id: '/cambiarPasswd',
   path: '/cambiarPasswd',
+const ListaEsperaRoute = ListaEsperaRouteImport.update({
+  id: '/listaEspera',
+  path: '/listaEspera',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -46,6 +50,7 @@ export interface FileRoutesByFullPath {
   '/cambiarPasswd': typeof CambiarPasswdRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/registro': typeof RegistroRoute
+  '/listaEspera': typeof ListaEsperaRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +58,7 @@ export interface FileRoutesByTo {
   '/cambiarPasswd': typeof CambiarPasswdRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/registro': typeof RegistroRoute
+  '/listaEspera': typeof ListaEsperaRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesById {
@@ -61,6 +67,7 @@ export interface FileRoutesById {
   '/cambiarPasswd': typeof CambiarPasswdRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/registro': typeof RegistroRoute
+  '/listaEspera': typeof ListaEsperaRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRouteTypes {
@@ -71,6 +78,7 @@ export interface FileRouteTypes {
     | '/iniciarSesion'
     | '/registro'
     | '/solicitarTurno'
+| '/listaEspera'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +86,7 @@ export interface FileRouteTypes {
     | '/iniciarSesion'
     | '/registro'
     | '/solicitarTurno'
+| '/listaEspera' 
   id:
     | '__root__'
     | '/'
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
     | '/iniciarSesion'
     | '/registro'
     | '/solicitarTurno'
+| '/listaEspera'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -92,6 +102,7 @@ export interface RootRouteChildren {
   CambiarPasswdRoute: typeof CambiarPasswdRoute
   IniciarSesionRoute: typeof IniciarSesionRoute
   RegistroRoute: typeof RegistroRoute
+  ListaEsperaRoute: typeof ListaEsperaRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
 }
 
@@ -123,6 +134,11 @@ declare module '@tanstack/react-router' {
       path: '/cambiarPasswd'
       fullPath: '/cambiarPasswd'
       preLoaderRoute: typeof CambiarPasswdRouteImport
+    '/listaEspera': {
+      id: '/listaEspera'
+      path: '/listaEspera'
+      fullPath: '/listaEspera'
+      preLoaderRoute: typeof ListaEsperaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -140,6 +156,7 @@ const rootRouteChildren: RootRouteChildren = {
   CambiarPasswdRoute: CambiarPasswdRoute,
   IniciarSesionRoute: IniciarSesionRoute,
   RegistroRoute: RegistroRoute,
+  ListaEsperaRoute: ListaEsperaRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
 }
 export const routeTree = rootRouteImport
