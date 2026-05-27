@@ -9,8 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
+import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as IniciarSesionRouteImport } from './routes/iniciarSesion'
+import { Route as CambiarPasswdRouteImport } from './routes/cambiarPasswd'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
+  id: '/solicitarTurno',
+  path: '/solicitarTurno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IniciarSesionRoute = IniciarSesionRouteImport.update({
+  id: '/iniciarSesion',
+  path: '/iniciarSesion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CambiarPasswdRoute = CambiarPasswdRouteImport.update({
+  id: '/cambiarPasswd',
+  path: '/cambiarPasswd',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +43,88 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cambiarPasswd': typeof CambiarPasswdRoute
+  '/iniciarSesion': typeof IniciarSesionRoute
+  '/registro': typeof RegistroRoute
+  '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cambiarPasswd': typeof CambiarPasswdRoute
+  '/iniciarSesion': typeof IniciarSesionRoute
+  '/registro': typeof RegistroRoute
+  '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cambiarPasswd': typeof CambiarPasswdRoute
+  '/iniciarSesion': typeof IniciarSesionRoute
+  '/registro': typeof RegistroRoute
+  '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/cambiarPasswd'
+    | '/iniciarSesion'
+    | '/registro'
+    | '/solicitarTurno'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/cambiarPasswd'
+    | '/iniciarSesion'
+    | '/registro'
+    | '/solicitarTurno'
+  id:
+    | '__root__'
+    | '/'
+    | '/cambiarPasswd'
+    | '/iniciarSesion'
+    | '/registro'
+    | '/solicitarTurno'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CambiarPasswdRoute: typeof CambiarPasswdRoute
+  IniciarSesionRoute: typeof IniciarSesionRoute
+  RegistroRoute: typeof RegistroRoute
+  SolicitarTurnoRoute: typeof SolicitarTurnoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/solicitarTurno': {
+      id: '/solicitarTurno'
+      path: '/solicitarTurno'
+      fullPath: '/solicitarTurno'
+      preLoaderRoute: typeof SolicitarTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/iniciarSesion': {
+      id: '/iniciarSesion'
+      path: '/iniciarSesion'
+      fullPath: '/iniciarSesion'
+      preLoaderRoute: typeof IniciarSesionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cambiarPasswd': {
+      id: '/cambiarPasswd'
+      path: '/cambiarPasswd'
+      fullPath: '/cambiarPasswd'
+      preLoaderRoute: typeof CambiarPasswdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +137,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CambiarPasswdRoute: CambiarPasswdRoute,
+  IniciarSesionRoute: IniciarSesionRoute,
+  RegistroRoute: RegistroRoute,
+  SolicitarTurnoRoute: SolicitarTurnoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
