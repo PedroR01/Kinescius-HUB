@@ -19,7 +19,7 @@ export class AuthController {
   }
   
   @Post('login')
-  iniciarSesion(@Body() datosIngresados: InicioDto) {
+  iniciarSesion(@Body() datosIngresados: InicioDto) { 
     return this.authService.iniciarSesion(datosIngresados);
   }
 
