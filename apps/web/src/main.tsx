@@ -4,6 +4,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { AppProviders } from "./providers";
 import { router } from "./router";
 import "./index.css";
+import App from "./App";
 
 // Importamos tus dos componentes (ajustá las rutas si es necesario)
 import { CancelarTurno } from './modules/turnos/components/cancelarTurnoModal';
@@ -81,6 +82,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AppProviders>
       <RouterProvider router={router} />
+      <App />
     </AppProviders>
 
     {/* INYECTAMOS EL ENTORNO DE PRUEBAS */}
