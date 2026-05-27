@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   BadRequestException,
+  NotFoundException,
 } from "@nestjs/common";
 
 import { SupabaseService } from "../integrations/supabase.service";
@@ -43,7 +44,44 @@ export class ClasesService {
       );
     }
 
-    return data;
+    const clases = (data ?? []) as Array<{
+      id: number;
+      id_profesor?: number | null;
+      [key: string]: unknown;
+    }>;
+
+    const profesorIds = [...new Set(
+      clases
+        .map((clase) => clase.id_profesor)
+        .filter((id): id is number => typeof id === "number")
+    )];
+
+    const profesorDnis = new Map<number, string | null>();
+
+    if (profesorIds.length > 0) {
+      const { data: personas, error: profesorError } =
+        await this.supabaseService.client
+          .from("Persona")
+          .select("id,dni")
+          .in("id", profesorIds);
+
+      if (profesorError) {
+        throw new InternalServerErrorException(
+          `Error al obtener profesores: ${profesorError.message}`
+        );
+      }
+
+      (personas ?? []).forEach((persona: { id: number; dni?: string | null }) => {
+        profesorDnis.set(persona.id, persona.dni ?? null);
+      });
+    }
+
+    return clases.map((clase) => ({
+      ...clase,
+      profesor_dni: clase.id_profesor
+        ? profesorDnis.get(clase.id_profesor) ?? null
+        : null,
+    }));
   }
 
   async create({
@@ -59,10 +97,17 @@ export class ClasesService {
     profesorDni?: string | null;
     cupo?: number;
   }) {
-    // Usar cupo proporcionado o valor por defecto
-    const claseCupo = cupo ?? 10;
+    const MAX_CLASES_POR_DIA_Y_HORARIO = 10;
+    const MAX_CUPO = 50;
+    const DEFAULT_CUPO = 10;
 
-    // Validar cupo máximo
+    const claseCupo = cupo ?? DEFAULT_CUPO;
+
+    if (!Number.isInteger(claseCupo) || claseCupo < 1 || claseCupo > MAX_CUPO) {
+      throw new BadRequestException("El cupo debe estar entre 1 y 50");
+    }
+
+    // Validar máximo de clases programadas por día y horario
     const countQuery = this.supabaseService.client
       .from("Clase")
       .select("id", { count: "exact", head: true })
@@ -77,9 +122,9 @@ export class ClasesService {
       );
     }
 
-    if ((count ?? 0) >= claseCupo) {
+    if ((count ?? 0) >= MAX_CLASES_POR_DIA_Y_HORARIO) {
       throw new BadRequestException(
-        `Error. Cupo máximo de clases por hora (${claseCupo}) completo`
+        "Ya hay 10 clases programadas para ese día y horario"
       );
     }
 
@@ -117,6 +162,26 @@ export class ClasesService {
       }
 
       profesorId = profesor.id;
+
+      const { count: profesorClasesCount, error: profesorClaseError } =
+        await this.supabaseService.client
+          .from("Clase")
+          .select("id", { count: "exact", head: true })
+          .eq("id_profesor", profesorId)
+          .eq("fecha", fecha)
+          .eq("hora", hora);
+
+      if (profesorClaseError) {
+        throw new InternalServerErrorException(
+          `Error al verificar el profesor: ${profesorClaseError.message}`
+        );
+      }
+
+      if ((profesorClasesCount ?? 0) > 0) {
+        throw new BadRequestException(
+          "El profesor ya tiene una clase programada para ese día y horario"
+        );
+      }
     }
 
     // Crear clase
@@ -143,6 +208,55 @@ export class ClasesService {
     return {
       message: "Clase creada correctamente",
       clase: data,
+    };
+  }
+
+  async cancel(id: number) {
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new BadRequestException("El id de la clase debe ser mayor a 0");
+    }
+
+    const { data: clase, error: claseError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (claseError) {
+      throw new InternalServerErrorException(
+        `Error al buscar la clase: ${claseError.message}`
+      );
+    }
+
+    if (!clase) {
+      throw new NotFoundException("No existe una clase con ese id");
+    }
+
+    const { error: inscripcionesError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .delete()
+      .eq("id_clase", id);
+
+    if (inscripcionesError) {
+      throw new InternalServerErrorException(
+        `Error al cancelar inscripciones: ${inscripcionesError.message}`
+      );
+    }
+
+    const { error: deleteError } = await this.supabaseService.client
+      .from("Clase")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      throw new InternalServerErrorException(
+        `Error al cancelar la clase: ${deleteError.message}`
+      );
+    }
+
+    return {
+      message: "Clase cancelada correctamente",
+      id,
     };
   }
 

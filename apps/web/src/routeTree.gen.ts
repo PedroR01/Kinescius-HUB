@@ -10,19 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerClasesRouteImport } from './routes/verClases'
-import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as CrearClaseRouteImport } from './routes/crearClase'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as CancelarClaseRouteImport } from './routes/cancelarClase'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VerClasesRoute = VerClasesRouteImport.update({
   id: '/verClases',
   path: '/verClases',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
-  id: '/solicitarTurno',
-  path: '/solicitarTurno',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrearClaseRoute = CrearClaseRouteImport.update({
@@ -35,6 +30,11 @@ const ClientesRoute = ClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CancelarClaseRoute = CancelarClaseRouteImport.update({
+  id: '/cancelarClase',
+  path: '/cancelarClase',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,50 +43,45 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cancelarClase': typeof CancelarClaseRoute
   '/clientes': typeof ClientesRoute
   '/crearClase': typeof CrearClaseRoute
-  '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cancelarClase': typeof CancelarClaseRoute
   '/clientes': typeof ClientesRoute
   '/crearClase': typeof CrearClaseRoute
-  '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cancelarClase': typeof CancelarClaseRoute
   '/clientes': typeof ClientesRoute
   '/crearClase': typeof CrearClaseRoute
-  '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/clientes'
-    | '/crearClase'
-    | '/solicitarTurno'
-    | '/verClases'
+  fullPaths: '/' | '/cancelarClase' | '/clientes' | '/crearClase' | '/verClases'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clientes' | '/crearClase' | '/solicitarTurno' | '/verClases'
+  to: '/' | '/cancelarClase' | '/clientes' | '/crearClase' | '/verClases'
   id:
     | '__root__'
     | '/'
+    | '/cancelarClase'
     | '/clientes'
     | '/crearClase'
-    | '/solicitarTurno'
     | '/verClases'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CancelarClaseRoute: typeof CancelarClaseRoute
   ClientesRoute: typeof ClientesRoute
   CrearClaseRoute: typeof CrearClaseRoute
-  SolicitarTurnoRoute: typeof SolicitarTurnoRoute
   VerClasesRoute: typeof VerClasesRoute
 }
 
@@ -97,13 +92,6 @@ declare module '@tanstack/react-router' {
       path: '/verClases'
       fullPath: '/verClases'
       preLoaderRoute: typeof VerClasesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/solicitarTurno': {
-      id: '/solicitarTurno'
-      path: '/solicitarTurno'
-      fullPath: '/solicitarTurno'
-      preLoaderRoute: typeof SolicitarTurnoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crearClase': {
@@ -120,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cancelarClase': {
+      id: '/cancelarClase'
+      path: '/cancelarClase'
+      fullPath: '/cancelarClase'
+      preLoaderRoute: typeof CancelarClaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -132,9 +127,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CancelarClaseRoute: CancelarClaseRoute,
   ClientesRoute: ClientesRoute,
   CrearClaseRoute: CrearClaseRoute,
-  SolicitarTurnoRoute: SolicitarTurnoRoute,
   VerClasesRoute: VerClasesRoute,
 }
 export const routeTree = rootRouteImport

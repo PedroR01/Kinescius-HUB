@@ -5,13 +5,16 @@ export const Route = createFileRoute("/")({
 });
 
 const GREEN = "#2DBE7F";
-const BG = "#0d1f18";
+const BG = "#ffffff";
+const TEXT = "#0d1f18";
+const MUTED = "rgba(13, 31, 24, 0.55)";
+const CARD = "#f0faf5";
 
 const cards = [
-  { to: "/verClases",      num: "01", title: "Ver clases",      desc: "Consultá horarios y disponibilidad",  icon: "📅" },
-  { to: "/crearClase",     num: "02", title: "Crear clase",     desc: "Agendá una nueva sesión",             icon: "➕" },
-  { to: "/solicitarTurno", num: "03", title: "Solicitar turno", desc: "Reservá tu próxima consulta",         icon: "🕐" },
-  { to: "/clientes",       num: "04", title: "Clientes",        desc: "Administrá tus pacientes",            icon: "👥" },
+  { to: "/verClases",    num: "01", title: "Ver clases",     desc: "Consultá horarios y disponibilidad", icon: "📅" },
+  { to: "/cancelarClase", num: "02", title: "Cancelar clase", desc: "Seleccioná una clase y cancelala",  icon: "❌" },
+  { to: "/crearClase",   num: "03", title: "Crear clase",    desc: "Agendá una nueva sesión",            icon: "➕" },
+  { to: "/clientes",     num: "04", title: "Clientes",       desc: "Administrá tus pacientes",           icon: "👥" },
 ];
 
 function NavCard({ to, num, title, desc, icon }: (typeof cards)[0]) {
@@ -25,26 +28,26 @@ function NavCard({ to, num, title, desc, icon }: (typeof cards)[0]) {
         padding: "20px",
         borderRadius: "16px",
         border: `1px solid rgba(45,190,127,0.2)`,
-        background: "rgba(45,190,127,0.06)",
+        background: CARD,
         textDecoration: "none",
         transition: "background 0.2s, border-color 0.2s, transform 0.2s",
         cursor: "pointer",
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.background = "rgba(45,190,127,0.14)";
+        el.style.background = "rgba(45,190,127,0.12)";
         el.style.borderColor = "rgba(45,190,127,0.5)";
         el.style.transform = "translateY(-3px)";
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.background = "rgba(45,190,127,0.06)";
+        el.style.background = CARD;
         el.style.borderColor = "rgba(45,190,127,0.2)";
         el.style.transform = "translateY(0)";
       }}
     >
       {/* número */}
-      <span style={{ fontSize: "10px", letterSpacing: "0.1em", color: "rgba(45,190,127,0.5)", fontFamily: "monospace" }}>
+      <span style={{ fontSize: "10px", letterSpacing: "0.1em", color: "rgba(45,190,127,0.7)", fontFamily: "monospace" }}>
         {num}
       </span>
 
@@ -61,12 +64,12 @@ function NavCard({ to, num, title, desc, icon }: (typeof cards)[0]) {
       </div>
 
       {/* título */}
-      <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#ffffff", lineHeight: 1.2 }}>
+      <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
         {title}
       </p>
 
       {/* descripción */}
-      <p style={{ margin: 0, fontSize: "12px", fontWeight: 300, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: "12px", fontWeight: 300, color: MUTED, lineHeight: 1.5 }}>
         {desc}
       </p>
 
@@ -125,14 +128,14 @@ function Home() {
         fontSize: "clamp(36px, 8vw, 52px)",
         fontWeight: 700,
         lineHeight: 1.08,
-        color: "#ffffff",
+        color: TEXT,
         letterSpacing: "-0.01em",
       }}>
         Bienvenido a<br />
         <span style={{ color: GREEN, fontStyle: "italic" }}>Kinescius</span>
       </h1>
 
-      <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, letterSpacing: "0.04em", color: "rgba(255,255,255,0.35)" }}>
+      <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, letterSpacing: "0.04em", color: MUTED }}>
         Buenos Aires · Sistema de gestión
       </p>
 
@@ -153,10 +156,10 @@ function Home() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "28px" }}>
         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: GREEN, boxShadow: `0 0 6px ${GREEN}`, display: "inline-block" }} />
-          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "inline-block" }} />
-          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "inline-block" }} />
+          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(13,31,24,0.12)", display: "inline-block" }} />
+          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(13,31,24,0.12)", display: "inline-block" }} />
         </div>
-        <span style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.15)" }}>
+        <span style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(13,31,24,0.18)" }}>
           Kinescius © 2026
         </span>
       </div>

@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 
 type Clase = {
   id: number
@@ -19,14 +19,51 @@ type Inscripto = {
   mail: string | null
 }
 
-function formatDate(fecha: string) {
-  const date = new Date(fecha)
-  if (Number.isNaN(date.getTime())) return fecha
-  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+function getMinFecha() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
-function formatTime(hora: string) {
-  return hora.replace(/:00$/, 'hs')
+function normalizeFecha(fecha: string) {
+  const trimmed = fecha.trim()
+
+  if (!trimmed) {
+    return null
+  }
+
+  if (trimmed.includes('T')) {
+    return trimmed.split('T')[0]
+  }
+
+  if (trimmed.includes('/')) {
+    const [day, month, year] = trimmed.split('/').map((part) => part.trim())
+
+    if (day && month && year) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    }
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed
+  }
+
+  return null
+}
+
+function isClaseVisibleParaHoyOFuturo(fecha: string) {
+  const normalizedFecha = normalizeFecha(fecha)
+
+  if (!normalizedFecha) {
+    return false
+  }
+
+  return normalizedFecha >= getMinFecha()
 }
 
 export const Route = createFileRoute('/verClases')({
@@ -35,31 +72,24 @@ export const Route = createFileRoute('/verClases')({
 
 function RouteComponent() {
   const [classes, setClasses] = useState<Clase[]>([])
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [inscriptosDate, setInscriptosDate] = useState('')
   const [inscriptosTipo, setInscriptosTipo] = useState('')
+  const [inscriptosOptions, setInscriptosOptions] = useState<string[]>([])
   const [inscriptos, setInscriptos] = useState<Inscripto[]>([])
   const [inscriptosMessage, setInscriptosMessage] = useState<string | null>(null)
   const [inscriptosError, setInscriptosError] = useState<string | null>(null)
   const [inscriptosLoading, setInscriptosLoading] = useState(false)
 
-  const viewClasses = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const loadClasses = async () => {
     setLoading(true)
     setMessage(null)
     setError(null)
 
     try {
-      const url = new URL('http://localhost:3000/clases')
-
-      if (startDate) url.searchParams.append('startDate', startDate)
-      if (endDate) url.searchParams.append('endDate', endDate)
-
-      const response = await fetch(url.toString())
+      const response = await fetch(`http://localhost:3000/clases?startDate=${encodeURIComponent(getMinFecha())}`)
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
@@ -67,16 +97,53 @@ function RouteComponent() {
       }
 
       const clases = (data ?? []) as Clase[]
-      setClasses(clases)
+      const clasesVisibles = clases.filter((clase) => isClaseVisibleParaHoyOFuturo(clase.fecha))
+      setClasses(clasesVisibles)
 
-      if (clases.length === 0) {
-        setMessage(startDate || endDate ? 'No hay clases registradas en dicha fecha.' : 'No hay clases cargadas')
+      if (clasesVisibles.length === 0) {
+        setMessage('No hay clases programadas para hoy o para los próximos días.')
       }
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
       setClasses([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadClasses()
+  }, [])
+
+  const loadInscriptosOptions = async (fecha: string) => {
+    setInscriptosTipo('')
+    setInscriptos([])
+    setInscriptosMessage(null)
+    setInscriptosError(null)
+
+    if (!fecha) {
+      setInscriptosOptions([])
+      return
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3000/clases?startDate=${encodeURIComponent(fecha)}&endDate=${encodeURIComponent(fecha)}`)
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? `Error ${response.status}`)
+      }
+
+      const clases = (data ?? []) as Clase[]
+      const tipos = [...new Set(clases.map((clase) => clase.tipo).filter((tipo): tipo is string => Boolean(tipo)))]
+      setInscriptosOptions(tipos)
+
+      if (tipos.length === 0) {
+        setInscriptosMessage('No hay clases en el día ingresado')
+      }
+    } catch (fetchError) {
+      setInscriptosOptions([])
+      setInscriptosError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
     }
   }
 
@@ -88,17 +155,13 @@ function RouteComponent() {
     setInscriptos([])
 
     if (!inscriptosDate || !inscriptosTipo) {
-      setInscriptosError('Ingrese fecha y clase para ver los inscriptos.')
+      setInscriptosError('Ingrese día y clase para ver los inscriptos.')
       setInscriptosLoading(false)
       return
     }
 
     try {
-      const url = new URL('http://localhost:3000/clases/inscriptos')
-      url.searchParams.append('fecha', inscriptosDate)
-      url.searchParams.append('tipo', inscriptosTipo)
-
-      const response = await fetch(url.toString())
+      const response = await fetch(`http://localhost:3000/clases/inscriptos?fecha=${encodeURIComponent(inscriptosDate)}&tipo=${encodeURIComponent(inscriptosTipo)}`)
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
@@ -116,90 +179,56 @@ function RouteComponent() {
     }
   }
 
-  const classRows = useMemo(
-    () =>
-      classes.map((clase) => (
-        <tr key={clase.id}>
-          <td>{clase.id}</td>
-          <td>{formatDate(clase.fecha)}</td>
-          <td>{formatTime(clase.hora)}</td>
-          <td>{clase.tipo ?? 'Sin tipo'}</td>
-          <td>{clase.profesor_dni ?? 'Sin profesor'}</td>
-          <td>{clase.cupo ?? 'N/A'}</td>
-        </tr>
-      )),
-    [classes]
-  )
-
   return (
     <main className="page-shell">
-      <section className="hero-card">
-        <h1>Ver clases (Admin)</h1>
-        <p>Visualice todas las clases o filtre por rango de fechas.</p>
+      <section className="hero-card" style={{ background: "#f0faf5" }}>
+        <h1>Ver clases</h1>
+        <p>Consultá las clases programadas para hoy o fechas futuras y revisá los inscriptos por día y clase.</p>
       </section>
 
-      <section className="form-card">
-        <form className="field-column" onSubmit={viewClasses}>
-          <div className="field-row">
-            <label>
-              Fecha inicio
-              <input
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-              />
-            </label>
-            <label>
-              Fecha fin
-              <input
-                type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <div className="actions-row">
-            <button className="button button-primary" type="submit" disabled={loading}>
-              {loading ? 'Cargando...' : 'Visualizar clases'}
-            </button>
-            <Link to="/crearClase" className="button button-secondary">
-              Crear clase
-            </Link>
-            <Link to="/solicitarTurno" className="button button-secondary">
-              Solicitar turno
-            </Link>
-          </div>
-        </form>
-
-        <form className="field-column" onSubmit={viewInscriptos}>
+      <section className="form-card" style={{ background: "#f0faf5" }}>
+        <div className="field-column">
           <h2>Ver inscriptos</h2>
           <div className="field-row">
             <label>
-              Fecha
+              Día
               <input
                 type="date"
                 value={inscriptosDate}
-                onChange={(event) => setInscriptosDate(event.target.value)}
+                onChange={(event) => {
+                  const nextDate = event.target.value
+                  setInscriptosDate(nextDate)
+                  void loadInscriptosOptions(nextDate)
+                }}
               />
             </label>
             <label>
               Clase
-              <input
-                type="text"
+              <select
                 value={inscriptosTipo}
                 onChange={(event) => setInscriptosTipo(event.target.value)}
-                placeholder="Ej: clase 1"
-              />
+                disabled={inscriptosOptions.length === 0}
+              >
+                <option value="">Seleccionar...</option>
+                {inscriptosOptions.map((tipo) => (
+                  <option key={tipo} value={tipo}>{tipo}</option>
+                ))}
+              </select>
             </label>
           </div>
 
           <div className="actions-row">
-            <button className="button button-primary" type="submit" disabled={inscriptosLoading}>
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={viewInscriptos}
+              disabled={inscriptosLoading}
+              style={{ background: "#2DBE7F", color: "#0d1f18" }}
+            >
               {inscriptosLoading ? 'Cargando...' : 'Ver inscriptos'}
             </button>
           </div>
-        </form>
+        </div>
 
         {inscriptosError ? <p className="status-badge full">{inscriptosError}</p> : null}
         {inscriptosMessage ? <p className="status-badge success">{inscriptosMessage}</p> : null}
@@ -232,6 +261,20 @@ function RouteComponent() {
             </table>
           </div>
         ) : null}
+      </section>
+
+      <section className="form-card" style={{ background: "#f0faf5" }}>
+        <div className="actions-row">
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => void loadClasses()}
+            disabled={loading}
+            style={{ background: "#2DBE7F", color: "#0d1f18" }}
+          >
+            {loading ? 'Cargando...' : 'Actualizar clases'}
+          </button>
+        </div>
 
         {error ? <p className="status-badge full">{error}</p> : null}
         {message ? <p className="status-badge success">{message}</p> : null}
@@ -249,7 +292,18 @@ function RouteComponent() {
                   <th>Cupo</th>
                 </tr>
               </thead>
-              <tbody>{classRows}</tbody>
+              <tbody>
+                {classes.map((clase) => (
+                  <tr key={clase.id}>
+                    <td>{clase.id}</td>
+                    <td>{clase.fecha}</td>
+                    <td>{clase.hora}</td>
+                    <td>{clase.tipo ?? 'Sin tipo'}</td>
+                    <td>{clase.profesor_dni ?? 'Sin profesor'}</td>
+                    <td>{clase.cupo ?? 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         ) : null}

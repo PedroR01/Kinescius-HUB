@@ -6,14 +6,16 @@ export const Route = createFileRoute('/crearClase')({
 })
 
 const GREEN = "#2DBE7F"
+const TEXT = "#0d1f18"
+const CARD = "#f0faf5"
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px 14px",
   borderRadius: "10px",
   border: "1px solid rgba(45,190,127,0.25)",
-  background: "rgba(255,255,255,0.05)",
-  color: "#ffffff",
+  background: "#ffffff",
+  color: TEXT,
   fontSize: "14px",
   outline: "none",
   boxSizing: "border-box",
@@ -27,8 +29,26 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 500,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
-  color: "rgba(45,190,127,0.8)",
+  color: GREEN,
 }
+
+const getMinFecha = () => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+const horasDisponibles = Array.from({ length: 12 }, (_, index) => {
+  const hour = index + 8
+  return `${String(hour).padStart(2, '0')}:00`
+})
+
+const cuposDisponibles = Array.from({ length: 50 }, (_, index) => index + 1)
 
 function RouteComponent() {
   const [fecha, setFecha] = useState('')
@@ -40,17 +60,47 @@ function RouteComponent() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const minFecha = getMinFecha()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
     setError(null)
 
+    if (fecha && fecha < minFecha) {
+      setError('La fecha no puede ser anterior al día de hoy')
+      setLoading(false)
+      return
+    }
+
+    if (hora.split(':')[1] !== '00') {
+      setError('La hora debe ser exacta, sin minutos adicionales')
+      setLoading(false)
+      return
+    }
+
+    const [hour] = hora.split(':').map(Number)
+
+    if (Number.isNaN(hour) || hour < 8 || hour > 19) {
+      setError('La hora debe estar entre 08:00 y 19:00')
+      setLoading(false)
+      return
+    }
+
+    const parsedCupo = Number.parseInt(cupo, 10)
+
+    if (Number.isNaN(parsedCupo) || parsedCupo < 1 || parsedCupo > 50) {
+      setError('El cupo debe estar entre 1 y 50')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('http://localhost:3000/clases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fecha, hora, tipo, profesorDni, cupo: parseInt(cupo) })
+        body: JSON.stringify({ fecha, hora, tipo, profesorDni, cupo: parsedCupo })
       })
 
       const data = await response.json().catch(() => ({}))
@@ -75,14 +125,13 @@ function RouteComponent() {
   return (
     <main style={{
       minHeight: "100vh",
-      background: "#0d1f18",
+      background: "#ffffff",
       padding: "40px 24px",
       boxSizing: "border-box",
       position: "relative",
       overflow: "hidden",
     }}>
 
-      {/* destellos */}
       <div style={{
         position: "absolute", top: "-80px", right: "-80px",
         width: "300px", height: "300px", borderRadius: "50%",
@@ -90,7 +139,6 @@ function RouteComponent() {
         pointerEvents: "none",
       }} />
 
-      {/* badge */}
       <div style={{
         display: "inline-flex", alignItems: "center", gap: "8px",
         background: "rgba(45,190,127,0.1)",
@@ -108,24 +156,21 @@ function RouteComponent() {
         </span>
       </div>
 
-      {/* título */}
       <h1 style={{
         margin: "0 0 6px",
         fontSize: "36px", fontWeight: 700,
-        color: "#ffffff", letterSpacing: "-0.01em",
+        color: TEXT, letterSpacing: "-0.01em",
       }}>
         Crear <span style={{ color: GREEN, fontStyle: "italic" }}>clase</span>
       </h1>
-      <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, color: "rgba(255,255,255,0.35)" }}>
+      <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, color: "rgba(13,31,24,0.55)" }}>
         Completá los datos y presioná Crear clase.
       </p>
 
-      {/* línea */}
       <div style={{ width: "36px", height: "2px", background: GREEN, boxShadow: `0 0 10px ${GREEN}88`, marginBottom: "32px" }} />
 
-      {/* formulario */}
       <div style={{
-        background: "rgba(45,190,127,0.05)",
+        background: CARD,
         border: "1px solid rgba(45,190,127,0.15)",
         borderRadius: "20px",
         padding: "28px 24px",
@@ -136,21 +181,40 @@ function RouteComponent() {
       }}>
         <label style={labelStyle}>
           Fecha
-          <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} required style={inputStyle} />
+          <input
+            type="date"
+            value={fecha}
+            min={minFecha}
+            onChange={e => setFecha(e.target.value)}
+            required
+            style={inputStyle}
+          />
         </label>
 
         <label style={labelStyle}>
           Hora
-          <input type="time" value={hora} onChange={e => setHora(e.target.value)} required style={inputStyle} />
+          <select
+            value={hora}
+            onChange={e => setHora(e.target.value)}
+            required
+            style={{ ...inputStyle, cursor: "pointer" }}
+          >
+            <option value="" style={{ background: "#ffffff" }}>Seleccionar...</option>
+            {horasDisponibles.map((horaDisponible) => (
+              <option key={horaDisponible} value={horaDisponible} style={{ background: "#ffffff" }}>
+                {horaDisponible}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label style={labelStyle}>
           Tipo de clase
           <select value={tipo} onChange={e => setTipo(e.target.value)} required style={{ ...inputStyle, cursor: "pointer" }}>
-            <option value="" style={{ background: "#0d1f18" }}>Seleccionar...</option>
-            <option value="zona media" style={{ background: "#0d1f18" }}>Zona Media</option>
-            <option value="zona superior" style={{ background: "#0d1f18" }}>Zona Superior</option>
-            <option value="zona inferior" style={{ background: "#0d1f18" }}>Zona Inferior</option>
+            <option value="" style={{ background: "#ffffff" }}>Seleccionar...</option>
+            <option value="zona media" style={{ background: "#ffffff" }}>Zona Media</option>
+            <option value="zona superior" style={{ background: "#ffffff" }}>Zona Superior</option>
+            <option value="zona inferior" style={{ background: "#ffffff" }}>Zona Inferior</option>
           </select>
         </label>
 
@@ -161,7 +225,19 @@ function RouteComponent() {
 
         <label style={labelStyle}>
           Cupo
-          <input type="number" value={cupo} onChange={e => setCupo(e.target.value)} min="1" required style={inputStyle} />
+          <select
+            value={cupo}
+            onChange={e => setCupo(e.target.value)}
+            required
+            style={{ ...inputStyle, cursor: "pointer" }}
+          >
+            <option value="" style={{ background: "#ffffff" }}>Seleccionar...</option>
+            {cuposDisponibles.map((cupoDisponible) => (
+              <option key={cupoDisponible} value={cupoDisponible} style={{ background: "#ffffff" }}>
+                {cupoDisponible}
+              </option>
+            ))}
+          </select>
         </label>
 
         <button
@@ -174,7 +250,7 @@ function RouteComponent() {
             borderRadius: "12px",
             border: "none",
             background: loading ? "rgba(45,190,127,0.4)" : GREEN,
-            color: "#0d1f18",
+            color: TEXT,
             fontSize: "14px",
             fontWeight: 700,
             letterSpacing: "0.04em",

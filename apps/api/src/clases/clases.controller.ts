@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, BadRequestException } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Query, Param, ParseIntPipe, BadRequestException } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateClaseDto } from "./dto/create-clase.dto";
 
@@ -34,5 +34,10 @@ export class ClasesController {
   @Post()
   async create(@Body() payload: CreateClaseDto) {
     return this.clasesService.create(payload as any);
+  }
+
+  @Patch(":id/cancelar")
+  async cancel(@Param("id", ParseIntPipe) id: number) {
+    return this.clasesService.cancel(id);
   }
 }
