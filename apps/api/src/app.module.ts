@@ -5,6 +5,8 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { SupabaseModule } from "./integrations/supabase.module";
 import { ClasesModule } from "./clases/clases.module";
+import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
 import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
 
 @Module({
@@ -14,7 +16,9 @@ import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
       throttlers: [{ ttl: 60, limit: 60 }]
     }),
     SupabaseModule,
+    AuthModule,
     ClasesModule,
+    EmailModule,
     ListaEsperaModule
   ],
   controllers: [AppController],
