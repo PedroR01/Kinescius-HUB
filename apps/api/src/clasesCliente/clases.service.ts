@@ -1,15 +1,11 @@
 import {
   Injectable,
   InternalServerErrorException,
-<<<<<<< HEAD
   ConflictException,
 } from "@nestjs/common";
 import { SupabaseService } from "../integrations/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
-=======
-} from "@nestjs/common";
-import { SupabaseService } from "../integrations/supabase.service";
->>>>>>> b614010c6b7d86a3ec1058a2e7dfc54b883ec493
+
 
 @Injectable()
 export class ClasesService {
@@ -30,7 +26,6 @@ export class ClasesService {
 
     return data;
   }
-<<<<<<< HEAD
 
   async getMontoAFavor(clienteId: number) {
     const { data, error } = await this.supabaseService.client
@@ -97,6 +92,4 @@ export class ClasesService {
 
     return data;
   }
-=======
->>>>>>> b614010c6b7d86a3ec1058a2e7dfc54b883ec493
 }
