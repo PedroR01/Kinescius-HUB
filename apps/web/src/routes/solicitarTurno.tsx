@@ -64,6 +64,7 @@ function RouteComponent() {
   const [message, setMessage] = useState<string | null>(null)
   const [enrollments, setEnrollments] = useState<string[]>([])
   const [waitList, setWaitList] = useState<string[]>([])
+  const [montoAFavor, setMontoAFavor] = useState(0)
 
   const API_BASE = "http://localhost:3000"
   const CLIENTE_ID = 1
@@ -89,6 +90,20 @@ function RouteComponent() {
     void fetchClasses()
   }, [])
 
+  useEffect(() => {
+    const fetchMontoAFavor = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/clases/cliente/${CLIENTE_ID}/monto-a-favor`)
+        if (!res.ok) return
+        const data = await res.json()
+        setMontoAFavor(Number(data.monto_a_favor) ?? 0)
+      } catch {
+        // si falla, queda en 0
+      }
+    }
+    void fetchMontoAFavor()
+  }, [])
+
   const appointmentSlots = useMemo<AppointmentSlot[]>(() => {
     return classes.map((clase) => {
       const cupo = clase.cupo ?? 0
@@ -103,11 +118,11 @@ function RouteComponent() {
         cupo,
         full: cupo <= 0,
         sinCupo: cupo <= 0,
-        favorAmount: 0,
+        favorAmount: montoAFavor,
         source: clase,
       }
     })
-  }, [classes])
+  }, [classes, montoAFavor])
 
   const dates = useMemo(() => {
     const seen = new Set<string>()
@@ -213,8 +228,12 @@ function RouteComponent() {
                 key={slot.date}
                 type="button"
                 className={`day-pill${selectedDate === slot.date ? ' active' : ''}`}
-                onClick={() => setSelectedDate(slot.date)}
-              >
+onClick={() => {
+  setSelectedDate(slot.date)
+  setSelectedSlot(null)
+  setPhase('idle')
+  setMessage(null)
+}}              >
                 <span className="day-name">{slot.dayLabel}</span>
                 <span className="day-date">{slot.dateLabel}</span>
               </button>
