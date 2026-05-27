@@ -1,0 +1,21 @@
+/*import { Module } from "@nestjs/common";
+import { ClasesController } from "./clases.controller";
+import { ClasesService } from "./clases.service";
+
+@Module({
+  controllers: [ClasesController],
+  providers: [ClasesService]
+})
+export class ClasesModule {}*/
+
+import { Module } from '@nestjs/common';
+import { ClasesController } from './clases.controller';
+import { ClasesService } from './clases.service';
+import { SupabaseModule } from '../integrations/supabase.module';
+
+@Module({
+  imports: [SupabaseModule],
+  controllers: [ClasesController],
+  providers: [ClasesService],
+})
+export class ClasesModule {}
