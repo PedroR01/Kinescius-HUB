@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, BadRequestException } from "@nestjs/common";
+/*import { Controller, Get, Post, Body, Param, BadRequestException } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 
@@ -20,5 +20,19 @@ export class ClasesController {
     }
 
     return this.clasesService.createTurno(claseId, dto);
+  }
+}
+*/
+
+import { Controller, Get } from "@nestjs/common";
+import { ClasesService } from "./clases.service";
+
+@Controller("clases")
+export class ClasesController {
+  constructor(private readonly clasesService: ClasesService) {}
+
+  @Get()
+  async findAll() {
+    return this.clasesService.findAll();
   }
 }
