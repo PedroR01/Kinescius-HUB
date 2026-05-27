@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Body, Query, Param, ParseIntPipe, BadRequestException } from "@nestjs/common";
-import { ClasesService } from "./clases.service";
+import { ClasesService } from "./clases.service.Admin";
 import { CreateClaseDto } from "./dto/create-clase.dto";
 
 @Controller("clases")
