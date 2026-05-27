@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
+import { Route as ListaEsperaRouteImport } from './routes/listaEspera'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
   id: '/solicitarTurno',
   path: '/solicitarTurno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListaEsperaRoute = ListaEsperaRouteImport.update({
+  id: '/listaEspera',
+  path: '/listaEspera',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,27 +31,31 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/listaEspera': typeof ListaEsperaRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/listaEspera': typeof ListaEsperaRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/listaEspera': typeof ListaEsperaRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/solicitarTurno'
+  fullPaths: '/' | '/listaEspera' | '/solicitarTurno'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/solicitarTurno'
-  id: '__root__' | '/' | '/solicitarTurno'
+  to: '/' | '/listaEspera' | '/solicitarTurno'
+  id: '__root__' | '/' | '/listaEspera' | '/solicitarTurno'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ListaEsperaRoute: typeof ListaEsperaRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/solicitarTurno'
       fullPath: '/solicitarTurno'
       preLoaderRoute: typeof SolicitarTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listaEspera': {
+      id: '/listaEspera'
+      path: '/listaEspera'
+      fullPath: '/listaEspera'
+      preLoaderRoute: typeof ListaEsperaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ListaEsperaRoute: ListaEsperaRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
 }
 export const routeTree = rootRouteImport

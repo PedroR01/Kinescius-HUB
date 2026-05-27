@@ -5,6 +5,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { SupabaseModule } from "./integrations/supabase.module";
 import { ClasesModule } from "./clases/clases.module";
+import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { ClasesModule } from "./clases/clases.module";
       throttlers: [{ ttl: 60, limit: 60 }]
     }),
     SupabaseModule,
-    ClasesModule
+    ClasesModule,
+    ListaEsperaModule
   ],
   controllers: [AppController],
   providers: [AppService]
