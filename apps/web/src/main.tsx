@@ -19,10 +19,10 @@ const EntornoDePruebas = () => {
   // y que haya alguna otra clase disponible el mismo día para probar el cambio.
   const mockTurno = {
     clienteId: 33,
-    claseId: 99,
+    claseId: 105,
     actividad: "Kinesiología",
     fechaActual: "2026-05-27",
-    horaActual: "08:00:00"
+    horaActual: "19:00:00"
   };
 
   return (

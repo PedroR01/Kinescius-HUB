@@ -8,6 +8,8 @@ import { ClasesModule } from "./clases/clases.module";
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
 import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
+import { ScheduleModule } from '@nestjs/schedule';
+import { RecordatoriosService } from "./notifications/shifts-reminders.service";
 
 @Module({
   imports: [
@@ -20,9 +22,10 @@ import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
     AuthModule,
     ClasesModule,
     EmailModule,
-    ListaEsperaModule
+    ListaEsperaModule,
+    ScheduleModule.forRoot()
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [AppService, RecordatoriosService]
 })
 export class AppModule {}
