@@ -1,7 +1,6 @@
-/*import { Controller, Get, Post, Body, Param, BadRequestException } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, BadRequestException } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
-
 
 @Controller("clases")
 export class ClasesController {
@@ -10,6 +9,15 @@ export class ClasesController {
   @Get()
   async findAll() {
     return this.clasesService.findAll();
+  }
+
+  @Get("cliente/:id/monto-a-favor")
+  async getMontoAFavor(@Param("id") id: string) {
+    const clienteId = Number(id);
+    if (Number.isNaN(clienteId)) {
+      throw new BadRequestException("Invalid cliente id");
+    }
+    return this.clasesService.getMontoAFavor(clienteId);
   }
 
   @Post(":id/turnos")
@@ -18,21 +26,6 @@ export class ClasesController {
     if (Number.isNaN(claseId)) {
       throw new BadRequestException("Invalid clase id");
     }
-
     return this.clasesService.createTurno(claseId, dto);
-  }
-}
-*/
-
-import { Controller, Get } from "@nestjs/common";
-import { ClasesService } from "./clases.service";
-
-@Controller("clases")
-export class ClasesController {
-  constructor(private readonly clasesService: ClasesService) {}
-
-  @Get()
-  async findAll() {
-    return this.clasesService.findAll();
   }
 }
