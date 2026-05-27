@@ -32,15 +32,136 @@ const labelStyle: React.CSSProperties = {
   color: GREEN,
 }
 
-const getMinFecha = () => {
+const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+function DatePicker({ value, onChange }: { value: string, onChange: (v: string) => void }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
+  const [viewYear, setViewYear] = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const [open, setOpen] = useState(false)
 
-  return `${year}-${month}-${day}`
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
+  }
+
+  const handleDay = (day: number) => {
+    const date = new Date(viewYear, viewMonth, day)
+    const dow = date.getDay()
+    if (dow === 0 || dow === 6) return
+    if (date < today) return
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    onChange(`${y}-${m}-${d}`)
+    setOpen(false)
+  }
+
+  const displayValue = value
+    ? new Date(value + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : ''
+
+  const cells = []
+  for (let i = 0; i < firstDay; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  return (
+    <div style={{ position: 'relative', marginTop: '6px' }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          ...inputStyle,
+          marginTop: 0,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          userSelect: 'none',
+          color: value ? TEXT : 'rgba(13,31,24,0.35)',
+        }}
+      >
+        <span>{displayValue || 'Seleccionar fecha...'}</span>
+        <span style={{ fontSize: '12px', opacity: 0.5 }}>▼</span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute',
+          top: 'calc(100% + 6px)',
+          left: 0,
+          zIndex: 100,
+          background: '#fff',
+          border: '1px solid rgba(45,190,127,0.3)',
+          borderRadius: '14px',
+          padding: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+          width: '280px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: GREEN, padding: '4px 8px' }}>‹</button>
+            <span style={{ fontWeight: 600, fontSize: '14px', color: TEXT }}>{MONTHS[viewMonth]} {viewYear}</span>
+            <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: GREEN, padding: '4px 8px' }}>›</button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
+            {DAYS.map(d => (
+              <div key={d} style={{
+                textAlign: 'center', fontSize: '10px', fontWeight: 600,
+                color: d === 'Dom' || d === 'Sáb' ? 'rgba(13,31,24,0.25)' : 'rgba(13,31,24,0.45)',
+                padding: '4px 0', letterSpacing: '0.04em'
+              }}>{d}</div>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+            {cells.map((day, i) => {
+              if (day === null) return <div key={`e-${i}`} />
+              const date = new Date(viewYear, viewMonth, day)
+              const dow = date.getDay()
+              const isWeekend = dow === 0 || dow === 6
+              const isPast = date < today
+              const isSelected = value === `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              const isToday = date.getTime() === today.getTime()
+              const disabled = isWeekend || isPast
+
+              return (
+                <div
+                  key={day}
+                  onClick={() => handleDay(day)}
+                  style={{
+                    textAlign: 'center',
+                    padding: '6px 2px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    cursor: disabled ? 'default' : 'pointer',
+                    fontWeight: isSelected ? 700 : 400,
+                    background: isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent',
+                    color: isSelected ? '#fff' : disabled ? 'rgba(13,31,24,0.2)' : TEXT,
+                    border: isToday && !isSelected ? `1px solid ${GREEN}` : '1px solid transparent',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!disabled) (e.currentTarget.style.background = isSelected ? GREEN : 'rgba(45,190,127,0.12)') }}
+                  onMouseLeave={e => { if (!disabled) (e.currentTarget.style.background = isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent') }}
+                >
+                  {day}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const horasDisponibles = Array.from({ length: 12 }, (_, index) => {
@@ -60,28 +181,13 @@ function RouteComponent() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const minFecha = getMinFecha()
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
     setError(null)
 
-    if (fecha && fecha < minFecha) {
-      setError('La fecha no puede ser anterior al día de hoy')
-      setLoading(false)
-      return
-    }
-
-    if (hora.split(':')[1] !== '00') {
-      setError('La hora debe ser exacta, sin minutos adicionales')
-      setLoading(false)
-      return
-    }
-
     const [hour] = hora.split(':').map(Number)
-
     if (Number.isNaN(hour) || hour < 8 || hour > 19) {
       setError('La hora debe estar entre 08:00 y 19:00')
       setLoading(false)
@@ -89,7 +195,6 @@ function RouteComponent() {
     }
 
     const parsedCupo = Number.parseInt(cupo, 10)
-
     if (Number.isNaN(parsedCupo) || parsedCupo < 1 || parsedCupo > 50) {
       setError('El cupo debe estar entre 1 y 50')
       setLoading(false)
@@ -97,7 +202,7 @@ function RouteComponent() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/clases', {
+      const response = await fetch('http://localhost:3000/admin/clases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fecha, hora, tipo, profesorDni, cupo: parsedCupo })
@@ -131,7 +236,6 @@ function RouteComponent() {
       position: "relative",
       overflow: "hidden",
     }}>
-
       <div style={{
         position: "absolute", top: "-80px", right: "-80px",
         width: "300px", height: "300px", borderRadius: "50%",
@@ -156,11 +260,7 @@ function RouteComponent() {
         </span>
       </div>
 
-      <h1 style={{
-        margin: "0 0 6px",
-        fontSize: "36px", fontWeight: 700,
-        color: TEXT, letterSpacing: "-0.01em",
-      }}>
+      <h1 style={{ margin: "0 0 6px", fontSize: "36px", fontWeight: 700, color: TEXT, letterSpacing: "-0.01em" }}>
         Crear <span style={{ color: GREEN, fontStyle: "italic" }}>clase</span>
       </h1>
       <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, color: "rgba(13,31,24,0.55)" }}>
@@ -181,40 +281,24 @@ function RouteComponent() {
       }}>
         <label style={labelStyle}>
           Fecha
-          <input
-            type="date"
-            value={fecha}
-            min={minFecha}
-            onChange={e => setFecha(e.target.value)}
-            required
-            style={inputStyle}
-          />
+          <DatePicker value={fecha} onChange={setFecha} />
         </label>
 
         <label style={labelStyle}>
           Hora
-          <select
-            value={hora}
-            onChange={e => setHora(e.target.value)}
-            required
-            style={{ ...inputStyle, cursor: "pointer" }}
-          >
-            <option value="" style={{ background: "#ffffff" }}>Seleccionar...</option>
-            {horasDisponibles.map((horaDisponible) => (
-              <option key={horaDisponible} value={horaDisponible} style={{ background: "#ffffff" }}>
-                {horaDisponible}
-              </option>
-            ))}
+          <select value={hora} onChange={e => setHora(e.target.value)} required style={{ ...inputStyle, cursor: "pointer" }}>
+            <option value="">Seleccionar...</option>
+            {horasDisponibles.map(h => <option key={h} value={h}>{h}</option>)}
           </select>
         </label>
 
         <label style={labelStyle}>
           Tipo de clase
           <select value={tipo} onChange={e => setTipo(e.target.value)} required style={{ ...inputStyle, cursor: "pointer" }}>
-            <option value="" style={{ background: "#ffffff" }}>Seleccionar...</option>
-            <option value="zona media" style={{ background: "#ffffff" }}>Zona Media</option>
-            <option value="zona superior" style={{ background: "#ffffff" }}>Zona Superior</option>
-            <option value="zona inferior" style={{ background: "#ffffff" }}>Zona Inferior</option>
+            <option value="">Seleccionar...</option>
+            <option value="zona media">Zona Media</option>
+            <option value="zona superior">Zona Superior</option>
+            <option value="zona inferior">Zona Inferior</option>
           </select>
         </label>
 
@@ -225,18 +309,9 @@ function RouteComponent() {
 
         <label style={labelStyle}>
           Cupo
-          <select
-            value={cupo}
-            onChange={e => setCupo(e.target.value)}
-            required
-            style={{ ...inputStyle, cursor: "pointer" }}
-          >
-            <option value="" style={{ background: "#ffffff" }}>Seleccionar...</option>
-            {cuposDisponibles.map((cupoDisponible) => (
-              <option key={cupoDisponible} value={cupoDisponible} style={{ background: "#ffffff" }}>
-                {cupoDisponible}
-              </option>
-            ))}
+          <select value={cupo} onChange={e => setCupo(e.target.value)} required style={{ ...inputStyle, cursor: "pointer" }}>
+            <option value="">Seleccionar...</option>
+            {cuposDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
 
@@ -245,38 +320,22 @@ function RouteComponent() {
           disabled={loading}
           onClick={handleSubmit}
           style={{
-            marginTop: "4px",
-            padding: "12px",
-            borderRadius: "12px",
-            border: "none",
+            marginTop: "4px", padding: "12px", borderRadius: "12px", border: "none",
             background: loading ? "rgba(45,190,127,0.4)" : GREEN,
-            color: TEXT,
-            fontSize: "14px",
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-            cursor: loading ? "not-allowed" : "pointer",
-            transition: "opacity 0.2s",
+            color: TEXT, fontSize: "14px", fontWeight: 700, letterSpacing: "0.04em",
+            cursor: loading ? "not-allowed" : "pointer", transition: "opacity 0.2s",
           }}
         >
           {loading ? 'Creando...' : 'Crear clase'}
         </button>
 
         {message && (
-          <p style={{
-            margin: 0, padding: "12px 16px", borderRadius: "10px",
-            background: "rgba(45,190,127,0.12)", border: "1px solid rgba(45,190,127,0.3)",
-            color: GREEN, fontSize: "13px",
-          }}>
+          <p style={{ margin: 0, padding: "12px 16px", borderRadius: "10px", background: "rgba(45,190,127,0.12)", border: "1px solid rgba(45,190,127,0.3)", color: GREEN, fontSize: "13px" }}>
             ✓ {message}
           </p>
         )}
-
         {error && (
-          <p style={{
-            margin: 0, padding: "12px 16px", borderRadius: "10px",
-            background: "rgba(220,50,50,0.1)", border: "1px solid rgba(220,50,50,0.3)",
-            color: "#ff6b6b", fontSize: "13px",
-          }}>
+          <p style={{ margin: 0, padding: "12px 16px", borderRadius: "10px", background: "rgba(220,50,50,0.1)", border: "1px solid rgba(220,50,50,0.3)", color: "#ff6b6b", fontSize: "13px" }}>
             ✕ {error}
           </p>
         )}

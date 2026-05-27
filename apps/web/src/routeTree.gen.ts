@@ -18,6 +18,7 @@ import { Route as CrearClaseRouteImport } from './routes/crearClase'
 import { Route as ConfirmarTurnoRouteImport } from './routes/confirmar-turno'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CancelarClaseRouteImport } from './routes/cancelarClase'
+import { Route as CambiarProfesorRouteImport } from './routes/cambiarProfesor'
 import { Route as CambiarPasswdRouteImport } from './routes/cambiarPasswd'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -66,6 +67,11 @@ const CancelarClaseRoute = CancelarClaseRouteImport.update({
   path: '/cancelarClase',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CambiarProfesorRoute = CambiarProfesorRouteImport.update({
+  id: '/cambiarProfesor',
+  path: '/cambiarProfesor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CambiarPasswdRoute = CambiarPasswdRouteImport.update({
   id: '/cambiarPasswd',
   path: '/cambiarPasswd',
@@ -80,6 +86,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cambiarPasswd': typeof CambiarPasswdRoute
+  '/cambiarProfesor': typeof CambiarProfesorRoute
   '/cancelarClase': typeof CancelarClaseRoute
   '/clientes': typeof ClientesRoute
   '/confirmar-turno': typeof ConfirmarTurnoRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cambiarPasswd': typeof CambiarPasswdRoute
+  '/cambiarProfesor': typeof CambiarProfesorRoute
   '/cancelarClase': typeof CancelarClaseRoute
   '/clientes': typeof ClientesRoute
   '/confirmar-turno': typeof ConfirmarTurnoRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cambiarPasswd': typeof CambiarPasswdRoute
+  '/cambiarProfesor': typeof CambiarProfesorRoute
   '/cancelarClase': typeof CancelarClaseRoute
   '/clientes': typeof ClientesRoute
   '/confirmar-turno': typeof ConfirmarTurnoRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/cambiarPasswd'
+    | '/cambiarProfesor'
     | '/cancelarClase'
     | '/clientes'
     | '/confirmar-turno'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/cambiarPasswd'
+    | '/cambiarProfesor'
     | '/cancelarClase'
     | '/clientes'
     | '/confirmar-turno'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/cambiarPasswd'
+    | '/cambiarProfesor'
     | '/cancelarClase'
     | '/clientes'
     | '/confirmar-turno'
@@ -162,6 +174,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CambiarPasswdRoute: typeof CambiarPasswdRoute
+  CambiarProfesorRoute: typeof CambiarProfesorRoute
   CancelarClaseRoute: typeof CancelarClaseRoute
   ClientesRoute: typeof ClientesRoute
   ConfirmarTurnoRoute: typeof ConfirmarTurnoRoute
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CancelarClaseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cambiarProfesor': {
+      id: '/cambiarProfesor'
+      path: '/cambiarProfesor'
+      fullPath: '/cambiarProfesor'
+      preLoaderRoute: typeof CambiarProfesorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cambiarPasswd': {
       id: '/cambiarPasswd'
       path: '/cambiarPasswd'
@@ -258,6 +278,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CambiarPasswdRoute: CambiarPasswdRoute,
+  CambiarProfesorRoute: CambiarProfesorRoute,
   CancelarClaseRoute: CancelarClaseRoute,
   ClientesRoute: ClientesRoute,
   ConfirmarTurnoRoute: ConfirmarTurnoRoute,

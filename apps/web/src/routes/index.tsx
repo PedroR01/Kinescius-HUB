@@ -1,9 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 
-// ------------------------------------------------------------------
-// COMPONENTE 1: Tu lógica de sesión (PaginaPrincipal)
-// ------------------------------------------------------------------
 const PaginaPrincipal = () => {
   const [estaLogueado, setEstaLogueado] = useState(false);
 
@@ -34,6 +31,7 @@ const PaginaPrincipal = () => {
             <Link to="/cancelarClase" className="button button-primary">Cancelar clase</Link>
             <Link to="/clientes" className="button button-primary">Ver clientes</Link>
             <Link to="/verClases" className="button button-primary">Ver clases</Link>
+            <Link to="/cambiarProfesor" className="button button-primary">Cambiar profesor</Link>
             <button onClick={cerrarSesion} className="button">Cerrar sesión</button>
           </>
         ) : (
@@ -51,9 +49,6 @@ const PaginaPrincipal = () => {
   );
 };
 
-// ------------------------------------------------------------------
-// COMPONENTE 2: El nuevo diseño visual de tu compañero (Home)
-// ------------------------------------------------------------------
 const GREEN = "#2DBE7F";
 const BG = "#ffffff";
 const TEXT = "#0d1f18";
@@ -61,10 +56,11 @@ const MUTED = "rgba(13, 31, 24, 0.55)";
 const CARD = "#f0faf5";
 
 const cards = [
-  { to: "/verClases",    num: "01", title: "Ver clases",     desc: "Consultá horarios y disponibilidad", icon: "📅" },
-  { to: "/cancelarClase", num: "02", title: "Cancelar clase", desc: "Seleccioná una clase y cancelala",  icon: "❌" },
-  { to: "/crearClase",   num: "03", title: "Crear clase",    desc: "Agendá una nueva sesión",            icon: "➕" },
-  { to: "/clientes",     num: "04", title: "Clientes",       desc: "Administrá tus pacientes",           icon: "👥" },
+  { to: "/verClases",        num: "01", title: "Ver clases",        desc: "Consultá horarios y disponibilidad",      icon: "📅" },
+  { to: "/cancelarClase",    num: "02", title: "Cancelar clase",    desc: "Seleccioná una clase y cancelala",        icon: "❌" },
+  { to: "/crearClase",       num: "03", title: "Crear clase",       desc: "Agendá una nueva sesión",                 icon: "➕" },
+  { to: "/clientes",         num: "04", title: "Clientes",          desc: "Administrá tus pacientes",                icon: "👥" },
+  { to: "/cambiarProfesor",  num: "05", title: "Cambiar profesor",  desc: "Asigná un nuevo profesor a una clase",    icon: "👨‍🏫" },
 ];
 
 function NavCard({ to, num, title, desc, icon }: (typeof cards)[0]) {
@@ -136,9 +132,6 @@ function Home() {
   );
 }
 
-// ------------------------------------------------------------------
-// RUTA PRINCIPAL
-// ------------------------------------------------------------------
 export const Route = createFileRoute("/")({
-  component: PaginaPrincipal // <--- Acá elegís qué se muestra. Podés cambiarlo por "Home" si preferís ver el nuevo diseño
+  component: PaginaPrincipal
 });
