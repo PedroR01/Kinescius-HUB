@@ -16,6 +16,7 @@ import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
       throttlers: [{ ttl: 60, limit: 60 }]
     }),
     SupabaseModule,
+    ClasesModule
     AuthModule,
     ClasesModule,
     EmailModule,
