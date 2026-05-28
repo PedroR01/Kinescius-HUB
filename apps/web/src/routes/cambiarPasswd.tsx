@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 type FormData = {
   passwdActual: string;
@@ -10,6 +10,14 @@ type FormData = {
 
 const CambiarPasswd = () => {
   const navigate = useNavigate(); 
+
+  const [estaLogueado, setEstaLogueado] = useState(false);
+     useEffect(() => {
+      const token = localStorage.getItem('miToken');
+      if (token) {
+        setEstaLogueado(true);
+      }
+    })
 
   const [formData, setFormData] = useState<FormData>({
     passwdActual: '',
@@ -81,29 +89,36 @@ const CambiarPasswd = () => {
   return (
     <div>
       <button onClick={() => navigate({to: "/"})}>Volver a la página principal</button>
-      <h1>Cambio de contraseña</h1>
-      <p>Por favor ingrese su contraseña actual, y la nueva contraseña en los dos campos que la solicitan.</p>
+      {estaLogueado ? (
+        <>
+          <h1>Cambio de contraseña</h1>
+          <p>Por favor ingrese su contraseña actual, y la nueva contraseña en los dos campos que la solicitan.</p>
 
-      <form onSubmit={e => e.preventDefault()}>
-         
-        <label>Contraseña actual:</label>
-        <input type="password" name="passwdActual" value={formData.passwdActual} onChange={handleChange} required />
-        <br />
-
-        <label>Contraseña nueva:</label>
-        <input type="password" name="passwdNueva" value={formData.passwdNueva} onChange={handleChange} required />
-        <br />
-
-        <label>Vuelva a ingresar su nueva contraseña:</label>
-        <input type="password" name="passwdConfirmacion" value={formData.passwdConfirmacion} onChange={handleChange} required />
-        <br />
-
-        <div style={{ marginTop: '1rem' }}>
-          <button type="button" onClick={handleCambioPasswd} disabled={isProcessing}>
-            {isProcessing ? 'Procesando...' : 'Cambiar contraseña'}
-          </button>
-        </div>
-      </form>
+          <form onSubmit={e => e.preventDefault()}>
+            <label>Contraseña actual:</label>
+            <input type="password" name="passwdActual" value={formData.passwdActual} onChange={handleChange} required />
+            <br />
+            <label>Contraseña nueva:</label>
+            <input type="password" name="passwdNueva" value={formData.passwdNueva} onChange={handleChange} required />
+            <br />
+            <label>Vuelva a ingresar su nueva contraseña:</label>
+            <input type="password" name="passwdConfirmacion" value={formData.passwdConfirmacion} onChange={handleChange} required />
+            <br />
+            <div style={{ marginTop: '1rem' }}>
+              <button type="button" onClick={handleCambioPasswd} disabled={isProcessing}>
+                {isProcessing ? 'Procesando...' : 'Cambiar contraseña'}
+              </button>
+            </div>
+          </form>
+        </>
+      ) : (
+        <>
+          <h1>No iniciaste sesión!</h1>
+          <p>Vuelve a la página principal e inicia sesión para cambiar tu contraseña.</p>
+        </>
+        
+      )}
+      
 
       {message && <p style={{ color: 'green', marginTop: '1rem' }}>{message}</p>}
       {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
