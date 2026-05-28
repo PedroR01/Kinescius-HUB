@@ -6,7 +6,7 @@ export const Route = createFileRoute('/clientes')({
 })
 
 type Cliente = {
-  id_cliente: number
+  clienteId: number
   nombre: string
   apellido: string
   dni: string
@@ -23,7 +23,7 @@ function RouteComponent() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:3000/clases/clientes')
+      const response = await fetch('http://localhost:3000/admin/clases/clientes')
 
       if (!response.ok) {
         throw new Error('Error al obtener clientes')
@@ -105,15 +105,15 @@ function RouteComponent() {
         <div className="grid grid-cols-1 gap-14 md:grid-cols-2 xl:grid-cols-3">
           {clientes.map((cliente) => (
             <button
-              key={cliente.id_cliente}
+              key={cliente.clienteId}
               className="group relative overflow-hidden rounded-[42px] bg-[#f0faf5] p-10 text-left shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
             >
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#2DBE7F]/15 blur-3xl transition-all duration-500 group-hover:scale-150"></div>
 
               <div className="relative z-10 flex items-center gap-5">
                 <div className="flex h-20 w-20 items-center justify-center rounded-[28px] bg-[#2DBE7F] text-2xl font-black text-[#0d1f18] shadow-lg">
-                  {cliente.nombre.charAt(0)}
-                  {cliente.apellido.charAt(0)}
+                  {cliente.nombre?.charAt(0)}
+                  {cliente.apellido?.charAt(0)}
                 </div>
 
                 <div>
@@ -153,7 +153,7 @@ function RouteComponent() {
 
               <div className="relative z-10 mt-8 flex items-center justify-between">
                 <span className="rounded-full bg-white px-5 py-2 text-xs font-black text-[#0d1f18]">
-                  Cliente #{cliente.id_cliente}
+                  Cliente #{cliente.clienteId}
                 </span>
 
                 <div className="h-4 w-4 rounded-full bg-[#2DBE7F] shadow-lg shadow-[#2DBE7F]"></div>
