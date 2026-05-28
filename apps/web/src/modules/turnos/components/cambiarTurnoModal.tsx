@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { obtenerClasesDisponiblesRequest, cambiarTurnoRequest, type  ClaseDisponible } from '../../../api/shifts';
+import { obtenerClasesDisponiblesRequest, cambiarTurnoRequest, type ClaseDisponible } from '../../../api/shifts';
 
 interface CambiarTurnoModalProps {
   clienteId: number;
   claseActualId: number;
   actividad: string;
-  fechaActual: string; 
-  horaActual: string;  
+  fechaActual: string;
+  horaActual: string;
   onClose: () => void;
   onChangeSuccess: () => void;
 }
 
-export const CambiarTurnoModal: React.FC<CambiarTurnoModalProps> = ({
+export const CambiarTurno: React.FC<CambiarTurnoModalProps> = ({
   clienteId,
   claseActualId,
   actividad,
@@ -33,8 +33,8 @@ export const CambiarTurnoModal: React.FC<CambiarTurnoModalProps> = ({
         setErrorMensaje(null);
         const todasLasClases = await obtenerClasesDisponiblesRequest();
         const delMismoDia = todasLasClases.filter(
-          (clase) => 
-            clase.fecha === fechaActual && 
+          (clase) =>
+            clase.fecha === fechaActual &&
             clase.id !== claseActualId &&
             clase.cuposDisponibles > 0
         );
@@ -67,7 +67,7 @@ export const CambiarTurnoModal: React.FC<CambiarTurnoModalProps> = ({
       };
 
       await cambiarTurnoRequest(payload);
-      onChangeSuccess(); 
+      onChangeSuccess();
     } catch (error: any) {
       setErrorMensaje(error.message);
     } finally {
@@ -78,7 +78,7 @@ export const CambiarTurnoModal: React.FC<CambiarTurnoModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full border border-gray-100 relative">
-        
+
         <h2 className="text-2xl font-bold text-[#0D6B5D] mb-4">Cambiar Horario de Turno</h2>
 
         <div className="mb-6 bg-gray-50 p-4 rounded text-gray-700 text-sm border-l-4 border-[#0D6B5D]">
@@ -91,7 +91,7 @@ export const CambiarTurnoModal: React.FC<CambiarTurnoModalProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Horarios alternativos disponibles para hoy:
           </label>
-          
+
           {loadingFetch ? (
             <p className="text-sm text-gray-500 animate-pulse">Buscando alternativas en tiempo real...</p>
           ) : clasesFiltradas.length === 0 ? (
