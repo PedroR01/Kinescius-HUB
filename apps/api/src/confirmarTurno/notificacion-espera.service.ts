@@ -3,7 +3,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { SupabaseService } from '../integrations/supabase.service';
+import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { emailLugarDisponible } from './templates/email-lugar-disponible.template';
 import { Resend } from 'resend';
 import * as crypto from 'crypto';

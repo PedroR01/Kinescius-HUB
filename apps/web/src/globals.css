@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/raleway";
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 @source "./src/**/*.{ts,tsx,html}";
@@ -60,6 +61,17 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --ks-green-dark: #1a3a2a;
+  --ks-green-mid: #2d6a4f;
+  --ks-green-light: #52b788;
+  --ks-green-pale: #d8f3dc;
+  --ks-off-white: #f4faf6;
+  --ks-gray-soft: #e8f4ec;
+  --ks-gray-text: #4a6555;
+  --ks-text-dark: #0f2419;
+  --ks-red-soft: #fde8e8;
+  --ks-red: #c0392b;
 
   @media (max-width: 1024px) {
     font-size: 16px;
@@ -155,6 +167,25 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-ks-green-dark: var(--ks-green-dark);
+  --color-ks-green-mid: var(--ks-green-mid);
+  --color-ks-green-light: var(--ks-green-light);
+  --color-ks-green-pale: var(--ks-green-pale);
+  --color-ks-off-white: var(--ks-off-white);
+  --color-ks-gray-soft: var(--ks-gray-soft);
+  --color-ks-gray-text: var(--ks-gray-text);
+  --color-ks-text-dark: var(--ks-text-dark);
+  --color-ks-red-soft: var(--ks-red-soft);
+  --color-ks-red: var(--ks-red);
+  --font-outfit: "Outfit", sans-serif;
+  --font-dm-sans: "DM Sans", sans-serif;
+  --radius-ks-sm: 12px;
+  --radius-ks-md: 20px;
+  --radius-ks-lg: 32px;
+  --radius-ks-full: 999px;
+  --animate-ks-slide-up: ks-slide-up 0.22s ease;
+  --animate-ks-fade-in: ks-fade-in 0.18s ease;
 }
 
 h1,
@@ -210,5 +241,56 @@ p {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes ks-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ks-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ks-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 85% 30%, rgba(183, 224, 85, 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 15% 80%, rgba(82, 183, 136, 0.2) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.ks-hero-card::after {
+  content: "KS";
+  position: absolute;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-outfit);
+  font-size: 120px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.06);
+  letter-spacing: -4px;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .ks-hero-card::after {
+    font-size: 80px;
+    right: 16px;
   }
 }

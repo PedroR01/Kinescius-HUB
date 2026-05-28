@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, InternalServerErrorException, UnauthorizedException} from '@nestjs/common';
-import { SupabaseService } from "../integrations/supabase.service";
+import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { RegistroDto } from './dto/registro.dto';
 import { InicioDto } from './dto/inicio.dto';
 import { EmailService } from '../email/email.service';

@@ -3,7 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
-import { SupabaseModule } from "./integrations/supabase.module";
+import { SupabaseModule } from "./integrations/supabase/supabase.module";
 import { ClasesModule } from "./clasesCliente/clases.module";
 import { ClasesModule as ClasesAdminModule } from "./clasesAdmin/clases.module.Admin";
 import { AuthModule } from './auth/auth.module';

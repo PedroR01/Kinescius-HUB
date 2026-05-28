@@ -9,22 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerInscriptosRouteImport } from './routes/verInscriptos'
 import { Route as VerClasesRouteImport } from './routes/verClases'
+import { Route as SuccessRouteImport } from './routes/success'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as PagarClaseRouteImport } from './routes/pagarClase'
+import { Route as MisClasesRouteImport } from './routes/mis-clases'
 import { Route as ListaEsperaRouteImport } from './routes/listaEspera'
 import { Route as IniciarSesionRouteImport } from './routes/iniciarSesion'
 import { Route as CrearClaseRouteImport } from './routes/crearClase'
 import { Route as ConfirmarTurnoRouteImport } from './routes/confirmar-turno'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as CancelarTurnoRouteImport } from './routes/cancelarTurno'
 import { Route as CancelarClaseRouteImport } from './routes/cancelarClase'
 import { Route as CambiarProfesorRouteImport } from './routes/cambiarProfesor'
 import { Route as CambiarPasswdRouteImport } from './routes/cambiarPasswd'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VerInscriptosRoute = VerInscriptosRouteImport.update({
+  id: '/verInscriptos',
+  path: '/verInscriptos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerClasesRoute = VerClasesRouteImport.update({
   id: '/verClases',
   path: '/verClases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuccessRoute = SuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
@@ -35,6 +50,16 @@ const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagarClaseRoute = PagarClaseRouteImport.update({
+  id: '/pagarClase',
+  path: '/pagarClase',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisClasesRoute = MisClasesRouteImport.update({
+  id: '/mis-clases',
+  path: '/mis-clases',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListaEsperaRoute = ListaEsperaRouteImport.update({
@@ -60,6 +85,11 @@ const ConfirmarTurnoRoute = ConfirmarTurnoRouteImport.update({
 const ClientesRoute = ClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CancelarTurnoRoute = CancelarTurnoRouteImport.update({
+  id: '/cancelarTurno',
+  path: '/cancelarTurno',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CancelarClaseRoute = CancelarClaseRouteImport.update({
@@ -88,28 +118,38 @@ export interface FileRoutesByFullPath {
   '/cambiarPasswd': typeof CambiarPasswdRoute
   '/cambiarProfesor': typeof CambiarProfesorRoute
   '/cancelarClase': typeof CancelarClaseRoute
+  '/cancelarTurno': typeof CancelarTurnoRoute
   '/clientes': typeof ClientesRoute
   '/confirmar-turno': typeof ConfirmarTurnoRoute
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/mis-clases': typeof MisClasesRoute
+  '/pagarClase': typeof PagarClaseRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/success': typeof SuccessRoute
   '/verClases': typeof VerClasesRoute
+  '/verInscriptos': typeof VerInscriptosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cambiarPasswd': typeof CambiarPasswdRoute
   '/cambiarProfesor': typeof CambiarProfesorRoute
   '/cancelarClase': typeof CancelarClaseRoute
+  '/cancelarTurno': typeof CancelarTurnoRoute
   '/clientes': typeof ClientesRoute
   '/confirmar-turno': typeof ConfirmarTurnoRoute
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/mis-clases': typeof MisClasesRoute
+  '/pagarClase': typeof PagarClaseRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/success': typeof SuccessRoute
   '/verClases': typeof VerClasesRoute
+  '/verInscriptos': typeof VerInscriptosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,14 +157,19 @@ export interface FileRoutesById {
   '/cambiarPasswd': typeof CambiarPasswdRoute
   '/cambiarProfesor': typeof CambiarProfesorRoute
   '/cancelarClase': typeof CancelarClaseRoute
+  '/cancelarTurno': typeof CancelarTurnoRoute
   '/clientes': typeof ClientesRoute
   '/confirmar-turno': typeof ConfirmarTurnoRoute
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/mis-clases': typeof MisClasesRoute
+  '/pagarClase': typeof PagarClaseRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/success': typeof SuccessRoute
   '/verClases': typeof VerClasesRoute
+  '/verInscriptos': typeof VerInscriptosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,42 +178,57 @@ export interface FileRouteTypes {
     | '/cambiarPasswd'
     | '/cambiarProfesor'
     | '/cancelarClase'
+    | '/cancelarTurno'
     | '/clientes'
     | '/confirmar-turno'
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/mis-clases'
+    | '/pagarClase'
     | '/registro'
     | '/solicitarTurno'
+    | '/success'
     | '/verClases'
+    | '/verInscriptos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/cambiarPasswd'
     | '/cambiarProfesor'
     | '/cancelarClase'
+    | '/cancelarTurno'
     | '/clientes'
     | '/confirmar-turno'
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/mis-clases'
+    | '/pagarClase'
     | '/registro'
     | '/solicitarTurno'
+    | '/success'
     | '/verClases'
+    | '/verInscriptos'
   id:
     | '__root__'
     | '/'
     | '/cambiarPasswd'
     | '/cambiarProfesor'
     | '/cancelarClase'
+    | '/cancelarTurno'
     | '/clientes'
     | '/confirmar-turno'
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/mis-clases'
+    | '/pagarClase'
     | '/registro'
     | '/solicitarTurno'
+    | '/success'
     | '/verClases'
+    | '/verInscriptos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -176,23 +236,42 @@ export interface RootRouteChildren {
   CambiarPasswdRoute: typeof CambiarPasswdRoute
   CambiarProfesorRoute: typeof CambiarProfesorRoute
   CancelarClaseRoute: typeof CancelarClaseRoute
+  CancelarTurnoRoute: typeof CancelarTurnoRoute
   ClientesRoute: typeof ClientesRoute
   ConfirmarTurnoRoute: typeof ConfirmarTurnoRoute
   CrearClaseRoute: typeof CrearClaseRoute
   IniciarSesionRoute: typeof IniciarSesionRoute
   ListaEsperaRoute: typeof ListaEsperaRoute
+  MisClasesRoute: typeof MisClasesRoute
+  PagarClaseRoute: typeof PagarClaseRoute
   RegistroRoute: typeof RegistroRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
+  SuccessRoute: typeof SuccessRoute
   VerClasesRoute: typeof VerClasesRoute
+  VerInscriptosRoute: typeof VerInscriptosRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verInscriptos': {
+      id: '/verInscriptos'
+      path: '/verInscriptos'
+      fullPath: '/verInscriptos'
+      preLoaderRoute: typeof VerInscriptosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verClases': {
       id: '/verClases'
       path: '/verClases'
       fullPath: '/verClases'
       preLoaderRoute: typeof VerClasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/success': {
+      id: '/success'
+      path: '/success'
+      fullPath: '/success'
+      preLoaderRoute: typeof SuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/solicitarTurno': {
@@ -207,6 +286,20 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagarClase': {
+      id: '/pagarClase'
+      path: '/pagarClase'
+      fullPath: '/pagarClase'
+      preLoaderRoute: typeof PagarClaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-clases': {
+      id: '/mis-clases'
+      path: '/mis-clases'
+      fullPath: '/mis-clases'
+      preLoaderRoute: typeof MisClasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/listaEspera': {
@@ -242,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/clientes'
       fullPath: '/clientes'
       preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cancelarTurno': {
+      id: '/cancelarTurno'
+      path: '/cancelarTurno'
+      fullPath: '/cancelarTurno'
+      preLoaderRoute: typeof CancelarTurnoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cancelarClase': {
@@ -280,14 +380,19 @@ const rootRouteChildren: RootRouteChildren = {
   CambiarPasswdRoute: CambiarPasswdRoute,
   CambiarProfesorRoute: CambiarProfesorRoute,
   CancelarClaseRoute: CancelarClaseRoute,
+  CancelarTurnoRoute: CancelarTurnoRoute,
   ClientesRoute: ClientesRoute,
   ConfirmarTurnoRoute: ConfirmarTurnoRoute,
   CrearClaseRoute: CrearClaseRoute,
   IniciarSesionRoute: IniciarSesionRoute,
   ListaEsperaRoute: ListaEsperaRoute,
+  MisClasesRoute: MisClasesRoute,
+  PagarClaseRoute: PagarClaseRoute,
   RegistroRoute: RegistroRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
+  SuccessRoute: SuccessRoute,
   VerClasesRoute: VerClasesRoute,
+  VerInscriptosRoute: VerInscriptosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
