@@ -3,8 +3,10 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
-import { SupabaseModule } from "./integrations/supabase.module";
+import { SupabaseModule } from "./integrations/supabase/supabase.module";
 import { ClasesModule } from "./clases/clases.module";
+import { PagosModule } from "./pagos/pagos.module";
+import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.module";
 
 @Module({
   imports: [
@@ -13,9 +15,11 @@ import { ClasesModule } from "./clases/clases.module";
       throttlers: [{ ttl: 60, limit: 60 }]
     }),
     SupabaseModule,
-    ClasesModule
+    MpCheckoutProModule,
+    ClasesModule,
+    PagosModule
   ],
   controllers: [AppController],
   providers: [AppService]
 })
-export class AppModule {}
+export class AppModule { }

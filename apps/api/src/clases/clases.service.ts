@@ -1,9 +1,9 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
-import { SupabaseService } from "../integrations/supabase.service";
+import { SupabaseService } from "../integrations/supabase/supabase.service";
 
 @Injectable()
 export class ClasesService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService) { }
 
   async findAll() {
     const { data, error } = await this.supabaseService.client

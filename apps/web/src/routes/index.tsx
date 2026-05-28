@@ -1,9 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { Home } from "../modules/home/Home";
 
 export const Route = createFileRoute("/")({
-  component: () => (
-    <Link to="/solicitarTurno" className="button button-primary">
-      Solicitar turno
-    </Link>
-  )
+  component: Home
 });
