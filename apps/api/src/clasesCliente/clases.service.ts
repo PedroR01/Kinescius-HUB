@@ -6,7 +6,6 @@ import {
 import { SupabaseService } from "../integrations/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 
-
 @Injectable()
 export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) {}
