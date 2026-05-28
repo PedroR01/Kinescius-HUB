@@ -24,6 +24,8 @@ import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
     ListaEsperaModule,
     ShiftsModule,
     ConfirmarTurnoModule,
+    ShiftsModule,
+    ConfirmarTurnoModule,
   ],
   controllers: [AppController],
   providers: [AppService]
