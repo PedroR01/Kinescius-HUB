@@ -17,6 +17,9 @@ importers:
       class-validator:
         specifier: ^0.15.1
         version: 0.15.1
+      resend:
+        specifier: ^6.12.4
+        version: 6.12.4
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -2438,6 +2441,15 @@ packages:
 
   resend@6.12.3:
     resolution: {integrity: sha512-FkEi6YPnVL96/LvH8+QP7NaeaBy5brYXwlRqUCqZZeNL0/iyKij18IPmyPXYauT/2ODn1JG04qKz+qlJfzqzTw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@react-email/render': '*'
+    peerDependenciesMeta:
+      '@react-email/render':
+        optional: true
+
+  resend@6.12.4:
+    resolution: {integrity: sha512-lRpJ2Hxd+ht+JPDm97juRcUp9HOMuZyxaRFRFmc9Tx8iNWiei94Dx9v6SWufgKk2667C/uCeKKspMotOHSpCSg==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -5258,6 +5270,11 @@ snapshots:
     dependencies:
       postal-mime: 2.7.4
       svix: 1.92.2
+
+  resend@6.12.4:
+    dependencies:
+      postal-mime: 2.7.4
+      standardwebhooks: 1.0.0
 
   resolve-from@4.0.0: {}
 

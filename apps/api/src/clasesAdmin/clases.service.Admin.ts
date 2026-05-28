@@ -6,12 +6,14 @@ import {
 } from "@nestjs/common";
 
 import { SupabaseService } from "../integrations/supabase.service";
+import { EmailService } from "../email/email.service";
 
 @Injectable()
-export class ClasesService {
+export class ClasesAdminService {
 
   constructor(
-    private readonly supabaseService: SupabaseService
+    private readonly supabaseService: SupabaseService,
+    private readonly emailService: EmailService,
   ) {}
 
   async findAll(startDate?: string, endDate?: string) {
@@ -107,7 +109,6 @@ export class ClasesService {
       throw new BadRequestException("El cupo debe estar entre 1 y 50");
     }
 
-    // Validar máximo de clases programadas por día y horario
     const countQuery = this.supabaseService.client
       .from("Clase")
       .select("id", { count: "exact", head: true })
@@ -130,10 +131,8 @@ export class ClasesService {
 
     let profesorId = null;
 
-    // Buscar profesor usando DNI
     if (profesorDni) {
 
-      // Buscar persona por DNI
       const { data: persona, error: personaError } =
         await this.supabaseService.client
           .from("Persona")
@@ -147,7 +146,6 @@ export class ClasesService {
         );
       }
 
-      // Verificar que sea profesor
       const { data: profesor, error: profesorError } =
         await this.supabaseService.client
           .from("Profesor")
@@ -184,7 +182,6 @@ export class ClasesService {
       }
     }
 
-    // Crear clase
     const insertPayload = {
       fecha,
       hora,
@@ -216,9 +213,10 @@ export class ClasesService {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");
     }
 
+    // 1. Buscar la clase con sus datos
     const { data: clase, error: claseError } = await this.supabaseService.client
       .from("Clase")
-      .select("id")
+      .select("id, fecha, hora, tipo")
       .eq("id", id)
       .maybeSingle();
 
@@ -232,6 +230,20 @@ export class ClasesService {
       throw new NotFoundException("No existe una clase con ese id");
     }
 
+    // 2. Obtener inscriptos con emails ANTES de borrar
+    const { data: inscripciones, error: inscripcionesQueryError } =
+      await this.supabaseService.client
+        .from("Se_inscribe")
+        .select("id_cliente, Cliente!inner(Usuario!inner(Persona(nombre, mail)))")
+        .eq("id_clase", id);
+
+    if (inscripcionesQueryError) {
+      throw new InternalServerErrorException(
+        `Error al obtener inscriptos: ${inscripcionesQueryError.message}`
+      );
+    }
+
+    // 3. Borrar inscripciones
     const { error: inscripcionesError } = await this.supabaseService.client
       .from("Se_inscribe")
       .delete()
@@ -243,6 +255,7 @@ export class ClasesService {
       );
     }
 
+    // 4. Borrar la clase
     const { error: deleteError } = await this.supabaseService.client
       .from("Clase")
       .delete()
@@ -254,8 +267,27 @@ export class ClasesService {
       );
     }
 
+    // 5. Enviar emails a todos los inscriptos
+    const emailPromises = (inscripciones ?? []).map((entry: any) => {
+      const persona = entry?.Cliente?.Usuario?.Persona;
+      const mail: string | null = persona?.mail ?? null;
+      const nombre: string = persona?.nombre ?? "Cliente";
+
+      if (!mail) return Promise.resolve();
+
+      return this.emailService.enviarClaseCancelada({
+        to: mail,
+        nombre,
+        fecha: clase.fecha,
+        hora: clase.hora,
+        tipo: clase.tipo ?? null,
+      });
+    });
+
+    await Promise.allSettled(emailPromises);
+
     return {
-      message: "Clase cancelada correctamente",
+      message: `Clase cancelada correctamente. Se notificó a ${emailPromises.length} inscripto/s.`,
       id,
     };
   }
@@ -374,4 +406,108 @@ export class ClasesService {
     };
   }
 
+
+  async getProfesores() {
+  const { data, error } = await this.supabaseService.client
+    .from("Profesor")
+    .select("id, Persona(nombre, apellido, dni)");
+
+  if (error) {
+    throw new InternalServerErrorException(
+      `Error al obtener profesores: ${error.message}`
+    );
+  }
+
+  const profesores = (data ?? []).map((entry: any) => ({
+    id: entry.id,
+    nombre: entry?.Persona?.nombre ?? null,
+    apellido: entry?.Persona?.apellido ?? null,
+    dni: entry?.Persona?.dni ?? null,
+  }));
+
+  return { profesores };
+}
+
+async cambiarProfesor(idClase: number, idProfesor: number) {
+  if (!Number.isInteger(idClase) || idClase <= 0) {
+    throw new BadRequestException("El id de la clase debe ser mayor a 0");
+  }
+
+  if (!Number.isInteger(idProfesor) || idProfesor <= 0) {
+    throw new BadRequestException("El id del profesor debe ser mayor a 0");
+  }
+
+  // Verificar que la clase existe
+  const { data: clase, error: claseError } = await this.supabaseService.client
+    .from("Clase")
+    .select("id, fecha, hora")
+    .eq("id", idClase)
+    .maybeSingle();
+
+  if (claseError) {
+    throw new InternalServerErrorException(
+      `Error al buscar la clase: ${claseError.message}`
+    );
+  }
+
+  if (!clase) {
+    throw new NotFoundException("No existe una clase con ese id");
+  }
+
+  // Verificar que el profesor existe
+  const { data: profesor, error: profesorError } = await this.supabaseService.client
+    .from("Profesor")
+    .select("id")
+    .eq("id", idProfesor)
+    .maybeSingle();
+
+  if (profesorError) {
+    throw new InternalServerErrorException(
+      `Error al buscar el profesor: ${profesorError.message}`
+    );
+  }
+
+  if (!profesor) {
+    throw new NotFoundException("No existe un profesor con ese id");
+  }
+
+  // Verificar que el profesor no tenga otra clase en el mismo día y horario
+  const { count, error: countError } = await this.supabaseService.client
+    .from("Clase")
+    .select("id", { count: "exact", head: true })
+    .eq("id_profesor", idProfesor)
+    .eq("fecha", clase.fecha)
+    .eq("hora", clase.hora)
+    .neq("id", idClase);
+
+  if (countError) {
+    throw new InternalServerErrorException(
+      `Error al verificar disponibilidad: ${countError.message}`
+    );
+  }
+
+  if ((count ?? 0) > 0) {
+    throw new BadRequestException(
+      "El profesor ya tiene una clase en ese día y horario"
+    );
+  }
+
+  // Actualizar el profesor de la clase
+  const { error: updateError } = await this.supabaseService.client
+    .from("Clase")
+    .update({ id_profesor: idProfesor })
+    .eq("id", idClase);
+
+  if (updateError) {
+    throw new InternalServerErrorException(
+      `Error al cambiar el profesor: ${updateError.message}`
+    );
+  }
+
+  return {
+    message: "Profesor actualizado correctamente",
+    idClase,
+    idProfesor,
+  };
+}
 }
