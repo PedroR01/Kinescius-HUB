@@ -1,10 +1,21 @@
-import { Controller, Get, Post, Patch, Body, Query, Param, ParseIntPipe, BadRequestException } from "@nestjs/common";
-import { ClasesService } from "./clases.service.Admin";
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Query,
+  Param,
+  ParseIntPipe,
+  BadRequestException
+} from "@nestjs/common";
+
+import { ClasesAdminService } from "./clases.service.Admin";
 import { CreateClaseDto } from "./dto/create-clase..Admin.dto";
 
-@Controller("clases")
-export class ClasesController {
-  constructor(private readonly clasesService: ClasesService) {}
+@Controller("admin/clases")
+export class ClasesAdminController {
+  constructor(private readonly clasesService: ClasesAdminService) {}
 
   @Get()
   async findAll(
@@ -25,10 +36,17 @@ export class ClasesController {
     @Query("tipo") tipo?: string
   ) {
     if (!fecha || !tipo) {
-      throw new BadRequestException("Los parámetros fecha y clase son obligatorios");
+      throw new BadRequestException(
+        "Los parámetros fecha y clase son obligatorios"
+      );
     }
 
     return this.clasesService.getInscriptos(fecha, tipo);
+  }
+
+  @Get("profesores")
+  async findProfesores() {
+    return this.clasesService.getProfesores();
   }
 
   @Post()
@@ -39,5 +57,16 @@ export class ClasesController {
   @Patch(":id/cancelar")
   async cancel(@Param("id", ParseIntPipe) id: number) {
     return this.clasesService.cancel(id);
+  }
+
+  @Patch(":id/cambiar-profesor")
+  async cambiarProfesor(
+    @Param("id", ParseIntPipe) id: number,
+    @Body("profesorId") profesorId: number
+  ) {
+    if (!profesorId) {
+      throw new BadRequestException("El profesorId es obligatorio");
+    }
+    return this.clasesService.cambiarProfesor(id, profesorId);
   }
 }

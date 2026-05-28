@@ -6,6 +6,7 @@ import {
 import { SupabaseService } from "../integrations/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 
+
 @Injectable()
 export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -20,6 +21,22 @@ export class ClasesService {
     if (error) {
       throw new InternalServerErrorException(
         `Error al obtener clases: ${error.message}`
+      );
+    }
+
+    return data;
+  }
+
+  async getMontoAFavor(clienteId: number) {
+    const { data, error } = await this.supabaseService.client
+      .from("Cliente")
+      .select("monto_a_favor")
+      .eq("id", clienteId)
+      .single();
+
+    if (error || !data) {
+      throw new InternalServerErrorException(
+        `Error al obtener monto a favor: ${error?.message}`
       );
     }
 
