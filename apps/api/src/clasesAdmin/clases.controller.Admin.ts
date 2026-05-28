@@ -44,6 +44,11 @@ export class ClasesAdminController {
     return this.clasesService.getInscriptos(fecha, tipo);
   }
 
+  @Get("profesores")
+  async findProfesores() {
+    return this.clasesService.getProfesores();
+  }
+
   @Post()
   async create(@Body() payload: CreateClaseDto) {
     return this.clasesService.create(payload as any);
@@ -52,5 +57,16 @@ export class ClasesAdminController {
   @Patch(":id/cancelar")
   async cancel(@Param("id", ParseIntPipe) id: number) {
     return this.clasesService.cancel(id);
+  }
+
+  @Patch(":id/cambiar-profesor")
+  async cambiarProfesor(
+    @Param("id", ParseIntPipe) id: number,
+    @Body("profesorId") profesorId: number
+  ) {
+    if (!profesorId) {
+      throw new BadRequestException("El profesorId es obligatorio");
+    }
+    return this.clasesService.cambiarProfesor(id, profesorId);
   }
 }

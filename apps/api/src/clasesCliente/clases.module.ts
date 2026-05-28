@@ -6,6 +6,6 @@ import { SupabaseModule } from "../integrations/supabase.module";
 @Module({
   imports: [SupabaseModule],
   controllers: [ClasesController],
-  providers: [ClasesService],
+  providers: [ClasesService]
 })
 export class ClasesModule {}

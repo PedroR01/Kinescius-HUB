@@ -4,7 +4,12 @@ import { ThrottlerModule } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { SupabaseModule } from "./integrations/supabase.module";
-import { ClasesModule } from "./clasesAdmin/clases.module.Admin";
+import { ClasesModule } from "./clasesCliente/clases.module";
+import { AuthModule } from './auth/auth.module';
+import { EmailModule } from './email/email.module';
+import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
+import { ShiftsModule } from "./shifts/shifts.module";
+import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
 
 @Module({
   imports: [
@@ -13,7 +18,12 @@ import { ClasesModule } from "./clasesAdmin/clases.module.Admin";
       throttlers: [{ ttl: 60, limit: 60 }]
     }),
     SupabaseModule,
-    ClasesModule
+    AuthModule,
+    ClasesModule,
+    EmailModule,
+    ListaEsperaModule,
+    ShiftsModule,
+    ConfirmarTurnoModule,
   ],
   controllers: [AppController],
   providers: [AppService]
