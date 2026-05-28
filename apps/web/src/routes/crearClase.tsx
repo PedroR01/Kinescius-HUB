@@ -202,6 +202,12 @@ function RouteComponent() {
     setMessage(null)
     setError(null)
 
+    if (!profesorDni) {
+      setError('El profesor es obligatorio')
+      setLoading(false)
+      return
+    }
+
     const [hour] = hora.split(':').map(Number)
     if (Number.isNaN(hour) || hour < 8 || hour > 19) {
       setError('La hora debe estar entre 08:00 y 19:00')
@@ -279,14 +285,14 @@ function RouteComponent() {
       }}>
         <label style={labelStyle}>
           Fecha
-          <DatePicker value={fecha} onChange={(v) => { setFecha(v); loadProfesores(v, hora) }} />
+          <DatePicker value={fecha} onChange={(v) => { setFecha(v); void loadProfesores(v, hora) }} />
         </label>
 
         <label style={labelStyle}>
           Hora
           <select
             value={hora}
-            onChange={e => { setHora(e.target.value); loadProfesores(fecha, e.target.value) }}
+            onChange={e => { setHora(e.target.value); void loadProfesores(fecha, e.target.value) }}
             required
             style={{ ...inputStyle, cursor: "pointer" }}
           >
@@ -321,7 +327,7 @@ function RouteComponent() {
               onChange={e => setProfesorDni(e.target.value)}
               style={{ ...inputStyle, cursor: 'pointer' }}
             >
-              <option value="">Sin profesor (opcional)</option>
+              <option value="">-- Seleccioná un profesor --</option>
               {profesores.length === 0
                 ? <option disabled value="">No hay profesores disponibles</option>
                 : profesores.map(p => (
