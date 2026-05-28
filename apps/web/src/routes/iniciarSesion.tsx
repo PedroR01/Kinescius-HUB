@@ -63,7 +63,7 @@ const IniciarSesion = () => {
         localStorage.setItem('rol', data.rol); //Guardo el rol del usuario (admin o usuario)
         console.log ("El rol ingresado es ", data.rol);
 
-        setMessage('¡Inicio de sesión exitoso!');
+        setMessage('Inicio de sesión exitoso!');
         setTimeout(() => {
           navigate({ to: '/' }); //espera un segundo para redirigir al inicio de Kinescius
         }, 1000);
@@ -99,7 +99,10 @@ const IniciarSesion = () => {
       const data = await response.json();
       if (response.ok) {
         //Seteo el mensaje de éxito que nos manda NestJS, o uno por defecto
-        setMessage(data.mensaje || 'Si el correo está registrado, recibirás una nueva contraseña pronto.');
+        setMessage(data.mensaje || 'Vas a recibir una nueva contraseña pronto en tu email.');
+        setTimeout(() => {
+          navigate({ to: '/' }); //espera un segundo para redirigir al inicio de Kinescius
+        }, 1000);
       } else {
         //Y si el backend frena la petición seteo también mensaje
         setError(data.message || 'Hubo un error al intentar recuperar la contraseña.');

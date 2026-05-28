@@ -172,7 +172,7 @@ export class AuthService {
     if (errorPersona || !persona) {
       // Por convención de seguridad, no se avisa si el mail no existe para evitar que extraños 
       // averigüen quién es cliente, pero devolvemos un mensaje genérico de éxito.
-      return { success: true, mensaje: "Si el correo está registrado, recibirás una nueva contraseña pronto." };
+      return { success: true, mensaje: "Recibirás una nueva contraseña pronto en tu email" };
     }
 
     try {

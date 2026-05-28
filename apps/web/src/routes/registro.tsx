@@ -84,7 +84,7 @@ const Registro = () => {
         {!estaLogueado ? (
           <>
             <h1>Registro de cliente</h1>
-            <p>Por favor complete sus datos para registrarse.</p>
+            <p>Por favor complete sus datos para registrarse. Al presionar "Registrarme" se le enviará su contraseña por mail</p>
 
             {/* Como usás el onClick del botón, el onSubmit prevenido acá está perfecto */}
             <form onSubmit={e => e.preventDefault()}>
