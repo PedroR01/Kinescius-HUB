@@ -54,6 +54,51 @@ export const Route = createFileRoute('/solicitarTurno')({
   component: RouteComponent,
 })
 
+function ClassCard({
+  slot,
+  isSelected,
+  isWaited,
+  onSelect,
+  onWaitList,
+}: {
+  slot: AppointmentSlot
+  isSelected: boolean
+  isWaited: boolean
+  onSelect: (slot: AppointmentSlot) => void
+  onWaitList: (slot: AppointmentSlot) => void
+}) {
+  return (
+    <div
+      className={`class-card${slot.sinCupo ? ' sin-cupo' : ''}${isSelected && !slot.sinCupo ? ' selected' : ''}`}
+      onClick={() => !slot.sinCupo && onSelect(slot)}
+      role={slot.sinCupo ? undefined : 'button'}
+      tabIndex={slot.sinCupo ? undefined : 0}
+      onKeyDown={e => e.key === 'Enter' && !slot.sinCupo && onSelect(slot)}
+    >
+      <div className="class-time">{slot.time} hs</div>
+      <div className="class-name">{slot.className}</div>
+      {slot.sinCupo ? (
+        <>
+          <div className="cupo-badge sin-cupo-badge">
+            <span className="cupo-icon">Sin cupo</span>
+          </div>
+          <button
+            type="button"
+            className={`btn-espera-card${isWaited ? ' waited' : ''}`}
+            onClick={e => { e.stopPropagation(); onWaitList(slot) }}
+          >
+            {isWaited ? '✓ En lista de espera' : 'Unirse a lista de espera'}
+          </button>
+        </>
+      ) : slot.cupo === 1 ? (
+        <div className="cupo-badge solo-badge">¡Solo 1!</div>
+      ) : (
+        <div className="cupo-badge disponible-badge">{slot.cupo} lugares</div>
+      )}
+    </div>
+  )
+}
+
 function RouteComponent() {
   const [classes, setClasses] = useState<Clase[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,6 +110,7 @@ function RouteComponent() {
   const [enrollments, setEnrollments] = useState<string[]>([])
   const [waitList, setWaitList] = useState<string[]>([])
   const [montoAFavor, setMontoAFavor] = useState(0)
+  const [viewAll, setViewAll] = useState(false)
 
   const API_BASE = "http://localhost:3000"
   const CLIENTE_ID = 1
@@ -208,6 +254,13 @@ function RouteComponent() {
 
   const priceToPay = selectedSlot ? selectedSlot.price / 2 : 0
 
+  const handleToggleViewAll = () => {
+    setViewAll(v => !v)
+    setSelectedSlot(null)
+    setPhase('idle')
+    setMessage(null)
+  }
+
   return (
     <main className="page-shell">
       <section className="hero-card">
@@ -216,76 +269,97 @@ function RouteComponent() {
       </section>
 
       <section className="form-card">
-        <p className="section-label">SELECCIONÁ EL DÍA</p>
+        <div className="day-strip-header">
+          <p className="section-label">SELECCIONÁ EL DÍA</p>
+          <button
+            type="button"
+            className={`btn-ver-todas${viewAll ? ' active' : ''}`}
+            onClick={handleToggleViewAll}
+          >
+            {viewAll ? 'Ver por día' : 'Ver todas las clases'}
+          </button>
+        </div>
+
         {loading ? (
           <p className="loading-text">Cargando clases...</p>
         ) : error ? (
           <p className="status-badge full">{error}</p>
-        ) : (
+        ) : !viewAll ? (
           <div className="day-strip">
             {dates.map(slot => (
               <button
                 key={slot.date}
                 type="button"
                 className={`day-pill${selectedDate === slot.date ? ' active' : ''}`}
-onClick={() => {
-  setSelectedDate(slot.date)
-  setSelectedSlot(null)
-  setPhase('idle')
-  setMessage(null)
-}}              >
+                onClick={() => {
+                  setSelectedDate(slot.date)
+                  setSelectedSlot(null)
+                  setPhase('idle')
+                  setMessage(null)
+                }}
+              >
                 <span className="day-name">{slot.dayLabel}</span>
                 <span className="day-date">{slot.dateLabel}</span>
               </button>
             ))}
           </div>
-        )}
+        ) : null}
       </section>
 
       {!loading && !error && (
         <section className="form-card">
-          <p className="section-label">CLASES DISPONIBLES</p>
-          {classesByDate.length === 0 ? (
-            <p className="loading-text">No hay clases para este día.</p>
+          <p className="section-label">
+            {viewAll ? 'TODAS LAS CLASES DISPONIBLES' : 'CLASES DISPONIBLES'}
+          </p>
+
+          {viewAll ? (
+            dates.length === 0 ? (
+              <p className="loading-text">No hay clases disponibles.</p>
+            ) : (
+              <div className="all-classes-list">
+                {dates.map(dateSlot => {
+                  const slotsForDate = appointmentSlots.filter(s => s.date === dateSlot.date)
+                  return (
+                    <div key={dateSlot.date} className="date-group">
+                      <div className="date-group-heading">
+                        <span className="date-group-label">
+                          {dateSlot.dayLabel} {dateSlot.dateLabel}
+                        </span>
+                      </div>
+                      <div className="classes-grid">
+                        {slotsForDate.map(slot => (
+                          <ClassCard
+                            key={slot.key}
+                            slot={slot}
+                            isSelected={selectedSlot?.key === slot.key}
+                            isWaited={waitList.includes(`${slot.date} ${slot.time}hs ${slot.className}`)}
+                            onSelect={handleSelectSlot}
+                            onWaitList={handleAddWaitList}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
           ) : (
-            <div className="classes-grid">
-              {classesByDate.map(slot => {
-                const isWaited = waitList.includes(`${slot.date} ${slot.time}hs ${slot.className}`)
-                return (
-                  <div
+            classesByDate.length === 0 ? (
+              <p className="loading-text">No hay clases para este día.</p>
+            ) : (
+              <div className="classes-grid">
+                {classesByDate.map(slot => (
+                  <ClassCard
                     key={slot.key}
-                    className={`class-card${slot.sinCupo ? ' sin-cupo' : ''}${
-                      selectedSlot?.key === slot.key && !slot.sinCupo ? ' selected' : ''
-                    }`}
-                    onClick={() => !slot.sinCupo && handleSelectSlot(slot)}
-                    role={slot.sinCupo ? undefined : 'button'}
-                    tabIndex={slot.sinCupo ? undefined : 0}
-                    onKeyDown={e => e.key === 'Enter' && !slot.sinCupo && handleSelectSlot(slot)}
-                  >
-                    <div className="class-time">{slot.time} hs</div>
-                    <div className="class-name">{slot.className}</div>
-                    {slot.sinCupo ? (
-                      <>
-                        <div className="cupo-badge sin-cupo-badge">
-                          <span className="cupo-icon">Sin cupo</span>
-                        </div>
-                        <button
-                          type="button"
-                          className={`btn-espera-card${isWaited ? ' waited' : ''}`}
-                          onClick={e => { e.stopPropagation(); handleAddWaitList(slot) }}
-                        >
-                          {isWaited ? '✓ En lista de espera' : 'Unirse a lista de espera'}
-                        </button>
-                      </>
-                    ) : slot.cupo === 1 ? (
-                      <div className="cupo-badge solo-badge">¡Solo 1!</div>
-                    ) : (
-                      <div className="cupo-badge disponible-badge">{slot.cupo} lugares</div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                    slot={slot}
+                    isSelected={selectedSlot?.key === slot.key}
+                    isWaited={waitList.includes(`${slot.date} ${slot.time}hs ${slot.className}`)}
+                    onSelect={handleSelectSlot}
+                    onWaitList={handleAddWaitList}
+                  />
+                ))}
+              </div>
+            )
           )}
         </section>
       )}
