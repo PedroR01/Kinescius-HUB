@@ -3,12 +3,11 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { AppProviders } from "./providers";
 import { router } from "./router";
-import "./index.css";
-import App from "./App";
-
-// Importamos tus dos componentes (ajustá las rutas si es necesario)
+import { Toaster } from "./components/ui/sonner";
 import { CancelarTurno } from './modules/turnos/components/cancelarTurnoModal';
 import { CambiarTurnoModal } from './modules/turnos/components/cambiarTurnoModal';
+import "./globals.css";
+
 
 // Mini-componente para manejar los estados y la botonera de prueba
 const EntornoDePruebas = () => {
@@ -83,9 +82,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <AppProviders>
       <RouterProvider router={router} />
       <App />
-    </AppProviders>
-
-    {/* INYECTAMOS EL ENTORNO DE PRUEBAS */}
+      <Toaster />
     <EntornoDePruebas />
-  </React.StrictMode>,
+    </AppProviders>
+  </React.StrictMode>
 );
