@@ -27,9 +27,12 @@ export function HomeNavbar() {
           <NavLinks className="text-text-h/80" links={NAV_LINKS} />
         </div>
 
-        <div className="hidden lg:block">
-          <ButtonLink to="/solicitarTurno" size="sm">
-            Agenda tu cita
+        <div className="hidden lg:flex lg:flex-row lg:gap-2">
+          <ButtonLink to="/iniciarSesion" size="sm">
+            Iniciar sesión
+          </ButtonLink>
+          <ButtonLink variant="secondary" to="/registro" size="sm">
+            Registrarse
           </ButtonLink>
         </div>
 
