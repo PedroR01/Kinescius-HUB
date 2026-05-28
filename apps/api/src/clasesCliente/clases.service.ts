@@ -3,9 +3,8 @@ import {
   InternalServerErrorException,
   ConflictException,
 } from "@nestjs/common";
-import { SupabaseService } from "../integrations/supabase.service";
+import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
-
 
 @Injectable()
 export class ClasesService {

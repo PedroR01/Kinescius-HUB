@@ -3,7 +3,7 @@ import {
   InternalServerErrorException,
 } from "@nestjs/common";
 
-import { SupabaseService } from "../integrations/supabase.service";
+import { SupabaseService } from "../integrations/supabase/supabase.service";
 
 @Injectable()
 export class ListaEsperaService {

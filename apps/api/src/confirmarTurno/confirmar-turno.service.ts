@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { SupabaseService } from '../integrations/supabase.service';
+import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { ConfirmarTurnoDto } from './dto/confirmar-turno.dto';
 
 @Injectable()

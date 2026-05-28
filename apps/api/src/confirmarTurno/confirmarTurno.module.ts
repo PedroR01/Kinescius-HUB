@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfirmarTurnoController } from './confirmar-turno.controller';
 import { ConfirmarTurnoService } from './confirmar-turno.service';
 import { NotificacionEsperaService } from './notificacion-espera.service';
-import { SupabaseModule } from '../integrations/supabase.module';
+import { SupabaseModule } from '../integrations/supabase/supabase.module';
 
 @Module({
   imports: [SupabaseModule],

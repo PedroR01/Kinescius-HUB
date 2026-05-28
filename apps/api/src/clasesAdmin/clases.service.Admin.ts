@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
-import { SupabaseService } from "../integrations/supabase.service";
+import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { EmailService } from "../email/email.service";
 
 @Injectable()
