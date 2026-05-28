@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { SupabaseService } from '../integrations/supabase.service';
+import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { EmailService } from '../email/email.service'; 
 
 @Injectable()

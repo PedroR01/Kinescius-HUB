@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerClasesRouteImport } from './routes/verClases'
+import { Route as SuccessRouteImport } from './routes/success'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as PagarClaseRouteImport } from './routes/pagarClase'
 import { Route as ListaEsperaRouteImport } from './routes/listaEspera'
 import { Route as IniciarSesionRouteImport } from './routes/iniciarSesion'
 import { Route as CrearClaseRouteImport } from './routes/crearClase'
@@ -27,6 +29,11 @@ const VerClasesRoute = VerClasesRouteImport.update({
   path: '/verClases',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SuccessRoute = SuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
   id: '/solicitarTurno',
   path: '/solicitarTurno',
@@ -35,6 +42,11 @@ const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagarClaseRoute = PagarClaseRouteImport.update({
+  id: '/pagarClase',
+  path: '/pagarClase',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListaEsperaRoute = ListaEsperaRouteImport.update({
@@ -93,8 +105,10 @@ export interface FileRoutesByFullPath {
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/pagarClase': typeof PagarClaseRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/success': typeof SuccessRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesByTo {
@@ -107,8 +121,10 @@ export interface FileRoutesByTo {
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/pagarClase': typeof PagarClaseRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/success': typeof SuccessRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRoutesById {
@@ -122,8 +138,10 @@ export interface FileRoutesById {
   '/crearClase': typeof CrearClaseRoute
   '/iniciarSesion': typeof IniciarSesionRoute
   '/listaEspera': typeof ListaEsperaRoute
+  '/pagarClase': typeof PagarClaseRoute
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
+  '/success': typeof SuccessRoute
   '/verClases': typeof VerClasesRoute
 }
 export interface FileRouteTypes {
@@ -138,8 +156,10 @@ export interface FileRouteTypes {
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/pagarClase'
     | '/registro'
     | '/solicitarTurno'
+    | '/success'
     | '/verClases'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -152,8 +172,10 @@ export interface FileRouteTypes {
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/pagarClase'
     | '/registro'
     | '/solicitarTurno'
+    | '/success'
     | '/verClases'
   id:
     | '__root__'
@@ -166,8 +188,10 @@ export interface FileRouteTypes {
     | '/crearClase'
     | '/iniciarSesion'
     | '/listaEspera'
+    | '/pagarClase'
     | '/registro'
     | '/solicitarTurno'
+    | '/success'
     | '/verClases'
   fileRoutesById: FileRoutesById
 }
@@ -181,8 +205,10 @@ export interface RootRouteChildren {
   CrearClaseRoute: typeof CrearClaseRoute
   IniciarSesionRoute: typeof IniciarSesionRoute
   ListaEsperaRoute: typeof ListaEsperaRoute
+  PagarClaseRoute: typeof PagarClaseRoute
   RegistroRoute: typeof RegistroRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
+  SuccessRoute: typeof SuccessRoute
   VerClasesRoute: typeof VerClasesRoute
 }
 
@@ -193,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/verClases'
       fullPath: '/verClases'
       preLoaderRoute: typeof VerClasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/success': {
+      id: '/success'
+      path: '/success'
+      fullPath: '/success'
+      preLoaderRoute: typeof SuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/solicitarTurno': {
@@ -207,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagarClase': {
+      id: '/pagarClase'
+      path: '/pagarClase'
+      fullPath: '/pagarClase'
+      preLoaderRoute: typeof PagarClaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/listaEspera': {
@@ -285,8 +325,10 @@ const rootRouteChildren: RootRouteChildren = {
   CrearClaseRoute: CrearClaseRoute,
   IniciarSesionRoute: IniciarSesionRoute,
   ListaEsperaRoute: ListaEsperaRoute,
+  PagarClaseRoute: PagarClaseRoute,
   RegistroRoute: RegistroRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
+  SuccessRoute: SuccessRoute,
   VerClasesRoute: VerClasesRoute,
 }
 export const routeTree = rootRouteImport

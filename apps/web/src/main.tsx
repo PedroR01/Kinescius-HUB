@@ -81,7 +81,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AppProviders>
       <RouterProvider router={router} />
-      <App />
       <Toaster />
     <EntornoDePruebas />
     </AppProviders>
