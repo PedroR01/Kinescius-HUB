@@ -11,6 +11,8 @@ import { EmailModule } from './email/email.module';
 import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
 import { ShiftsModule } from "./shifts/shifts.module";
 import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
+import { PagosModule } from "./pagos/pagos.module";
+import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.module";
 
 @Module({
   imports: [
@@ -26,6 +28,10 @@ import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
     ListaEsperaModule,
     ShiftsModule,
     ConfirmarTurnoModule,
+    ShiftsModule,
+    ConfirmarTurnoModule,
+    MpCheckoutProModule,
+    PagosModule
   ],
   controllers: [AppController],
   providers: [AppService]
