@@ -17,13 +17,20 @@ type Profesor = {
 }
 
 function formatDate(fecha: string) {
-  const date = new Date(fecha)
-  if (Number.isNaN(date.getTime())) return fecha
-  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+  const [year, month, day] = fecha.split('T')[0].split('-')
+  return `${Number(day)}/${Number(month)}/${year}`
 }
 
 function formatTime(hora: string) {
   return hora.replace(/:00$/, 'hs')
+}
+
+function getHoy() {
+  const today = new Date()
+  const y = today.getFullYear()
+  const m = String(today.getMonth() + 1).padStart(2, '0')
+  const d = String(today.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export const Route = createFileRoute('/cambiarProfesor')({
@@ -36,33 +43,65 @@ function RouteComponent() {
   const [selectedClase, setSelectedClase] = useState<Clase | null>(null)
   const [selectedProfesorId, setSelectedProfesorId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingProfesores, setLoadingProfesores] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [startDate, setStartDate] = useState(getHoy())
+  const [endDate, setEndDate] = useState('')
 
   useEffect(() => {
-    void loadData()
+    void loadClases()
   }, [])
 
-  const loadData = async () => {
+  const loadClases = async () => {
     setLoading(true)
     setError(null)
+    setSelectedClase(null)
+    setSelectedProfesorId(null)
+    setProfesores([])
     try {
-      const [clasesRes, profesoresRes] = await Promise.all([
-        fetch('http://localhost:3000/admin/clases'),
-        fetch('http://localhost:3000/admin/clases/profesores'),
-      ])
+      const params = new URLSearchParams()
+      if (startDate) params.append('startDate', startDate)
+      if (endDate) params.append('endDate', endDate)
 
-      const clasesData = await clasesRes.json()
-      const profesoresData = await profesoresRes.json()
-
-      setClases(clasesData ?? [])
-      setProfesores(profesoresData?.profesores ?? [])
+      const res = await fetch(`http://localhost:3000/admin/clases?${params.toString()}`)
+      const data = await res.json()
+      setClases(data ?? [])
     } catch {
-      setError('Error al cargar los datos')
+      setError('Error al cargar las clases')
     } finally {
       setLoading(false)
     }
+  }
+
+  // ← acá está el cambio clave: busca solo los disponibles para esa fecha/hora
+  const loadProfesoresDisponibles = async (clase: Clase) => {
+    setLoadingProfesores(true)
+    setProfesores([])
+    setSelectedProfesorId(null)
+    try {
+      const fecha = clase.fecha.split('T')[0]
+      const params = new URLSearchParams({ fecha, hora: clase.hora })
+      const res = await fetch(
+        `http://localhost:3000/admin/clases/profesores/disponibles?${params.toString()}`
+      )
+      const data = await res.json()
+      setProfesores(data?.profesores ?? [])
+    } catch {
+      setError('Error al cargar los profesores disponibles')
+    } finally {
+      setLoadingProfesores(false)
+    }
+  }
+
+  const handleClaseSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value)
+    const clase = clases.find((c) => c.id === id) ?? null
+    setSelectedClase(clase)
+    setMessage(null)
+    setError(null)
+    if (clase) void loadProfesoresDisponibles(clase)
   }
 
   const handleCambiar = async () => {
@@ -96,12 +135,22 @@ function RouteComponent() {
       setMessage(data?.message ?? 'Profesor actualizado correctamente')
       setSelectedClase(null)
       setSelectedProfesorId(null)
-      void loadData()
+      setProfesores([])
+      void loadClases()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
       setSaving(false)
     }
+  }
+
+  const selectStyle = {
+    width: '100%',
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid rgba(45,190,127,0.35)',
+    background: '#fff',
+    marginTop: '6px',
   }
 
   return (
@@ -115,32 +164,74 @@ function RouteComponent() {
         {error && <p className="status-badge full">{error}</p>}
         {message && <p className="status-badge success">{message}</p>}
 
+        <div className="field-row" style={{ marginBottom: '16px' }}>
+          <label>
+            Fecha desde
+            <input
+              type="date"
+              value={startDate}
+              min={getHoy()}
+              onChange={e => setStartDate(e.target.value)}
+              style={{ ...selectStyle, cursor: 'pointer' }}
+            />
+          </label>
+          <label>
+            Fecha hasta
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || getHoy()}
+              onChange={e => setEndDate(e.target.value)}
+              style={{ ...selectStyle, cursor: 'pointer' }}
+            />
+          </label>
+        </div>
+
+        <div className="actions-row" style={{ marginBottom: '20px' }}>
+          <button
+            type="button"
+            className="button button-primary"
+            onClick={() => void loadClases()}
+            disabled={loading}
+            style={{ background: '#2DBE7F', color: '#0d1f18' }}
+          >
+            {loading ? 'Cargando...' : 'Buscar clases'}
+          </button>
+          {(startDate !== getHoy() || endDate) && (
+            <button
+              type="button"
+              onClick={() => {
+                setStartDate(getHoy())
+                setEndDate('')
+                setClases([])
+                setSelectedClase(null)
+                setProfesores([])
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(45,190,127,0.4)',
+                color: '#2DBE7F',
+                borderRadius: '100px',
+                padding: '8px 18px',
+                cursor: 'pointer',
+                fontSize: '13px',
+              }}
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <p>Cargando...</p>
         ) : (
           <div className="field-column">
-
-            {/* Selector de clase */}
             <label>
               Clase
               <select
                 value={selectedClase?.id ?? ''}
-                onChange={(e) => {
-                  const id = Number(e.target.value)
-                  const clase = clases.find((c) => c.id === id) ?? null
-                  setSelectedClase(clase)
-                  setSelectedProfesorId(null)
-                  setMessage(null)
-                  setError(null)
-                }}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(45,190,127,0.35)',
-                  background: '#fff',
-                  marginTop: '6px',
-                }}
+                onChange={handleClaseSelect}
+                style={selectStyle}
               >
                 <option value="">-- Seleccioná una clase --</option>
                 {clases.map((clase) => (
@@ -151,33 +242,34 @@ function RouteComponent() {
               </select>
             </label>
 
-            {/* Selector de profesor */}
             {selectedClase && (
               <label>
                 Nuevo profesor
-                <select
-                  value={selectedProfesorId ?? ''}
-                  onChange={(e) => setSelectedProfesorId(Number(e.target.value))}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(45,190,127,0.35)',
-                    background: '#fff',
-                    marginTop: '6px',
-                  }}
-                >
-                  <option value="">-- Seleccioná un profesor --</option>
-                  {profesores.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} {p.apellido} — DNI {p.dni}
+                {loadingProfesores ? (
+                  <p style={{ marginTop: '8px', color: '#2DBE7F', fontSize: '14px' }}>
+                    Cargando profesores disponibles...
+                  </p>
+                ) : (
+                  <select
+                    value={selectedProfesorId ?? ''}
+                    onChange={(e) => setSelectedProfesorId(Number(e.target.value))}
+                    style={selectStyle}
+                  >
+                    <option value="">
+                      {profesores.length === 0
+                        ? '— Sin profesores disponibles para este horario —'
+                        : '-- Seleccioná un profesor --'}
                     </option>
-                  ))}
-                </select>
+                    {profesores.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre} {p.apellido} — DNI {p.dni}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
             )}
 
-            {/* Botón confirmar */}
             {selectedClase && selectedProfesorId && (
               <div className="actions-row">
                 <button
@@ -191,7 +283,6 @@ function RouteComponent() {
                 </button>
               </div>
             )}
-
           </div>
         )}
       </section>

@@ -29,6 +29,7 @@
             <Link to="/clientes" className="button button-primary">Ver clientes</Link>
             <Link to="/verClases" className="button button-primary">Ver clases</Link>
             <Link to="/cambiarProfesor" className="button button-primary">Cambiar profesor</Link>
+            <Link to="/verInscriptos" className="button button-primary">Ver inscriptos</Link>
             <button onClick={cerrarSesion} className="button">Cerrar sesión</button>
           </>
         ) : (
