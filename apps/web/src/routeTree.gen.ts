@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerInscriptosRouteImport } from './routes/verInscriptos'
 import { Route as VerClasesRouteImport } from './routes/verClases'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitarTurno'
 import { Route as RegistroRouteImport } from './routes/registro'
@@ -22,6 +23,11 @@ import { Route as CambiarProfesorRouteImport } from './routes/cambiarProfesor'
 import { Route as CambiarPasswdRouteImport } from './routes/cambiarPasswd'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VerInscriptosRoute = VerInscriptosRouteImport.update({
+  id: '/verInscriptos',
+  path: '/verInscriptos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerClasesRoute = VerClasesRouteImport.update({
   id: '/verClases',
   path: '/verClases',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
+  '/verInscriptos': typeof VerInscriptosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
+  '/verInscriptos': typeof VerInscriptosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/registro': typeof RegistroRoute
   '/solicitarTurno': typeof SolicitarTurnoRoute
   '/verClases': typeof VerClasesRoute
+  '/verInscriptos': typeof VerInscriptosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/solicitarTurno'
     | '/verClases'
+    | '/verInscriptos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/solicitarTurno'
     | '/verClases'
+    | '/verInscriptos'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/solicitarTurno'
     | '/verClases'
+    | '/verInscriptos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,10 +196,18 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
   VerClasesRoute: typeof VerClasesRoute
+  VerInscriptosRoute: typeof VerInscriptosRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verInscriptos': {
+      id: '/verInscriptos'
+      path: '/verInscriptos'
+      fullPath: '/verInscriptos'
+      preLoaderRoute: typeof VerInscriptosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verClases': {
       id: '/verClases'
       path: '/verClases'
@@ -288,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
   VerClasesRoute: VerClasesRoute,
+  VerInscriptosRoute: VerInscriptosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

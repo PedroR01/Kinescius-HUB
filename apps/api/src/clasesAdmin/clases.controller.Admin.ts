@@ -44,6 +44,19 @@ export class ClasesAdminController {
     return this.clasesService.getInscriptos(fecha, tipo);
   }
 
+  @Get("profesores/disponibles")
+  async findProfesoresDisponibles(
+    @Query("fecha") fecha?: string,
+    @Query("hora") hora?: string
+  ) {
+    if (!fecha || !hora) {
+      throw new BadRequestException(
+        "Los parámetros fecha y hora son obligatorios"
+      );
+    }
+    return this.clasesService.getProfesoresDisponibles(fecha, hora);
+  }
+
   @Get("profesores")
   async findProfesores() {
     return this.clasesService.getProfesores();

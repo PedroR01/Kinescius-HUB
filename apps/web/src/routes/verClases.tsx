@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 export const Route = createFileRoute('/verClases')({
   component: RouteComponent,
@@ -77,9 +77,6 @@ function DatePicker({
 
   const handleDay = (day: number) => {
     const date = new Date(viewYear, viewMonth, day)
-    const dow = date.getDay()
-    if (dow === 0 || dow === 6) return
-    if (date < today) return
     const y = date.getFullYear()
     const m = String(date.getMonth() + 1).padStart(2, '0')
     const d = String(date.getDate()).padStart(2, '0')
@@ -133,7 +130,7 @@ function DatePicker({
             {DAYS.map(d => (
               <div key={d} style={{
                 textAlign: 'center', fontSize: '10px', fontWeight: 600, padding: '4px 0', letterSpacing: '0.04em',
-                color: d === 'Dom' || d === 'Sáb' ? 'rgba(13,31,24,0.25)' : 'rgba(13,31,24,0.45)',
+                color: 'rgba(13,31,24,0.45)',
               }}>{d}</div>
             ))}
           </div>
@@ -142,19 +139,15 @@ function DatePicker({
             {cells.map((day, i) => {
               if (day === null) return <div key={`e-${i}`} />
               const date = new Date(viewYear, viewMonth, day)
-              const dow = date.getDay()
-              const isWeekend = dow === 0 || dow === 6
-              const isPast = date < today
               const isSelected = value === `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
               const isToday = date.getTime() === today.getTime()
-              const disabled = isWeekend || isPast
               return (
                 <div key={day} onClick={() => handleDay(day)} style={{
                   textAlign: 'center', padding: '6px 2px', borderRadius: '8px', fontSize: '13px',
-                  cursor: disabled ? 'default' : 'pointer',
+                  cursor: 'pointer',
                   fontWeight: isSelected ? 700 : 400,
                   background: isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent',
-                  color: isSelected ? '#fff' : disabled ? 'rgba(13,31,24,0.2)' : TEXT,
+                  color: isSelected ? '#fff' : TEXT,
                   border: isToday && !isSelected ? `1px solid ${GREEN}` : '1px solid transparent',
                 }}>{day}</div>
               )
@@ -166,16 +159,20 @@ function DatePicker({
   )
 }
 
+// ← fix timezone: parsea como string, sin conversión UTC
 function formatDate(fecha: string) {
-  const date = new Date(fecha)
-  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+  const [year, month, day] = fecha.split('T')[0].split('-')
+  return `${Number(day)}/${Number(month)}/${year}`
 }
 
 function formatTime(hora: string) {
   return hora.replace(/:00$/, 'hs')
 }
 
+type Mode = 'todas' | 'filtrar'
+
 function RouteComponent() {
+  const [mode, setMode] = useState<Mode>('todas')
   const [classes, setClasses] = useState<Clase[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -183,17 +180,20 @@ function RouteComponent() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
-  const loadClasses = async () => {
+  const loadClasses = async (overrideMode?: Mode) => {
+    const currentMode = overrideMode ?? mode
     setLoading(true)
     setMessage(null)
     setError(null)
 
     try {
       let url = 'http://localhost:3000/admin/clases'
-      const params = new URLSearchParams()
-      if (startDate) params.append('startDate', startDate)
-      if (endDate) params.append('endDate', endDate)
-      if (params.toString()) url += `?${params.toString()}`
+      if (currentMode === 'filtrar') {
+        const params = new URLSearchParams()
+        if (startDate) params.append('startDate', startDate)
+        if (endDate) params.append('endDate', endDate)
+        if (params.toString()) url += `?${params.toString()}`
+      }
 
       const response = await fetch(url)
       const data = await response.json().catch(() => null)
@@ -203,10 +203,7 @@ function RouteComponent() {
       }
 
       setClasses((data ?? []) as Clase[])
-
-      if ((data ?? []).length === 0) {
-        setMessage('No hay clases en el rango seleccionado.')
-      }
+      if ((data ?? []).length === 0) setMessage('No hay clases en el rango seleccionado.')
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
       setClasses([])
@@ -215,9 +212,14 @@ function RouteComponent() {
     }
   }
 
-  useEffect(() => {
-    void loadClasses()
-  }, [])
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode)
+    setStartDate('')
+    setEndDate('')
+    setClasses([])
+    setMessage(null)
+    setError(null)
+  }
 
   const classRows = useMemo(
     () => classes.map(clase => (
@@ -233,53 +235,105 @@ function RouteComponent() {
     [classes]
   )
 
+  const toggleBase: React.CSSProperties = {
+    padding: '10px 22px',
+    borderRadius: '100px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '14px',
+    transition: 'all 0.18s ease',
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#ffffff", padding: "40px 24px" }}>
       <h1 style={{ color: TEXT, marginBottom: '24px' }}>Ver clases</h1>
 
       <div style={{ background: CARD, borderRadius: '20px', padding: '24px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          <label style={labelStyle}>
-            Fecha desde
-            <DatePicker value={startDate} onChange={setStartDate} />
-          </label>
-          <label style={labelStyle}>
-            Fecha hasta
-            <DatePicker value={endDate} onChange={setEndDate} />
-          </label>
-        </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{
+          display: 'inline-flex',
+          background: 'rgba(45,190,127,0.1)',
+          borderRadius: '100px',
+          padding: '4px',
+          marginBottom: '20px',
+          gap: '4px',
+        }}>
           <button
             type="button"
-            onClick={() => void loadClasses()}
-            disabled={loading}
+            onClick={() => {
+              if (mode === 'todas') {
+                void loadClasses('todas')
+              } else {
+                handleModeChange('todas')
+              }
+            }}
             style={{
-              background: GREEN, color: TEXT, border: 'none',
-              borderRadius: '12px', padding: '12px 18px',
-              cursor: 'pointer', fontWeight: 700
+              ...toggleBase,
+              background: mode === 'todas' ? GREEN : 'transparent',
+              color: mode === 'todas' ? '#fff' : GREEN,
             }}
           >
-            {loading ? 'Cargando...' : 'Visualizar clases'}
+            {loading && mode === 'todas' ? 'Cargando...' : 'Ver todas'}
           </button>
-
           <button
             type="button"
-            onClick={() => { setStartDate(''); setEndDate(''); setClasses([]); setMessage(null); setError(null) }}
+            onClick={() => handleModeChange('filtrar')}
             style={{
-              background: 'transparent',
-              border: '1px solid rgba(45,190,127,0.3)',
-              color: GREEN, borderRadius: '12px',
-              padding: '12px 18px', cursor: 'pointer', fontWeight: 600
+              ...toggleBase,
+              background: mode === 'filtrar' ? GREEN : 'transparent',
+              color: mode === 'filtrar' ? '#fff' : GREEN,
             }}
           >
-            Limpiar filtros
+            Filtrar por fechas
           </button>
         </div>
+
+        {mode === 'filtrar' && (
+          <div>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <label style={labelStyle}>
+                Fecha desde
+                <DatePicker value={startDate} onChange={setStartDate} />
+              </label>
+              <label style={labelStyle}>
+                Fecha hasta
+                <DatePicker value={endDate} onChange={setEndDate} />
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => void loadClasses()}
+                disabled={loading}
+                style={{
+                  background: GREEN, color: TEXT, border: 'none',
+                  borderRadius: '12px', padding: '12px 18px',
+                  cursor: 'pointer', fontWeight: 700,
+                }}
+              >
+                {loading ? 'Cargando...' : 'Visualizar clases'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartDate(''); setEndDate(''); setClasses([]); setMessage(null); setError(null) }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(45,190,127,0.3)',
+                  color: GREEN, borderRadius: '12px',
+                  padding: '12px 18px', cursor: 'pointer', fontWeight: 600,
+                }}
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <p style={{ color: '#ff4d4f', marginBottom: '16px' }}>{error}</p>}
       {message && <p style={{ color: GREEN, marginBottom: '16px' }}>{message}</p>}
+      {loading && <p style={{ color: GREEN }}>Cargando...</p>}
 
       {classes.length > 0 && (
         <div style={{ overflowX: 'auto' }}>

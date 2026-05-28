@@ -32,6 +32,7 @@ const PaginaPrincipal = () => {
             <Link to="/clientes" className="button button-primary">Ver clientes</Link>
             <Link to="/verClases" className="button button-primary">Ver clases</Link>
             <Link to="/cambiarProfesor" className="button button-primary">Cambiar profesor</Link>
+            <Link to="/verInscriptos" className="button button-primary">Ver inscriptos</Link>
             <button onClick={cerrarSesion} className="button">Cerrar sesión</button>
           </>
         ) : (
@@ -61,6 +62,7 @@ const cards = [
   { to: "/crearClase",       num: "03", title: "Crear clase",       desc: "Agendá una nueva sesión",                 icon: "➕" },
   { to: "/clientes",         num: "04", title: "Clientes",          desc: "Administrá tus pacientes",                icon: "👥" },
   { to: "/cambiarProfesor",  num: "05", title: "Cambiar profesor",  desc: "Asigná un nuevo profesor a una clase",    icon: "👨‍🏫" },
+  { to: "/verInscriptos",    num: "06", title: "Ver inscriptos",    desc: "Consultá los inscriptos de una clase",    icon: "📋" },
 ];
 
 function NavCard({ to, num, title, desc, icon }: (typeof cards)[0]) {
