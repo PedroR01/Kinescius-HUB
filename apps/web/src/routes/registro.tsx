@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 
 type FormData = { 
@@ -10,6 +10,15 @@ type FormData = {
 };
 
 const Registro = () => {
+  const [estaLogueado, setEstaLogueado] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('miToken');
+    if (token) {
+      setEstaLogueado(true);
+    }
+  })
+
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
     apellido: '',
@@ -72,37 +81,46 @@ const Registro = () => {
   return (
     <div>
       <button onClick={() => navigate({to: "/"})}>Volver a la página principal</button>
-      <h1>Registro de cliente</h1>
-      <p>Por favor complete sus datos para registrarse.</p>
+        {!estaLogueado ? (
+          <>
+            <h1>Registro de cliente</h1>
+            <p>Por favor complete sus datos para registrarse.</p>
 
-      {/* Como usás el onClick del botón, el onSubmit prevenido acá está perfecto */}
-      <form onSubmit={e => e.preventDefault()}>
-        <label>Nombre:</label>
-        <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required />
-        <br />
+            {/* Como usás el onClick del botón, el onSubmit prevenido acá está perfecto */}
+            <form onSubmit={e => e.preventDefault()}>
+              <label>Nombre:</label>
+              <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required />
+              <br />
 
-        <label>Apellido:</label>
-        <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} required />
-        <br />
+              <label>Apellido:</label>
+              <input type="text" name="apellido" value={formData.apellido} onChange={handleChange} required />
+              <br />
 
-        <label>Email:</label>
-        <input type="email" name="email" value={formData.email} onChange={handleChange} required />
-        <br />
+              <label>Email:</label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+              <br />
 
-        <label>DNI:</label>
-        <input type="text" name="dni" value={formData.dni} onChange={handleChange} required />
-        <br />
+              <label>DNI:</label>
+              <input type="text" name="dni" value={formData.dni} onChange={handleChange} required />
+              <br />
 
-        <label>Teléfono (es opcional):</label>
-        <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} />
-        <br />
+              <label>Teléfono (es opcional):</label>
+              <input type="tel" name="telefono" value={formData.telefono} onChange={handleChange} />
+              <br />
 
-        <div style={{ marginTop: '1rem' }}>
-          <button type="button" onClick={handleRegister} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
-            {isProcessing ? 'Procesando...' : 'Registrarme'} {/*Texto del botón*/}
-          </button>
-        </div>
-      </form>
+              <div style={{ marginTop: '1rem' }}>
+                <button type="button" onClick={handleRegister} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
+                  {isProcessing ? 'Procesando...' : 'Registrarme'} {/*Texto del botón*/}
+                </button>
+              </div>
+            </form>
+          </>
+          ) : (
+          <>
+            <h1>Ya estás validado!</h1>
+            <p>Debes cerrar sesión si quieres registrar otro usuario</p>
+          </>
+          )}
 
       {message && <p style={{ color: 'green' }}>{message}</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}

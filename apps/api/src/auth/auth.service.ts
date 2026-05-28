@@ -27,6 +27,28 @@ export class AuthService {
     throw new BadRequestException("No se pudieron registrar los datos porque hay campos obligatorios vacíos.");
   }
 
+  //Busco si el DNI o el Mail ya están en la base de datos
+    const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
+      .from('Persona')
+      .select('dni, mail')
+      .or(`dni.eq.${datos.dni},mail.eq.${datos.email}`);
+    if (errorBusqueda) {
+      throw new InternalServerErrorException("Error al verificar la disponibilidad de los datos en el sistema.");
+    }
+    // Si el array trajo algún resultado, significa que al menos uno de los dos datos ya existe
+    if (usuariosExistentes && usuariosExistentes.length > 0) {
+      const dniOcupado = usuariosExistentes.some(usuario => usuario.dni === datos.dni);
+      const mailOcupado = usuariosExistentes.some(usuario => usuario.mail === datos.email);
+
+      if (dniOcupado && mailOcupado) {
+        throw new BadRequestException("El DNI y el Email ingresados ya se encuentran registrados en otra cuenta.");
+      } else if (dniOcupado) {
+        throw new BadRequestException("El DNI ingresado ya se encuentra registrado. Por favor, verificá tus datos.");
+      } else if (mailOcupado) {
+        throw new BadRequestException("El Email ingresado ya pertenece a una cuenta existente.");
+      }
+    }
+
   // Estructura de control para intentar la inserción segura en la base de datos y capturar cualquier falla imprevista
   try {
     //Genero la contraseña base para el registro
@@ -106,12 +128,34 @@ export class AuthService {
       throw new UnauthorizedException('El email o la contraseña son incorrectos.');
     }
 
-    //El token que devuelva supabase es lo que va a validar al usuario
+    //Uso el UUID del usuario para buscar su id
+    const { data: persona, error: errorPersona } = await this.supabaseService.client
+      .from('Persona')
+      .select('id')
+      .eq('user_id', data.user.id)
+      .single();
+
+    if (errorPersona || !persona) {
+      throw new InternalServerErrorException('Error al recuperar los datos internos del usuario.');
+    }
+
+    // Reviso si el id le pertenece a algún administrador
+    const { data: admin } = await this.supabaseService.client
+      .from('Administrador')
+      .select('id')
+      .eq('id', persona.id)
+      .maybeSingle(); 
+
+    // Asigno el rol del usuario basándome en si se encontró o no
+    const rolUsuario = admin ? 'admin' : 'usuario';
+
+    //El token y el rol que devuelva al frontend va a validar al usuario como cliente o admin
     return {
       success: true,
       mensaje: "Inicio de sesión exitoso :)",
       token: data.session.access_token, 
-      usuarioId: data.user.id
+      usuarioId: data.user.id,
+      rol: rolUsuario
     };
   }
 
