@@ -65,7 +65,8 @@ export class AuthService {
         throw new BadRequestException(`Error en autenticación: ${authError.message}`);
     }
 
-    const { error } = await this.supabaseService.client
+    //Recupero el ID generado para el nuevo usuario en Persona
+    const { data: personaData, error } = await this.supabaseService.client
       .from('Persona') 
       .insert([
         {
@@ -76,12 +77,28 @@ export class AuthService {
           dni: datos.dni,
           telefono: datos.telefono || null //Si el teléfono viene vacío, se guarda como null
         }
-      ]);
-
-    if (error) {      
+      ])
+      .select('id')
+      .single();
+    if (error || !personaData) {      
       await this.supabaseService.client.auth.admin.deleteUser(authData.user.id); //Si no se pudo registrar el usuario en la DB, lo eliminamos del sistema Auth de supabase
-      throw new BadRequestException(`No se pudieron registrar los datos: ${error.message}`);
+      throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
     }
+
+    //Inserto el ID de la persona en la tabla Usuario 
+    const { error: errorUsuario } = await this.supabaseService.client
+      .from('Usuario')
+      .insert([
+        {
+          id: personaData.id
+        }
+      ]);
+    if (errorUsuario) {
+      // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+      await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+      throw new BadRequestException(`No se pudo asignar el rol de usuario al sistema: ${errorUsuario.message}`);
+    }
+
     console.log(`¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}`); //Esto es lo que se debería enviar por mail
     try {
       await this.emailService.enviarCorreo(
