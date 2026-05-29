@@ -195,28 +195,36 @@ function RouteComponent() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const [fechaFiltro, setFechaFiltro] = useState('')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
 
   useEffect(() => {
     void loadClases()
   }, [])
 
   useEffect(() => {
-    if (!fechaFiltro) {
+    if (!fechaDesde && !fechaHasta) {
       setFilteredClases(clases)
       return
     }
-    const filtered = clases.filter(c => c.fecha.split('T')[0] === fechaFiltro)
+    const filtered = clases.filter(c => {
+      const fecha = c.fecha.split('T')[0]
+      if (fechaDesde && fecha < fechaDesde) return false
+      if (fechaHasta && fecha > fechaHasta) return false
+      return true
+    })
     setFilteredClases(filtered)
     setSelectedClase(prev => {
       if (!prev) return null
-      if (prev.fecha.split('T')[0] !== fechaFiltro) return null
+      const fecha = prev.fecha.split('T')[0]
+      if (fechaDesde && fecha < fechaDesde) return null
+      if (fechaHasta && fecha > fechaHasta) return null
       return prev
     })
     setInscriptos([])
     setError(null)
     setMessage(null)
-  }, [fechaFiltro, clases])
+  }, [fechaDesde, fechaHasta, clases])
 
   const loadClases = async () => {
     setLoadingClases(true)
@@ -258,8 +266,11 @@ function RouteComponent() {
   }
 
   const clearFiltro = () => {
-    setFechaFiltro('')
+    setFechaDesde('')
+    setFechaHasta('')
   }
+
+  const hayFiltro = fechaDesde || fechaHasta
 
   return (
     <main style={{ minHeight: "100vh", background: "#ffffff", padding: "40px 24px", boxSizing: "border-box" }}>
@@ -277,7 +288,7 @@ function RouteComponent() {
         Ver <span style={{ color: GREEN, fontStyle: "italic" }}>inscriptos</span>
       </h1>
       <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, color: "rgba(13,31,24,0.55)" }}>
-        Filtrá por día y seleccioná una clase para ver los inscriptos.
+        Filtrá por rango de fechas y seleccioná una clase para ver los inscriptos.
       </p>
       <div style={{ width: "36px", height: "2px", background: GREEN, boxShadow: `0 0 10px ${GREEN}88`, marginBottom: "32px" }} />
 
@@ -289,8 +300,8 @@ function RouteComponent() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ ...labelStyle, marginBottom: 0 }}>Filtrar por día</span>
-            {fechaFiltro && (
+            <span style={{ ...labelStyle, marginBottom: 0 }}>Filtrar por fecha</span>
+            {hayFiltro && (
               <button
                 onClick={clearFiltro}
                 style={{
@@ -303,14 +314,32 @@ function RouteComponent() {
               </button>
             )}
           </div>
-          <DatePicker
-            value={fechaFiltro}
-            onChange={setFechaFiltro}
-            placeholder="Cualquier fecha"
-          />
-          {fechaFiltro && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "2px" }}>
+            <label style={labelStyle}>
+              Desde
+              <DatePicker
+                value={fechaDesde}
+                onChange={(v) => {
+                  setFechaDesde(v)
+                  if (fechaHasta && v > fechaHasta) setFechaHasta('')
+                }}
+                placeholder="Cualquier fecha"
+                maxDate={fechaHasta || undefined}
+              />
+            </label>
+            <label style={labelStyle}>
+              Hasta
+              <DatePicker
+                value={fechaHasta}
+                onChange={setFechaHasta}
+                placeholder="Cualquier fecha"
+                minDate={fechaDesde || undefined}
+              />
+            </label>
+          </div>
+          {hayFiltro && (
             <p style={{ margin: "4px 0 0", fontSize: "12px", color: "rgba(13,31,24,0.45)" }}>
-              {filteredClases.length} clase{filteredClases.length !== 1 ? 's' : ''} en el día seleccionado
+              {filteredClases.length} clase{filteredClases.length !== 1 ? 's' : ''} en el rango seleccionado
             </p>
           )}
         </div>
