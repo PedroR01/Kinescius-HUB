@@ -26,12 +26,12 @@ export function SiteFooter() {
 
         <motion.div variants={fadeUp} transition={EASE_OUT}>
           <h3 className="mb-3 font-heading text-base font-bold text-dark-accent">Enlaces</h3>
-          <NavLinks className="text-text/60" links={NAV_LINKS} orientation="vertical" />
+          <NavLinks className="text-text-h/60" links={NAV_LINKS} orientation="vertical" />
         </motion.div>
 
         <motion.div variants={fadeUp} transition={EASE_OUT}>
           <h3 className="mb-3 font-heading text-base font-bold text-dark-accent">Contacto</h3>
-          <ul className="space-y-2.5 text-sm text-text/60">
+          <ul className="space-y-2.5 text-sm text-text-h/60">
             <li className="flex items-start gap-2">
               <Phone className="mt-0.5 h-4 w-4 shrink-0 text-main" aria-hidden />
               <a href={`tel:${CONTACT_INFO.phone.replace(/\s/g, "")}`} className="hover:text-main">
