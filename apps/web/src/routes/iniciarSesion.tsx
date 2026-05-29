@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import React, { useState } from 'react';
-
+import React, { useState, useEffect } from 'react';
 
 type FormData = { 
   email: string;
@@ -9,6 +8,13 @@ type FormData = {
 
 const IniciarSesion = () => {
   const navigate = useNavigate();
+  const [estaLogueado, setEstaLogueado] = useState(false);
+   useEffect(() => {
+    const token = localStorage.getItem('miToken');
+    if (token) {
+      setEstaLogueado(true);
+    }
+  })
 
   const [error, setError] = useState ('');
   const [message, setMessage] = useState('');
@@ -54,8 +60,10 @@ const IniciarSesion = () => {
       if (response.ok) {
         // Guardamos el token que nos devuelve Supabase/NestJS
         localStorage.setItem('miToken', data.token);
-        
-        setMessage('¡Inicio de sesión exitoso!');
+        localStorage.setItem('rol', data.rol); //Guardo el rol del usuario (admin o usuario)
+        console.log ("El rol ingresado es ", data.rol);
+
+        setMessage('Inicio de sesión exitoso!');
         setTimeout(() => {
           navigate({ to: '/' }); //espera un segundo para redirigir al inicio de Kinescius
         }, 1000);
@@ -91,7 +99,10 @@ const IniciarSesion = () => {
       const data = await response.json();
       if (response.ok) {
         //Seteo el mensaje de éxito que nos manda NestJS, o uno por defecto
-        setMessage(data.mensaje || 'Si el correo está registrado, recibirás una nueva contraseña pronto.');
+        setMessage(data.mensaje || 'Vas a recibir una nueva contraseña pronto en tu email.');
+        setTimeout(() => {
+          navigate({ to: '/' }); //espera un segundo para redirigir al inicio de Kinescius
+        }, 1000);
       } else {
         //Y si el backend frena la petición seteo también mensaje
         setError(data.message || 'Hubo un error al intentar recuperar la contraseña.');
@@ -107,27 +118,36 @@ const IniciarSesion = () => {
   return (
     <div>
       <button onClick={() => navigate({to: "/"})}>Volver a la página principal</button>
-      <h1>Inicio de sesión</h1>
-      <p>Por favor complete sus datos para iniciar sesión</p>
-      
-      <form onSubmit={e => e.preventDefault()}>
-        <label>Email:</label>
-        <input type="email" name="email" value={formData.email} onChange={handleChange} required/> 
-        <br />
+      {!estaLogueado ? (
+        <>
+          <h1>Inicio de sesión</h1>
+          <p>Por favor complete sus datos para iniciar sesión</p>
+          
+          <form onSubmit={e => e.preventDefault()}>
+            <label>Email:</label>
+            <input type="email" name="email" value={formData.email} onChange={handleChange} required/> 
+            <br />
 
-        <label>Contraseña:</label>
-        <input type="password" name="passwd" value={formData.passwd} onChange={handleChange} required/>
-        
-        <div style={{ marginTop: '1rem' }}>
-          <button type="button" onClick={handleInicio} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
-            {isProcessing ? 'Verificando...' : 'Iniciar Sesión'} {/*Texto que muestra el botón en base al sistema*/}
-          </button>
-        </div>
-        {/*Botón para recuperar contraseña*/}
-        <button type="button" onClick={handleRecuperacion} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
-          {isProcessing ? 'Procesando...' : 'Olvidé mi contraseña!'}
-        </button>
-      </form>
+            <label>Contraseña:</label>
+            <input type="password" name="passwd" value={formData.passwd} onChange={handleChange} required/>
+            
+            <div style={{ marginTop: '1rem' }}>
+              <button type="button" onClick={handleInicio} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
+                {isProcessing ? 'Verificando...' : 'Iniciar Sesión'} {/*Texto que muestra el botón en base al sistema*/}
+              </button>
+            </div>
+            {/*Botón para recuperar contraseña*/}
+            <button type="button" onClick={handleRecuperacion} disabled={isProcessing} style={{ marginLeft: '1rem' }}>
+              {isProcessing ? 'Procesando...' : 'Olvidé mi contraseña!'}
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <h1>Tu sesión ya está iniciada!</h1>
+          <p>Debes cerrar sesión en la página principal si quieres iniciar sesión de nuevo o con otra cuenta</p>
+        </>
+      )}
 
       {message && <p style={{ color: 'green' }}>{message}</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}

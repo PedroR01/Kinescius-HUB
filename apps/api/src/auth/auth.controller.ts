@@ -42,4 +42,5 @@ export class AuthController {
     // Le pasamos todo procesado al servicio de cambio de passwd
     return this.authService.cambiarPasswd(token, datos.passwdActual, datos.passwdNueva);
   }
+
 }

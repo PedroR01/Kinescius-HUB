@@ -3,11 +3,16 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
-import { SupabaseModule } from "./integrations/supabase.module";
-import { ClasesModule } from "./clases/clases.module";
+import { SupabaseModule } from "./integrations/supabase/supabase.module";
+import { ClasesModule } from "./clasesCliente/clases.module";
+import { ClasesModule as ClasesAdminModule } from "./clasesAdmin/clases.module.Admin";
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
 import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
+import { ShiftsModule } from "./shifts/shifts.module";
+import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
+import { PagosModule } from "./pagos/pagos.module";
+import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.module";
 
 @Module({
   imports: [
@@ -18,8 +23,15 @@ import { ListaEsperaModule } from "./listaEspera/listaEspera.module";
     SupabaseModule,
     AuthModule,
     ClasesModule,
+    ClasesAdminModule,
     EmailModule,
-    ListaEsperaModule
+    ListaEsperaModule,
+    ShiftsModule,
+    ConfirmarTurnoModule,
+    ShiftsModule,
+    ConfirmarTurnoModule,
+    MpCheckoutProModule,
+    PagosModule
   ],
   controllers: [AppController],
   providers: [AppService]
