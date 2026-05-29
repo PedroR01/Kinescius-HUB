@@ -85,7 +85,7 @@ export class AuthService {
       throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
     }
 
-    //Inserto el ID de la persona en la tabla Usuario 
+    //Inserto el ID de la persona en la tabla Usuario    
     const { error: errorUsuario } = await this.supabaseService.client
       .from('Usuario')
       .insert([
