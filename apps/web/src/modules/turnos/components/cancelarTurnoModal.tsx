@@ -31,10 +31,9 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   const diferenciaHoras = (fechaCompleta.getTime() - ahora.getTime()) / (1000 * 60 * 60);
   const permiteReembolso = diferenciaHoras >= 24;
 
-  // 2. Manejador del botón final
   const handleConfirmar = async () => {
     if (permiteReembolso && !opcionSeleccionada) {
-      setErrorMensaje('Por favor, selecciona qué deseas hacer con tu dinero.');
+      setErrorMensaje('Por favor, seleccioná qué deseas hacer con tu dinero.');
       return;
     }
 
@@ -58,70 +57,86 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full border border-gray-100">
-      <h2 className="text-2xl font-bold text-[#0D6B5D] mb-4">Cancelar Turno</h2>
+    <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
+      <h2 className="text-2xl font-heading font-extrabold text-dark-accent mb-6">Cancelar Turno</h2>
       
-      <div className="mb-6 bg-gray-50 p-4 rounded text-gray-700">
-        <p><strong>Actividad:</strong> {actividad}</p>
-        <p><strong>Fecha:</strong> {fechaClase}</p>
-        <p><strong>Hora:</strong> {horaClase}</p>
+      <div className="mb-6 bg-surface p-5 rounded-2xl text-slate-700">
+        <p className="mb-1"><strong className="font-semibold text-dark-accent">Actividad:</strong> {actividad}</p>
+        <p className="mb-1"><strong className="font-semibold text-dark-accent">Fecha:</strong> {fechaClase}</p>
+        <p><strong className="font-semibold text-dark-accent">Hora:</strong> {horaClase}</p>
       </div>
 
       {permiteReembolso ? (
-        <div className="mb-6">
-          <p className="text-sm text-gray-600 mb-3">
+        <div className="mb-8">
+          <p className="text-sm text-slate-600 mb-4 font-medium">
             Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:
           </p>
           <div className="flex flex-col gap-3">
-            <label className="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
+            <label 
+              className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
+                opcionSeleccionada === 'REEMBOLSO' 
+                  ? 'bg-white shadow-md scale-[1.02] ring-1 ring-main/20' 
+                  : 'bg-surface hover:bg-main/5'
+              }`}
+            >
               <input
                 type="radio"
                 name="reembolso"
                 value="REEMBOLSO"
-                className="mr-3 text-[#0D6B5D] focus:ring-[#0D6B5D]"
+                className="sr-only"
                 onChange={() => setOpcionSeleccionada('REEMBOLSO')}
               />
-              <span className="text-gray-700 font-medium">Exigir reembolso</span>
+              <span className={`font-semibold ${opcionSeleccionada === 'REEMBOLSO' ? 'text-main' : 'text-slate-600'}`}>
+                Exigir reembolso
+              </span>
             </label>
-            <label className="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
+            <label 
+              className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
+                opcionSeleccionada === 'A_FAVOR' 
+                  ? 'bg-white shadow-md scale-[1.02] ring-1 ring-main/20' 
+                  : 'bg-surface hover:bg-main/5'
+              }`}
+            >
               <input
                 type="radio"
                 name="reembolso"
                 value="A_FAVOR"
-                className="mr-3 text-[#0D6B5D] focus:ring-[#0D6B5D]"
+                className="sr-only"
                 onChange={() => setOpcionSeleccionada('A_FAVOR')}
               />
-              <span className="text-gray-700 font-medium">Dejar monto a favor</span>
+              <span className={`font-semibold ${opcionSeleccionada === 'A_FAVOR' ? 'text-main' : 'text-slate-600'}`}>
+                Dejar monto a favor
+              </span>
             </label>
           </div>
         </div>
       ) : (
-        <div className="mb-6 p-4 bg-orange-50 border-l-4 border-orange-400 text-orange-700 rounded">
-          <p className="font-semibold mb-1">Cancelación fuera de término</p>
-          <p className="text-sm">
+        <div className="mb-8 p-5 bg-red-50 text-red-700 rounded-2xl">
+          <p className="font-bold mb-2">Cancelación fuera de término</p>
+          <p className="text-sm font-medium">
             Al cancelar con menos de 24 horas de antelación, no se efectuará reembolso ni quedará saldo a favor.
           </p>
         </div>
       )}
 
       {errorMensaje && (
-        <div className="mb-4 text-red-600 text-sm font-medium">
+        <div className="mb-5 text-red-600 text-sm font-bold bg-red-50 p-3 rounded-xl">
           {errorMensaje}
         </div>
       )}
 
-      <div className="flex justify-end gap-3 mt-8">
+      <div className="flex justify-end gap-3">
         <button
           onClick={onClose}
           disabled={loading}
-          className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+          className="px-5 py-2.5 text-slate-600 font-semibold hover:bg-surface rounded-full transition-colors disabled:opacity-50"
         >
           Volver
         </button>
         <button
           onClick={handleConfirmar}
           disabled={loading}
-          className="px-6 py-2 bg-gradient-to-r from-[#0D6B5D] to-[#8BC34A] text-white font-bold rounded shadow hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-6 py-2.5 bg-main text-white font-bold rounded-full shadow-md hover:bg-main/90 transition-all active:scale-95 disabled:opacity-50"
         >
           {loading ? 'Procesando...' : 'Confirmar Cancelación'}
         </button>
