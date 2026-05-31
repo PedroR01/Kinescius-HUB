@@ -1,4 +1,3 @@
-import { z } from 'zod';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface CancelarTurnoPayload {
@@ -47,7 +46,7 @@ export const cambiarTurnoRequest = async (payload: CambiarTurnoPayload) => {
     throw new Error(errorData.message || 'Error al cambiar el turno');
   }
 
-  return response.json(); 
+  return response.json();
 };
 
 export const cancelarTurnoRequest = async (payload: CancelarTurnoPayload) => {

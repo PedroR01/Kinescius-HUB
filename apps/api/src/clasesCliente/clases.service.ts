@@ -11,9 +11,14 @@ export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async findAll() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+
     const { data, error } = await this.supabaseService.client
       .from("Clase")
       .select("*")
+      .gte("fecha", todayStr)
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
 

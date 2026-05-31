@@ -58,13 +58,13 @@ export class ClasesAdminService {
         .filter((id): id is number => typeof id === "number")
     )];
 
-    const profesorDnis = new Map<number, string | null>();
+    const profesorNombres = new Map<number, string | null>();
 
     if (profesorIds.length > 0) {
       const { data: personas, error: profesorError } =
         await this.supabaseService.client
           .from("Persona")
-          .select("id,dni")
+          .select("id,nombre,apellido")
           .in("id", profesorIds);
 
       if (profesorError) {
@@ -73,15 +73,16 @@ export class ClasesAdminService {
         );
       }
 
-      (personas ?? []).forEach((persona: { id: number; dni?: string | null }) => {
-        profesorDnis.set(persona.id, persona.dni ?? null);
+      (personas ?? []).forEach((persona: { id: number; nombre?: string | null; apellido?: string | null }) => {
+        const nombre = [persona.nombre, persona.apellido].filter(Boolean).join(' ')
+        profesorNombres.set(persona.id, nombre || null);
       });
     }
 
     return clases.map((clase) => ({
       ...clase,
-      profesor_dni: clase.id_profesor
-        ? profesorDnis.get(clase.id_profesor) ?? null
+      profesor_nombre: clase.id_profesor
+        ? profesorNombres.get(clase.id_profesor) ?? null
         : null,
     }));
   }
@@ -229,10 +230,11 @@ export class ClasesAdminService {
       throw new NotFoundException("No existe una clase con ese id");
     }
 
+    // 1. Obtener IDs de clientes inscriptos
     const { data: inscripciones, error: inscripcionesQueryError } =
       await this.supabaseService.client
         .from("Se_inscribe")
-        .select("id_cliente, Cliente!inner(Usuario!inner(Persona(nombre, mail)))")
+        .select("id_cliente")
         .eq("id_clase", id);
 
     if (inscripcionesQueryError) {
@@ -241,6 +243,33 @@ export class ClasesAdminService {
       );
     }
 
+    const clienteIds = (inscripciones ?? []).map((i: any) => i.id_cliente as number);
+
+    // 2. Obtener datos de contacto desde Persona
+    // Cliente.id === Usuario.id === Persona.id (herencia por FK compartida)
+    let emailData: { mail: string | null; nombre: string }[] = [];
+
+    if (clienteIds.length > 0) {
+      const { data: personas, error: personasError } =
+        await this.supabaseService.client
+          .from("Persona")
+          .select("id, nombre, mail")
+          .in("id", clienteIds);
+
+      if (personasError) {
+        console.error("Error al obtener datos de personas para notificación:", personasError.message);
+      } else {
+        emailData = (personas ?? []).map((p: any) => ({
+          nombre: (p.nombre as string) ?? "Cliente",
+          mail: (p.mail as string | null) ?? null,
+        }));
+      }
+    }
+
+    console.log(`[cancel] Clase ${id} - inscriptos encontrados: ${clienteIds.length}`);
+    console.log(`[cancel] Emails a notificar:`, emailData);
+
+    // 3. Eliminar inscripciones
     const { error: inscripcionesError } = await this.supabaseService.client
       .from("Se_inscribe")
       .delete()
@@ -252,6 +281,7 @@ export class ClasesAdminService {
       );
     }
 
+    // 4. Eliminar la clase
     const { error: deleteError } = await this.supabaseService.client
       .from("Clase")
       .delete()
@@ -263,11 +293,8 @@ export class ClasesAdminService {
       );
     }
 
-    const emailPromises = (inscripciones ?? []).map((entry: any) => {
-      const persona = entry?.Cliente?.Usuario?.Persona;
-      const mail: string | null = persona?.mail ?? null;
-      const nombre: string = persona?.nombre ?? "Cliente";
-
+    // 5. Enviar emails de notificación
+    const emailPromises = emailData.map(({ mail, nombre }) => {
       if (!mail) return Promise.resolve();
 
       return this.emailService.enviarClaseCancelada({
@@ -279,10 +306,20 @@ export class ClasesAdminService {
       });
     });
 
-    await Promise.allSettled(emailPromises);
+    const results = await Promise.allSettled(emailPromises);
+
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        console.error(`[cancel] Error enviando email a ${emailData[i]?.mail}:`, result.reason);
+      } else {
+        console.log(`[cancel] Email enviado correctamente a ${emailData[i]?.mail}`);
+      }
+    });
+
+    const enviados = results.filter((r) => r.status === "fulfilled").length;
 
     return {
-      message: `Clase cancelada correctamente. Se notificó a ${emailPromises.length} inscripto/s.`,
+      message: `Clase cancelada correctamente. Se notificó a ${enviados} inscripto/s.`,
       id,
     };
   }
