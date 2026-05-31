@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 
 type Clase = {
   id: number
@@ -38,6 +38,7 @@ export const Route = createFileRoute('/cambiarProfesor')({
 })
 
 function RouteComponent() {
+  const navigate = useNavigate()
   const [clases, setClases] = useState<Clase[]>([])
   const [profesores, setProfesores] = useState<Profesor[]>([])
   const [selectedClase, setSelectedClase] = useState<Clase | null>(null)
@@ -48,10 +49,7 @@ function RouteComponent() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [fecha, setFecha] = useState(getHoy())
-
-  useEffect(() => {
-    void loadClases()
-  }, [])
+  const [hasBuscado, setHasBuscado] = useState(false)
 
   const loadClases = async () => {
     setLoading(true)
@@ -67,6 +65,7 @@ function RouteComponent() {
       const res = await fetch(`http://localhost:3000/admin/clases?${params.toString()}`)
       const data = await res.json()
       setClases(data ?? [])
+      setHasBuscado(true)
     } catch {
       setError('Error al cargar las clases')
     } finally {
@@ -160,7 +159,29 @@ function RouteComponent() {
 
       <section className="form-card" style={{ background: '#f0faf5' }}>
         {error && <p className="status-badge full">{error}</p>}
-        {message && <p className="status-badge success">{message}</p>}
+
+        {message && (
+          <div style={{ marginBottom: '16px' }}>
+            <p className="status-badge success">{message}</p>
+            <button
+              type="button"
+              onClick={() => void navigate({ to: '/verClases' })}
+              style={{
+                marginTop: '10px',
+                background: 'transparent',
+                border: '1px solid rgba(45,190,127,0.4)',
+                color: '#2DBE7F',
+                borderRadius: '100px',
+                padding: '8px 18px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
+            >
+              Ver clases →
+            </button>
+          </div>
+        )}
 
         <div className="field-row" style={{ marginBottom: '16px' }}>
           <label>
@@ -169,7 +190,13 @@ function RouteComponent() {
               type="date"
               value={fecha}
               min={getHoy()}
-              onChange={e => setFecha(e.target.value)}
+              onChange={e => {
+                setFecha(e.target.value)
+                setHasBuscado(false)
+                setClases([])
+                setSelectedClase(null)
+                setProfesores([])
+              }}
               style={{ ...selectStyle, cursor: 'pointer' }}
             />
           </label>
@@ -193,6 +220,7 @@ function RouteComponent() {
                 setClases([])
                 setSelectedClase(null)
                 setProfesores([])
+                setHasBuscado(false)
               }}
               style={{
                 background: 'transparent',
@@ -209,9 +237,9 @@ function RouteComponent() {
           )}
         </div>
 
-        {loading ? (
-          <p>Cargando...</p>
-        ) : (
+        {loading && <p>Cargando...</p>}
+
+        {!loading && hasBuscado && (
           <div className="field-column">
             <label>
               Clase
