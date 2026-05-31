@@ -30,9 +30,11 @@ export default function GestionClases() {
     const [claseSeleccionada, setClaseSeleccionada] = useState<MisClasesResponseDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const idCliente = 11;
+    const token = localStorage.getItem('miToken');
+    const [idCliente, setIdCliente] = useState<number | null>(null);
 
     const cargarClases = () => {
+        if (!idCliente) return;
         setIsLoading(true);
         fetch(`http://localhost:3000/shifts/mis-clases/${idCliente}`)
             .then((res) => res.json())
@@ -46,9 +48,36 @@ export default function GestionClases() {
             });
     };
 
+    // 1. Obtener el idCliente al cargar la vista
     useEffect(() => {
-        cargarClases();
-    }, []);
+        if (token) {
+            fetch('http://localhost:3000/shifts/cliente-id', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("Token inválido o expirado");
+                    return res.json();
+                })
+                .then(data => {
+                    setIdCliente(data.id_cliente);
+                })
+                .catch(err => {
+                    console.error("Error al obtener ID del cliente:", err);
+                    setIsLoading(false);
+                });
+        } else {
+            setIsLoading(false);
+        }
+    }, [token]);
+
+    // 2. Cargar clases cuando ya tenemos el idCliente
+    useEffect(() => {
+        if (idCliente) {
+            cargarClases();
+        }
+    }, [idCliente]);
 
     const abrirModal = (tipo: 'CAMBIAR' | 'CANCELAR', clase: MisClasesResponseDto) => {
         setClaseSeleccionada(clase);
