@@ -213,6 +213,7 @@ export class ClasesAdminService {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");
     }
 
+    // 1. Verificar que la clase existe
     const { data: clase, error: claseError } = await this.supabaseService.client
       .from("Clase")
       .select("id, fecha, hora, tipo")
@@ -229,10 +230,11 @@ export class ClasesAdminService {
       throw new NotFoundException("No existe una clase con ese id");
     }
 
+    // 2. Obtener los id_cliente de los inscriptos (sin joins anidados)
     const { data: inscripciones, error: inscripcionesQueryError } =
       await this.supabaseService.client
         .from("Se_inscribe")
-        .select("id_cliente, Cliente!inner(Usuario!inner(Persona(nombre, mail)))")
+        .select("id_cliente")
         .eq("id_clase", id);
 
     if (inscripcionesQueryError) {
@@ -241,6 +243,30 @@ export class ClasesAdminService {
       );
     }
 
+    const clienteIds = (inscripciones ?? []).map((i: any) => i.id_cliente as number);
+
+    // 3. Buscar nombre y mail de cada inscripto por separado
+    let emailData: { mail: string | null; nombre: string }[] = [];
+
+    if (clienteIds.length > 0) {
+      const { data: personas, error: personasError } =
+        await this.supabaseService.client
+          .from("Persona")
+          .select("id, nombre, mail")
+          .in("id", clienteIds);
+
+      if (personasError) {
+        // No bloqueamos la cancelación si falla la búsqueda de emails
+        console.error("Error al obtener datos de personas para notificación:", personasError.message);
+      } else {
+        emailData = (personas ?? []).map((p: any) => ({
+          nombre: (p.nombre as string) ?? "Cliente",
+          mail: (p.mail as string | null) ?? null,
+        }));
+      }
+    }
+
+    // 4. Eliminar inscripciones
     const { error: inscripcionesError } = await this.supabaseService.client
       .from("Se_inscribe")
       .delete()
@@ -252,6 +278,7 @@ export class ClasesAdminService {
       );
     }
 
+    // 5. Eliminar la clase
     const { error: deleteError } = await this.supabaseService.client
       .from("Clase")
       .delete()
@@ -263,11 +290,8 @@ export class ClasesAdminService {
       );
     }
 
-    const emailPromises = (inscripciones ?? []).map((entry: any) => {
-      const persona = entry?.Cliente?.Usuario?.Persona;
-      const mail: string | null = persona?.mail ?? null;
-      const nombre: string = persona?.nombre ?? "Cliente";
-
+    // 6. Enviar emails de notificación
+    const emailPromises = emailData.map(({ mail, nombre }) => {
       if (!mail) return Promise.resolve();
 
       return this.emailService.enviarClaseCancelada({
