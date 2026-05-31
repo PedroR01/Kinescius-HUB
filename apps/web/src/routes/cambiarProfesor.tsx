@@ -105,7 +105,7 @@ function RouteComponent() {
     if (!selectedClase || !selectedProfesorId) return
 
     const confirmed = window.confirm(
-      `¿Confirmás el cambio de profesor para la clase ${selectedClase.id}?`
+      `¿Confirmás el cambio de profesor para la clase del ${formatDate(selectedClase.fecha)} a las ${formatTime(selectedClase.hora)}?`
     )
     if (!confirmed) return
 
@@ -239,7 +239,13 @@ function RouteComponent() {
 
         {loading && <p>Cargando...</p>}
 
-        {!loading && hasBuscado && (
+        {!loading && hasBuscado && clases.length === 0 && (
+          <p className="status-badge full">
+            No hay clases programadas para el día seleccionado.
+          </p>
+        )}
+
+        {!loading && hasBuscado && clases.length > 0 && (
           <div className="field-column">
             <label>
               Clase
@@ -251,7 +257,7 @@ function RouteComponent() {
                 <option value="">-- Seleccioná una clase --</option>
                 {clases.map((clase) => (
                   <option key={clase.id} value={clase.id}>
-                    #{clase.id} — {formatDate(clase.fecha)} {formatTime(clase.hora)} — {clase.tipo ?? 'Sin tipo'}
+                    {formatTime(clase.hora)} — {clase.tipo ?? 'Sin tipo'}
                   </option>
                 ))}
               </select>
