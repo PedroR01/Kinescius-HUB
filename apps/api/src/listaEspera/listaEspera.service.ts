@@ -141,7 +141,6 @@ export class ListaEsperaService {
   }
 
   async joinListaEspera(claseId: number, clienteId: number) {
-    // 1. Buscar o crear la lista de espera para esa clase
     let { data: lista, error: listaError } =
       await this.supabaseService.client
         .from("Lista de espera")
@@ -150,7 +149,6 @@ export class ListaEsperaService {
         .single();
 
     if (listaError || !lista) {
-      // No existe, la creamos
       const { data: nuevaLista, error: createError } =
         await this.supabaseService.client
           .from("Lista de espera")
@@ -167,7 +165,6 @@ export class ListaEsperaService {
       lista = nuevaLista;
     }
 
-    // 2. Verificar si el cliente ya está en la lista
     const { data: existing } =
       await this.supabaseService.client
         .from("No abonado")
@@ -180,7 +177,6 @@ export class ListaEsperaService {
       return { message: "Ya estás en la lista de espera." };
     }
 
-    // 3. Insertar en No abonado
     const { error: insertError } =
       await this.supabaseService.client
         .from("No abonado")
