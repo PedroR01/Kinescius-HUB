@@ -10,7 +10,7 @@ type Clase = {
   fecha: string
   hora: string
   tipo: string | null
-  profesor_dni?: string | null
+  profesor_nombre?: string | null
   cupo?: number | null
 }
 
@@ -159,7 +159,6 @@ function DatePicker({
   )
 }
 
-// ← fix timezone: parsea como string, sin conversión UTC
 function formatDate(fecha: string) {
   const [year, month, day] = fecha.split('T')[0].split('-')
   return `${Number(day)}/${Number(month)}/${year}`
@@ -175,7 +174,7 @@ function RouteComponent() {
   const [mode, setMode] = useState<Mode>('todas')
   const [classes, setClasses] = useState<Clase[]>([])
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -183,7 +182,7 @@ function RouteComponent() {
   const loadClasses = async (overrideMode?: Mode) => {
     const currentMode = overrideMode ?? mode
     setLoading(true)
-    setMessage(null)
+    setHasLoaded(false)
     setError(null)
 
     try {
@@ -203,12 +202,12 @@ function RouteComponent() {
       }
 
       setClasses((data ?? []) as Clase[])
-      if ((data ?? []).length === 0) setMessage('No hay clases en el rango seleccionado.')
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
       setClasses([])
     } finally {
       setLoading(false)
+      setHasLoaded(true)
     }
   }
 
@@ -217,18 +216,17 @@ function RouteComponent() {
     setStartDate('')
     setEndDate('')
     setClasses([])
-    setMessage(null)
+    setHasLoaded(false)
     setError(null)
   }
 
   const classRows = useMemo(
     () => classes.map(clase => (
       <tr key={clase.id}>
-        <td>{clase.id}</td>
         <td>{formatDate(clase.fecha)}</td>
         <td>{formatTime(clase.hora)}</td>
         <td>{clase.tipo ?? 'Sin tipo'}</td>
-        <td>{clase.profesor_dni ?? 'Sin profesor'}</td>
+        <td>{clase.profesor_nombre ?? 'Sin profesor'}</td>
         <td>{clase.cupo ?? 'N/A'}</td>
       </tr>
     )),
@@ -250,7 +248,6 @@ function RouteComponent() {
       <h1 style={{ color: TEXT, marginBottom: '24px' }}>Ver clases</h1>
 
       <div style={{ background: CARD, borderRadius: '20px', padding: '24px', marginBottom: '24px' }}>
-
         <div style={{
           display: 'inline-flex',
           background: 'rgba(45,190,127,0.1)',
@@ -316,7 +313,7 @@ function RouteComponent() {
               </button>
               <button
                 type="button"
-                onClick={() => { setStartDate(''); setEndDate(''); setClasses([]); setMessage(null); setError(null) }}
+                onClick={() => { setStartDate(''); setEndDate(''); setClasses([]); setHasLoaded(false); setError(null) }}
                 style={{
                   background: 'transparent',
                   border: '1px solid rgba(45,190,127,0.3)',
@@ -331,20 +328,29 @@ function RouteComponent() {
         )}
       </div>
 
-      {error && <p style={{ color: '#ff4d4f', marginBottom: '16px' }}>{error}</p>}
-      {message && <p style={{ color: GREEN, marginBottom: '16px' }}>{message}</p>}
-      {loading && <p style={{ color: GREEN }}>Cargando...</p>}
+      {error && (
+        <p style={{ color: '#ff4d4f', marginBottom: '16px' }}>{error}</p>
+      )}
 
-      {classes.length > 0 && (
+      {loading && (
+        <p style={{ color: GREEN }}>Cargando...</p>
+      )}
+
+      {!loading && hasLoaded && classes.length === 0 && !error && (
+        <p style={{ color: 'rgba(13,31,24,0.45)', fontSize: '14px' }}>
+          No hay clases para mostrar.
+        </p>
+      )}
+
+      {!loading && classes.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Fecha</th>
                 <th>Hora</th>
                 <th>Actividad</th>
-                <th>Profesor DNI</th>
+                <th>Profesor</th>
                 <th>Cupo</th>
               </tr>
             </thead>
