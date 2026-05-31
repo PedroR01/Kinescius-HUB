@@ -47,8 +47,7 @@ function RouteComponent() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState(getHoy())
-  const [endDate, setEndDate] = useState('')
+  const [fecha, setFecha] = useState(getHoy())
 
   useEffect(() => {
     void loadClases()
@@ -62,8 +61,8 @@ function RouteComponent() {
     setProfesores([])
     try {
       const params = new URLSearchParams()
-      if (startDate) params.append('startDate', startDate)
-      if (endDate) params.append('endDate', endDate)
+      if (fecha) params.append('startDate', fecha)
+      if (fecha) params.append('endDate', fecha)
 
       const res = await fetch(`http://localhost:3000/admin/clases?${params.toString()}`)
       const data = await res.json()
@@ -75,14 +74,13 @@ function RouteComponent() {
     }
   }
 
-  // ← acá está el cambio clave: busca solo los disponibles para esa fecha/hora
   const loadProfesoresDisponibles = async (clase: Clase) => {
     setLoadingProfesores(true)
     setProfesores([])
     setSelectedProfesorId(null)
     try {
-      const fecha = clase.fecha.split('T')[0]
-      const params = new URLSearchParams({ fecha, hora: clase.hora })
+      const fechaClase = clase.fecha.split('T')[0]
+      const params = new URLSearchParams({ fecha: fechaClase, hora: clase.hora })
       const res = await fetch(
         `http://localhost:3000/admin/clases/profesores/disponibles?${params.toString()}`
       )
@@ -166,22 +164,12 @@ function RouteComponent() {
 
         <div className="field-row" style={{ marginBottom: '16px' }}>
           <label>
-            Fecha desde
+            Fecha
             <input
               type="date"
-              value={startDate}
+              value={fecha}
               min={getHoy()}
-              onChange={e => setStartDate(e.target.value)}
-              style={{ ...selectStyle, cursor: 'pointer' }}
-            />
-          </label>
-          <label>
-            Fecha hasta
-            <input
-              type="date"
-              value={endDate}
-              min={startDate || getHoy()}
-              onChange={e => setEndDate(e.target.value)}
+              onChange={e => setFecha(e.target.value)}
               style={{ ...selectStyle, cursor: 'pointer' }}
             />
           </label>
@@ -197,12 +185,11 @@ function RouteComponent() {
           >
             {loading ? 'Cargando...' : 'Buscar clases'}
           </button>
-          {(startDate !== getHoy() || endDate) && (
+          {fecha !== getHoy() && (
             <button
               type="button"
               onClick={() => {
-                setStartDate(getHoy())
-                setEndDate('')
+                setFecha(getHoy())
                 setClases([])
                 setSelectedClase(null)
                 setProfesores([])
@@ -217,7 +204,7 @@ function RouteComponent() {
                 fontSize: '13px',
               }}
             >
-              Limpiar filtros
+              Limpiar filtro
             </button>
           )}
         </div>
