@@ -169,15 +169,22 @@ const cuposDisponibles = Array.from({ length: 50 }, (_, index) => index + 1)
 
 function RouteComponent() {
   const [fecha, setFecha] = useState('')
-  const [hora, setHora] = useState('15:00')
+  const [hora, setHora] = useState('')
   const [tipo, setTipo] = useState('')
   const [profesorDni, setProfesorDni] = useState('')
-  const [cupo, setCupo] = useState('10')
+  const [cupo, setCupo] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [profesores, setProfesores] = useState<Profesor[]>([])
   const [loadingProfesores, setLoadingProfesores] = useState(false)
+
+  const isFormValid =
+    fecha !== '' &&
+    hora !== '' &&
+    tipo !== '' &&
+    profesorDni !== '' &&
+    cupo !== ''
 
   const loadProfesores = async (fechaVal: string, horaVal: string) => {
     if (!fechaVal || !horaVal) return
@@ -198,15 +205,10 @@ function RouteComponent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isFormValid) return
     setLoading(true)
     setMessage(null)
     setError(null)
-
-    if (!profesorDni) {
-      setError('El profesor es obligatorio')
-      setLoading(false)
-      return
-    }
 
     const [hour] = hora.split(':').map(Number)
     if (Number.isNaN(hour) || hour < 8 || hour > 19) {
@@ -236,10 +238,10 @@ function RouteComponent() {
       } else {
         setMessage(data?.message ?? 'Clase creada correctamente')
         setFecha('')
-        setHora('15:00')
+        setHora('')
         setTipo('')
         setProfesorDni('')
-        setCupo('10')
+        setCupo('')
         setProfesores([])
       }
     } catch (err) {
@@ -248,6 +250,8 @@ function RouteComponent() {
       setLoading(false)
     }
   }
+
+  const isButtonDisabled = loading || !isFormValid
 
   return (
     <main style={{
@@ -313,11 +317,7 @@ function RouteComponent() {
 
         <label style={labelStyle}>
           Profesor
-          {!fecha || !hora ? (
-            <p style={{ fontSize: '12px', color: 'rgba(13,31,24,0.4)', marginTop: '8px', marginBottom: 0 }}>
-              Seleccioná fecha y hora primero
-            </p>
-          ) : loadingProfesores ? (
+          {loadingProfesores ? (
             <p style={{ fontSize: '12px', color: 'rgba(13,31,24,0.4)', marginTop: '8px', marginBottom: 0 }}>
               Cargando profesores...
             </p>
@@ -328,14 +328,11 @@ function RouteComponent() {
               style={{ ...inputStyle, cursor: 'pointer' }}
             >
               <option value="">-- Seleccioná un profesor --</option>
-              {profesores.length === 0
-                ? <option disabled value="">No hay profesores disponibles</option>
-                : profesores.map(p => (
-                    <option key={p.id} value={p.dni ?? ''}>
-                      {p.nombre} {p.apellido} — DNI {p.dni}
-                    </option>
-                  ))
-              }
+              {profesores.map(p => (
+                <option key={p.id} value={p.dni ?? ''}>
+                  {p.nombre} {p.apellido} — DNI {p.dni}
+                </option>
+              ))}
             </select>
           )}
         </label>
@@ -350,13 +347,16 @@ function RouteComponent() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={isButtonDisabled}
           onClick={handleSubmit}
+          title={!isFormValid ? 'Completá todos los campos para continuar' : undefined}
           style={{
             marginTop: "4px", padding: "12px", borderRadius: "12px", border: "none",
-            background: loading ? "rgba(45,190,127,0.4)" : GREEN,
-            color: TEXT, fontSize: "14px", fontWeight: 700, letterSpacing: "0.04em",
-            cursor: loading ? "not-allowed" : "pointer", transition: "opacity 0.2s",
+            background: isButtonDisabled ? "rgba(45,190,127,0.35)" : GREEN,
+            color: isButtonDisabled ? "rgba(13,31,24,0.4)" : TEXT,
+            fontSize: "14px", fontWeight: 700, letterSpacing: "0.04em",
+            cursor: isButtonDisabled ? "not-allowed" : "pointer",
+            transition: "background 0.2s, color 0.2s",
           }}
         >
           {loading ? 'Creando...' : 'Crear clase'}
