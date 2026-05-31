@@ -49,10 +49,7 @@ function RouteComponent() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [fecha, setFecha] = useState(getHoy())
-
-  useEffect(() => {
-    void loadClases()
-  }, [])
+  const [hasBuscado, setHasBuscado] = useState(false)
 
   const loadClases = async () => {
     setLoading(true)
@@ -193,7 +190,13 @@ function RouteComponent() {
               type="date"
               value={fecha}
               min={getHoy()}
-              onChange={e => setFecha(e.target.value)}
+              onChange={e => {
+                setFecha(e.target.value)
+                setHasBuscado(false)
+                setClases([])
+                setSelectedClase(null)
+                setProfesores([])
+              }}
               style={{ ...selectStyle, cursor: 'pointer' }}
             />
           </label>
