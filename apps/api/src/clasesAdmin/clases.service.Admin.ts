@@ -246,7 +246,6 @@ export class ClasesAdminService {
     const clienteIds = (inscripciones ?? []).map((i: any) => i.id_cliente as number);
 
     // 2. Obtener datos de contacto desde Persona
-    // Cliente.id === Usuario.id === Persona.id (herencia por FK compartida)
     let emailData: { mail: string | null; nombre: string }[] = [];
 
     if (clienteIds.length > 0) {
@@ -278,6 +277,18 @@ export class ClasesAdminService {
     if (inscripcionesError) {
       throw new InternalServerErrorException(
         `Error al cancelar inscripciones: ${inscripcionesError.message}`
+      );
+    }
+
+    // 3.5. Eliminar tokens de confirmación que referencian la clase
+    const { error: tokenError } = await this.supabaseService.client
+      .from("tokens_confirmacion")
+      .delete()
+      .eq("clase_id", id);
+
+    if (tokenError) {
+      throw new InternalServerErrorException(
+        `Error al eliminar tokens de confirmación: ${tokenError.message}`
       );
     }
 
