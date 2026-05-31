@@ -233,15 +233,30 @@ function RouteComponent() {
     }
   };
 
-  const handleAddWaitList = (slot: AppointmentSlot) => {
-    const waitKey = `${slot.date} ${slot.time}hs ${slot.className}`;
+const handleAddWaitList = async (slot: AppointmentSlot) => {
+  const waitKey = `${slot.date} ${slot.time}hs ${slot.className}`;
+  try {
+    const res = await fetch(
+      `${API_BASE}/listaEspera/clase/${slot.source.id}/join`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clienteId: CLIENTE_ID }),
+      }
+    );
+    if (!res.ok) throw new Error(`Error: ${res.status}`);
     if (!waitList.includes(waitKey)) {
       setWaitList((list) => [...list, waitKey]);
     }
     setMessage(
       `Fuiste añadido a la lista de espera para ${slot.className} el ${slot.date} a las ${slot.time}hs.`
     );
-  };
+  } catch (err) {
+    setMessage(
+      err instanceof Error ? err.message : "Error al unirse a lista de espera"
+    );
+  }
+};
 
   const handleConfirmFavor = (apply: boolean) => {
     if (!selectedSlot) return;

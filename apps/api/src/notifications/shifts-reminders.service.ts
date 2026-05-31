@@ -12,7 +12,7 @@ export class RecordatoriosService {
     private readonly emailService: EmailService,
   ) {}
 
-  @Cron('0 30 15 * * *',{
+  @Cron('0 15 16 * * *',{
     timeZone: 'America/Argentina/Buenos_Aires'
   })
   async enviarRecordatoriosDiarios() {
