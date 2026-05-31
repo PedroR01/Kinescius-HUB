@@ -1,7 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
+  Body,
   BadRequestException,
 } from "@nestjs/common";
 
@@ -13,47 +15,39 @@ export class ListaEsperaController {
     private readonly listaEsperaService: ListaEsperaService
   ) {}
 
-  // Obtener todas las listas de espera
   @Get()
   async findAll() {
     return this.listaEsperaService.findAll();
   }
 
-  // Obtener personas de la lista de espera de una clase
   @Get("clase/:id")
   async findByClase(@Param("id") id: string) {
     const claseId = Number(id);
-
     if (Number.isNaN(claseId)) {
-      throw new BadRequestException(
-        "Invalid clase id"
-      );
+      throw new BadRequestException("Invalid clase id");
     }
-
-    return this.listaEsperaService.findByClase(
-      claseId
-    );
+    return this.listaEsperaService.findByClase(claseId);
   }
 
-  // Obtener cantidad de personas en lista de espera
   @Get("clase/:id/count")
   async countByClase(@Param("id") id: string) {
     const claseId = Number(id);
-
     if (Number.isNaN(claseId)) {
-      throw new BadRequestException(
-        "Invalid clase id"
-      );
+      throw new BadRequestException("Invalid clase id");
     }
+    const count = await this.listaEsperaService.countByClase(claseId);
+    return { claseId, count };
+  }
 
-    const count =
-      await this.listaEsperaService.countByClase(
-        claseId
-      );
-
-    return {
-      claseId,
-      count,
-    };
+  @Post("clase/:id/join")
+  async joinListaEspera(
+    @Param("id") id: string,
+    @Body() body: { clienteId: number }
+  ) {
+    const claseId = Number(id);
+    if (Number.isNaN(claseId)) {
+      throw new BadRequestException("Invalid clase id");
+    }
+    return this.listaEsperaService.joinListaEspera(claseId, body.clienteId);
   }
 }

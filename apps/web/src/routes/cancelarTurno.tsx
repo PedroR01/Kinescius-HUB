@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal'
 import { CambiarTurno } from '../modules/turnos/components/cambiarTurnoModal'
+
 export const Route = createFileRoute('/cancelarTurno')({
   component: RouteComponent,
 })
