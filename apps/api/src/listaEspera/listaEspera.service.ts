@@ -12,10 +12,13 @@ export class ListaEsperaService {
   ) {}
 
   async findAll() {
+    const hoy = new Date().toISOString().split("T")[0];
+
     const { data, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("*");
+        .select("*, Clase!inner(fecha)")
+        .gte("Clase.fecha", hoy);
 
     if (error) {
       throw new InternalServerErrorException(
@@ -26,16 +29,18 @@ export class ListaEsperaService {
     return data;
   }
 
-  // ✅ Tu countByClase original, sin cambios
   async countByClase(claseId: number) {
+    const hoy = new Date().toISOString().split("T")[0];
+
     const { count, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("*", {
+        .select("*, Clase!inner(fecha)", {
           count: "exact",
           head: true,
         })
-        .eq("id_clase", claseId);
+        .eq("id_clase", claseId)
+        .gte("Clase.fecha", hoy);
 
     if (error) {
       throw new InternalServerErrorException(
@@ -46,13 +51,15 @@ export class ListaEsperaService {
     return count ?? 0;
   }
 
-  // ✅ findByClase actualizado para devolver datos de persona
   async findByClase(claseId: number) {
+    const hoy = new Date().toISOString().split("T")[0];
+
     const { data: listas, error: listaError } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("id")
-        .eq("id_clase", claseId);
+        .select("id, Clase!inner(fecha)")
+        .eq("id_clase", claseId)
+        .gte("Clase.fecha", hoy);
 
     if (listaError) {
       throw new InternalServerErrorException(
