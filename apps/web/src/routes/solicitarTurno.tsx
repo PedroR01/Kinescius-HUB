@@ -148,9 +148,22 @@ function RouteComponent() {
   const [waitList, setWaitList] = useState<string[]>([]);
   const [montoAFavor, setMontoAFavor] = useState(0);
   const [viewAll, setViewAll] = useState(false);
+  const [clienteId, setClienteId] = useState<number | null>(null);
 
   const API_BASE = "http://localhost:3000";
-  const CLIENTE_ID = 1;
+
+  // Obtener clienteId desde el token
+  useEffect(() => {
+    const token = localStorage.getItem('miToken');
+    if (token) {
+      fetch(`${API_BASE}/shifts/cliente-id`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => setClienteId(data.id_cliente))
+        .catch(err => console.error("Error al obtener ID del cliente:", err));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -174,9 +187,10 @@ function RouteComponent() {
   }, []);
 
   useEffect(() => {
+    if (!clienteId) return;
     const fetchMontoAFavor = async () => {
       try {
-        const res = await fetch(`${API_BASE}/clases/cliente/${CLIENTE_ID}/monto-a-favor`);
+        const res = await fetch(`${API_BASE}/clases/cliente/${clienteId}/monto-a-favor`);
         if (!res.ok) return;
         const data = await res.json();
         setMontoAFavor(Number(data.monto_a_favor) ?? 0);
@@ -185,7 +199,7 @@ function RouteComponent() {
       }
     };
     void fetchMontoAFavor();
-  }, []);
+  }, [clienteId]);
 
   const appointmentSlots = useMemo<AppointmentSlot[]>(() => {
     return classes.map((clase) => {
@@ -233,33 +247,37 @@ function RouteComponent() {
     }
   };
 
-const handleAddWaitList = async (slot: AppointmentSlot) => {
-  const waitKey = `${slot.date} ${slot.time}hs ${slot.className}`;
-  try {
-    const res = await fetch(
-      `${API_BASE}/listaEspera/clase/${slot.source.id}/join`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clienteId: CLIENTE_ID }),
-      }
-    );
-    if (!res.ok) throw new Error(`Error: ${res.status}`);
-    if (!waitList.includes(waitKey)) {
-      setWaitList((list) => [...list, waitKey]);
+  const handleAddWaitList = async (slot: AppointmentSlot) => {
+    if (!clienteId) {
+      setMessage("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
+      return;
     }
-    setMessage(
-      `Fuiste añadido a la lista de espera para ${slot.className} el ${slot.date} a las ${slot.time}hs.`
-    );
-  } catch (err) {
-    setMessage(
-      err instanceof Error ? err.message : "Error al unirse a lista de espera"
-    );
-  }
-};
+    const waitKey = `${slot.date} ${slot.time}hs ${slot.className}`;
+    try {
+      const res = await fetch(
+        `${API_BASE}/listaEspera/clase/${slot.source.id}/join`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clienteId }),
+        }
+      );
+      if (!res.ok) throw new Error(`Error: ${res.status}`);
+      if (!waitList.includes(waitKey)) {
+        setWaitList((list) => [...list, waitKey]);
+      }
+      setMessage(
+        `Fuiste añadido a la lista de espera para ${slot.className} el ${slot.date} a las ${slot.time}hs.`
+      );
+    } catch (err) {
+      setMessage(
+        err instanceof Error ? err.message : "Error al unirse a lista de espera"
+      );
+    }
+  };
 
   const handleConfirmFavor = (apply: boolean) => {
-    if (!selectedSlot) return;
+    if (!selectedSlot || !clienteId) return;
     if (apply) {
       void (async () => {
         try {
@@ -267,7 +285,7 @@ const handleAddWaitList = async (slot: AppointmentSlot) => {
           const res = await fetch(`${API_BASE}/clases/${selectedSlot.source.id}/turnos`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ clienteId: CLIENTE_ID, estado: "pagado" })
+            body: JSON.stringify({ clienteId, estado: "pagado" })
           });
           if (res.status === 409) throw new Error("Ya estás inscripto en esta clase.");
           if (!res.ok) throw new Error(`Error: ${res.status}`);
@@ -286,13 +304,13 @@ const handleAddWaitList = async (slot: AppointmentSlot) => {
   };
 
   const handlePayment = async (method: string) => {
-    if (!selectedSlot) return;
+    if (!selectedSlot || !clienteId) return;
     try {
       setMessage("Procesando pago...");
       const res = await fetch(`${API_BASE}/clases/${selectedSlot.source.id}/turnos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clienteId: CLIENTE_ID, estado: "pagado" })
+        body: JSON.stringify({ clienteId, estado: "pagado" })
       });
       if (res.status === 409) throw new Error("Ya estás inscripto en esta clase.");
       if (!res.ok) throw new Error(`Error: ${res.status}`);
@@ -326,10 +344,11 @@ const handleAddWaitList = async (slot: AppointmentSlot) => {
     >
       <Link
         to="/"
-        className="size-fit p-4  rounded-full transition-all duration-300 hover:bg-ks-gray-soft text-ks-green-dark"
+        className="size-fit p-4 rounded-full transition-all duration-300 hover:bg-ks-gray-soft text-ks-green-dark"
       >
-        <ArrowLeftIcon className="size-6 " />
+        <ArrowLeftIcon className="size-6" />
       </Link>
+
       <section
         className={cn(
           "ks-hero-card relative overflow-hidden rounded-ks-lg px-10 py-12 shadow-[0_20px_60px_rgba(26,58,42,0.18)] animate-ks-slide-up",
