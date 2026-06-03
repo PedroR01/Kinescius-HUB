@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 type Clase = {
   id: number
@@ -73,7 +74,7 @@ function RouteComponent() {
     setMessage(null)
     setError(null)
     try {
-      let url = 'http://localhost:3000/admin/clases'
+      let url = `${API_BASE}/admin/clases`
       const params = new URLSearchParams()
       if (startDate) params.append('startDate', startDate)
       if (endDate) params.append('endDate', endDate)
@@ -115,7 +116,7 @@ function RouteComponent() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/admin/clases/${id}/cancelar`,
+        `${API_BASE}/admin/clases/${id}/cancelar`,
         { method: 'PATCH' }
       )
       const data = await response.json().catch(() => null)

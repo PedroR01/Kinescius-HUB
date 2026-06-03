@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
+import { API_BASE } from '@/lib/constants';
 
 type ClaseInfo = {
   id: number;
@@ -29,7 +30,7 @@ function ConfirmarTurnoPage() {
     const validar = async () => {
       try {
         const res = await fetch(
-          `http://localhost:3000/confirmar-turno/validar?token=${token}&claseId=${claseId}&clienteId=${clienteId}`
+          `${API_BASE}/confirmar-turno/validar?token=${token}&claseId=${claseId}&clienteId=${clienteId}`
         );
         const data = await res.json();
         if (!res.ok) {
@@ -49,7 +50,7 @@ function ConfirmarTurnoPage() {
   const handleConfirmar = async () => {
     setConfirmando(true);
     try {
-      const res = await fetch('http://localhost:3000/confirmar-turno', {
+      const res = await fetch(`${API_BASE}/confirmar-turno`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -19,6 +19,11 @@ const USER_ACTIONS: DashboardAction[] = [
     label: "Solicitar turno",
     to: "/solicitarTurno",
     description: "Reservá tu próxima clase en el centro"
+  },
+  {
+    label: "Mis clases",
+    to: "/mis-clases",
+    description: "Ver tus clases agendadas"
   }
 ];
 

@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 type Clase = {
   id: number
@@ -62,7 +63,7 @@ function RouteComponent() {
       if (fecha) params.append('startDate', fecha)
       if (fecha) params.append('endDate', fecha)
 
-      const res = await fetch(`http://localhost:3000/admin/clases?${params.toString()}`)
+      const res = await fetch(`${API_BASE}/admin/clases?${params.toString()}`)
       const data = await res.json()
       setClases(data ?? [])
       setHasBuscado(true)
@@ -81,7 +82,7 @@ function RouteComponent() {
       const fechaClase = clase.fecha.split('T')[0]
       const params = new URLSearchParams({ fecha: fechaClase, hora: clase.hora })
       const res = await fetch(
-        `http://localhost:3000/admin/clases/profesores/disponibles?${params.toString()}`
+        `${API_BASE}/admin/clases/profesores/disponibles?${params.toString()}`
       )
       const data = await res.json()
       setProfesores(data?.profesores ?? [])
@@ -115,7 +116,7 @@ function RouteComponent() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/admin/clases/${selectedClase.id}/cambiar-profesor`,
+        `${API_BASE}/admin/clases/${selectedClase.id}/cambiar-profesor`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

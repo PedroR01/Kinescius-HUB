@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 export const Route = createFileRoute('/crearClase')({
   component: RouteComponent,
@@ -192,7 +193,7 @@ function RouteComponent() {
     setProfesorDni('')
     try {
       const res = await fetch(
-        `http://localhost:3000/admin/clases/profesores/disponibles?fecha=${fechaVal}&hora=${horaVal}`
+        `${API_BASE}/admin/clases/profesores/disponibles?fecha=${fechaVal}&hora=${horaVal}`
       )
       const data = await res.json()
       setProfesores(data?.profesores ?? [])
@@ -225,7 +226,7 @@ function RouteComponent() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/admin/clases', {
+      const response = await fetch(`${API_BASE}/admin/clases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fecha, hora, tipo, profesorDni, cupo: parsedCupo })

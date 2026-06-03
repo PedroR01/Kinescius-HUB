@@ -11,6 +11,7 @@ import {
 import { AuthPageLayout } from "@/modules/auth/components/AuthPageLayout";
 import { AuthFormField } from "@/modules/auth/components/AuthFormField";
 import { AuthFeedback } from "@/modules/auth/components/AuthFeedback";
+import { API_BASE } from "@/lib/constants";
 
 type FormData = {
   email: string;
@@ -55,7 +56,7 @@ const IniciarSesion = () => {
     // --- 2. PETICIÓN AL BACKEND (Seguridad) ---
     setIsProcessing(true);
     try {
-      const response = await fetch("http://localhost:3000/auth/login", {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -72,6 +73,8 @@ const IniciarSesion = () => {
         // Guardamos el token que nos devuelve Supabase/NestJS
         localStorage.setItem("miToken", data.token);
         localStorage.setItem("rol", data.rol); //Guardo el rol del usuario (admin o usuario)
+        // TODO: Verificar si es necesario guardar el userId. Esto no se suele hacer de esta forma porque es información sensible y vulnerabiliza la base de datos.
+        localStorage.setItem("userId", data.usuarioId); //Guardo el rol del usuario (admin o usuario)
         console.log("El rol ingresado es ", data.rol);
 
         setMessage("Inicio de sesión exitoso!");
@@ -103,7 +106,7 @@ const IniciarSesion = () => {
 
     setIsProcessing(true); //que se muestre procesando en el botón
     try {
-      const response = await fetch("http://localhost:3000/auth/recuperar", {
+      const response = await fetch(`${API_BASE}/auth/recuperar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email })
