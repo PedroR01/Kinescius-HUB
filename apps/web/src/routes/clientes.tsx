@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 export const Route = createFileRoute('/clientes')({
   component: RouteComponent,
@@ -23,7 +24,7 @@ function RouteComponent() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:3000/admin/clases/clientes')
+      const response = await fetch(`${API_BASE}/admin/clases/clientes`)
 
       if (!response.ok) {
         throw new Error('Error al obtener clientes')
@@ -78,23 +79,7 @@ function RouteComponent() {
           </div>
         )}
 
-        {!loading && clientes.length === 0 && (
-          <div className="rounded-[40px] bg-[#f0faf5] p-24 text-center shadow-xl">
-            <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-white text-4xl">
-              👤
-            </div>
-
-            <h2 className="text-3xl font-bold text-[#0d1f18]">
-              No hay clientes inscriptos
-            </h2>
-
-            <p className="mt-4 text-[#0d1f18]/70">
-              Cuando existan clientes registrados aparecerán aquí.
-            </p>
-          </div>
-        )}
-
-        {clientes.length > 0 && (
+        {!loading && (
           <div className="mb-12 flex justify-center">
             <div className="rounded-full bg-[#f0faf5] px-8 py-4 text-sm font-bold text-[#2DBE7F] shadow-md">
               Total de clientes: {clientes.length}
@@ -151,11 +136,7 @@ function RouteComponent() {
                 </div>
               </div>
 
-              <div className="relative z-10 mt-8 flex items-center justify-between">
-                <span className="rounded-full bg-white px-5 py-2 text-xs font-black text-[#0d1f18]">
-                  Cliente #{cliente.clienteId}
-                </span>
-
+              <div className="relative z-10 mt-8 flex justify-end">
                 <div className="h-4 w-4 rounded-full bg-[#2DBE7F] shadow-lg shadow-[#2DBE7F]"></div>
               </div>
             </button>

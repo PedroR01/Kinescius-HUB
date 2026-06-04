@@ -67,7 +67,7 @@ const CambiarPasswd = () => {
       // Agarro el token de la sesión actual
       const token = localStorage.getItem('miToken');
 
-      const response = await fetch('http://localhost:3000/auth/cambiar-password', {
+      const response = await fetch(`${API_BASE}/auth/cambiar-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
