@@ -1,9 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { Payment, PaymentRefund, Preference } from 'mercadopago';
 import { PreferenceResponse } from "mercadopago/dist/clients/preference/commonTypes";
+import { getFrontendUrl } from "../config/frontend-url";
 import { MpCheckoutProService } from "../integrations/mercado-pago/mp-checkoutPro.service";
 import { SupabaseService } from "../integrations/supabase/supabase.service";
-import { ClasePayload } from "./pagos.controller";
+import { ClasePayload, CreatePreferenceBody } from "./pagos.controller";
+
+export const CLASS_UNIT_PRICE = 10_000;
 
 type PagoInsert = {
     id_cliente: number;
@@ -26,27 +29,47 @@ export class PagosService {
         private readonly supabaseService: SupabaseService,
     ) { }
 
-    // Crea el pago (con los datos de la clase) y devuelve la redirección a la página de pago.
-    async createPreference(clases: ClasePayload[]): Promise<{ initPoint: string }> {
+    async createPreference(body: CreatePreferenceBody): Promise<{ initPoint: string }> {
+        const { clases, clienteId, montoAFavorAplicado = 0 } = body;
+        if (!clases?.length) {
+            throw new BadRequestException("Debe incluir al menos una clase.");
+        }
+        if (!clienteId || clienteId < 1) {
+            throw new BadRequestException("clienteId inválido.");
+        }
+
+        const subtotal = clases.length * CLASS_UNIT_PRICE;
+        if (montoAFavorAplicado < 0 || montoAFavorAplicado > subtotal) {
+            throw new BadRequestException("Monto a favor aplicado inválido.");
+        }
+
+        const totalFinal = subtotal - montoAFavorAplicado;
+        if (totalFinal <= 0) {
+            throw new BadRequestException(
+                "El total final debe ser mayor a 0 para usar Mercado Pago. Usá inscribir-con-saldo."
+            );
+        }
+        const frontendUrl = getFrontendUrl();
         const preference = new Preference(this.mpCheckoutProService.client);
         return preference.create({
             body: {
-                items: clases.map((clase) => ({
-                    id: clase.id.toString(),
-                    unit_price: 100, // TODO: reemplazar con el precio de la clase
+                items: [{
+                    id: "inscripcion-kinescius",
+                    title: `Inscripción a ${clases.length} clase(s) - Kinescius`,
                     quantity: 1,
-                    title: "Clase de kinesiología, Kinesicus",
-                })),
-                // Estos datos son accesibles cuando la API confirma el pago. Acá iria toda la info necesaria para un uso después del pago.
+                    unit_price: totalFinal,
+                }],
                 metadata: {
                     clases,
+                    clienteId,
+                    montoAFavorAplicado,
                 },
-                // Usar solamente para producción, si no, se usa el auto_return
                 back_urls: {
-                    success: `${process.env.CORS_ORIGIN}/success`,
-                    failure: `${process.env.CORS_ORIGIN}/failure`,
-                    pending: `${process.env.CORS_ORIGIN}/pending`,
+                    success: `https://6b19-2800-810-5c2-569-fdde-7d2d-5db5-2ee9.ngrok-free.app/success`, // Forwarding de ngrok
+                    failure: `${frontendUrl}/failure`,
+                    pending: `${frontendUrl}/pending`,
                 },
+                auto_return: "approved",
             },
         }).then((res: PreferenceResponse) => ({ initPoint: res.init_point! }))
             .catch((error: Error) => { throw new Error(error.message); });
@@ -56,17 +79,14 @@ export class PagosService {
 
         const paymentClient = new Payment(this.mpCheckoutProService.client);
         const payment = await paymentClient.get({ id: paymentId });
-
-        // Si el pago se encuentra en otro estado que no sea aprobado, se ignora y se envía el estado actual del pago.
         if (payment.status !== 'approved') {
             return { received: true, status: payment.status };
         }
 
-        // En la metadata se guarda toda la info necesaria para un uso después del pago. En este caso, la clase a la que se hizo el pago.
         const clases: ClasePayload[] = payment.metadata?.clases ?? [];
+        const idCliente = Number(payment.metadata?.cliente_id);
+        const montoAFavorAplicado = Number(payment.metadata?.monto_afavor_aplicado) || 0;
         const now = new Date();
-        // TODO: reemplazar con id del usuario autenticado
-        const idCliente = 1;
 
         const pago: PagoInsert = {
             id_cliente: idCliente,
@@ -93,7 +113,35 @@ export class PagosService {
 
         if (inscripcionError) throw new Error(inscripcionError.message);
 
+        if (montoAFavorAplicado > 0) {
+            await this.deductMontoAFavor(idCliente, montoAFavorAplicado);
+        }
+
         return { received: true };
+    }
+
+    private async deductMontoAFavor(clienteId: number, amount: number) {
+        const { data: cliente, error: fetchError } = await this.supabaseService.client
+            .from('Cliente')
+            .select('monto_a_favor')
+            .eq('id', clienteId)
+            .single();
+
+        if (fetchError || !cliente) {
+            throw new Error(`Error al obtener saldo del cliente: ${fetchError?.message}`);
+        }
+
+        const saldoActual = Number(cliente.monto_a_favor) || 0;
+        const nuevoSaldo = Math.max(0, saldoActual - amount);
+
+        const { error: updateError } = await this.supabaseService.client
+            .from('Cliente')
+            .update({ monto_a_favor: nuevoSaldo })
+            .eq('id', clienteId);
+
+        if (updateError) {
+            throw new Error(`Error al descontar monto a favor: ${updateError.message}`);
+        }
     }
 
     async getPago(id: string) {
@@ -103,15 +151,11 @@ export class PagosService {
     }
 
     async createRefund(idPago: string) {
-        // Generar reembolso total del pago por mercadopago.
         const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
         const refund = await refundClient.total({ payment_id: idPago });
-
-        // Una vez que se confirma el reembolso, hay que guardarlo en una tabla de reembolsos. Para mayor validez no se elimina el pago de la tabla de pagos.
         return refund;
     }
 
-    // Esto es necesario o con la tabla de reembolsos ya se pueden obtener todos los reembolsos de un pago?
     async getAllRefunds(idPago: string) {
         const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
         const refunds = await refundClient.list({ payment_id: idPago });

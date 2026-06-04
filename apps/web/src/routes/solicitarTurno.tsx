@@ -1,207 +1,119 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { cn, formatDate, formatDateLabel, formatDayLabel, formatTime } from "@/lib/utils";
 import { ArrowLeftIcon } from "lucide-react";
-
-type Clase = {
-  id: number;
-  fecha: string;
-  hora: string;
-  tipo: string | null;
-  cupo: number | null;
-  QR: string | null;
-  id_listaEspera: number | null;
-  id_profesor: number | null;
-  id_administrador: number | null;
-};
-
-type AppointmentSlot = {
-  key: string;
-  date: string;
-  dateLabel: string;
-  dayLabel: string;
-  time: string;
-  className: string;
-  price: number;
-  cupo: number;
-  full: boolean;
-  sinCupo: boolean;
-  favorAmount: number;
-  source: Clase;
-};
-
-const btnBase =
-  "font-outfit inline-block cursor-pointer rounded-full border-none px-7 py-[13px] text-[15px] font-semibold tracking-[0.2px] no-underline transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:transform-none";
-
-const btnPrimary =
-  "bg-[linear-gradient(135deg,var(--ks-green-mid)_0%,var(--ks-green-light)_100%)] text-white shadow-[0_4px_16px_rgba(45,106,79,0.35)] hover:shadow-[0_8px_24px_rgba(45,106,79,0.45)]";
-
-const btnSecondary = "border border-[rgba(82,183,136,0.3)] bg-ks-gray-soft text-ks-green-dark";
-
-function formatDate(fecha: string) {
-  const [year, month, day] = fecha.split("T")[0].split("-").map(Number);
-  return `${day}/${month}/${year}`;
-}
-
-function formatDateLabel(fecha: string) {
-  const [, month, day] = fecha.split("T")[0].split("-").map(Number);
-  return `${day}/${month}`;
-}
-
-function formatDayLabel(fecha: string) {
-  const date = new Date(fecha.split("T")[0] + "T12:00:00");
-  return date
-    .toLocaleDateString("es-AR", { weekday: "short" })
-    .replace(".", "")
-    .replace(/^\w/, (c) => c.toUpperCase());
-}
-
-function formatTime(hora: string) {
-  const [hh, mm] = hora.split(":");
-  return `${hh}:${mm}`;
-}
+import type { Class, ClassSlot } from "@/lib/class-interface";
+import ClassCard from "@/modules/turnos/components/classCard";
+import { CartFloatingBar } from "@/modules/turnos/components/CartFloatingBar";
+import { PaymentSummaryModal } from "@/modules/turnos/components/PaymentSummaryModal";
+import { useClassCart } from "@/modules/turnos/hooks/useClassCart";
+import { useClienteId } from "@/hooks/useClienteId";
+import { API_BASE, CLASS_PRICE } from "@/lib/constants";
+import { fetchMontoAFavor } from "@/api/payments";
+import {
+  pageMainClass,
+  heroSectionClass,
+  formCardClass,
+} from "@/lib/ks-page-styles";
 
 export const Route = createFileRoute("/solicitarTurno")({
-  component: RouteComponent
+  component: RouteComponent,
 });
 
-function ClassCard({
-  slot,
-  isSelected,
-  isWaited,
-  onSelect,
-  onWaitList
-}: {
-  slot: AppointmentSlot;
-  isSelected: boolean;
-  isWaited: boolean;
-  onSelect: (slot: AppointmentSlot) => void;
-  onWaitList: (slot: AppointmentSlot) => void;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col gap-1 rounded-ks-md border-[1.5px] p-[18px_16px] transition-all duration-180ms",
-        slot.sinCupo
-          ? "cursor-default border-ks-gray-soft bg-ks-gray-soft opacity-70"
-          : "cursor-pointer border-ks-gray-soft bg-ks-off-white hover:-translate-y-0.5 hover:border-ks-green-light hover:shadow-[0_2px_8px_rgba(26,58,42,0.08)]",
-        isSelected &&
-          !slot.sinCupo &&
-          "border-ks-green-mid bg-ks-green-pale shadow-[0_0_0_3px_rgba(82,183,136,0.2)]"
-      )}
-      onClick={() => !slot.sinCupo && onSelect(slot)}
-      role={slot.sinCupo ? undefined : "button"}
-      tabIndex={slot.sinCupo ? undefined : 0}
-      onKeyDown={(e) => e.key === "Enter" && !slot.sinCupo && onSelect(slot)}
-    >
-      <div
-        className={cn(
-          "font-outfit text-[22px] font-bold tracking-[-0.5px] text-ks-text-dark",
-          slot.sinCupo && "text-ks-gray-text"
-        )}
-      >
-        {slot.time} hs
-      </div>
-      <div className="mb-2 text-[13px] font-normal text-ks-gray-text">{slot.className}</div>
-      {slot.sinCupo ? (
-        <>
-          <span className="inline-flex w-fit items-center gap-[5px] rounded-ks-full bg-black/6 px-2.5 py-1 font-outfit text-xs font-semibold text-ks-gray-text">
-            Sin cupo
-          </span>
-          <button
-            type="button"
-            className={cn(
-              "mt-2 block w-full cursor-pointer rounded-ks-full border-[1.5px] px-3 py-[7px] text-center font-outfit text-xs font-semibold transition-colors duration-150",
-              isWaited
-                ? "border-[rgba(82,183,136,0.4)] bg-ks-green-pale text-ks-green-mid"
-                : "border-[rgba(192,57,43,0.3)] bg-ks-red-soft text-ks-red hover:border-ks-red hover:bg-[#fbd0cd]"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onWaitList(slot);
-            }}
-          >
-            {isWaited ? "✓ En lista de espera" : "Unirse a lista de espera"}
-          </button>
-        </>
-      ) : slot.cupo === 1 ? (
-        <span className="inline-flex w-fit items-center gap-[5px] rounded-ks-full bg-[rgba(255,180,0,0.15)] px-2.5 py-1 font-outfit text-xs font-semibold text-[#a67c00]">
-          ¡Solo 1!
-        </span>
-      ) : (
-        <span className="inline-flex w-fit items-center gap-[5px] rounded-ks-full bg-ks-green-pale px-2.5 py-1 font-outfit text-xs font-semibold text-ks-green-mid">
-          {slot.cupo} lugares
-        </span>
-      )}
-    </div>
-  );
+interface MisClaseInscripcion {
+  id_clase: number;
 }
 
 function RouteComponent() {
-  const [classes, setClasses] = useState<Clase[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedSlot, setSelectedSlot] = useState<AppointmentSlot | null>(null);
-  const [phase, setPhase] = useState<"idle" | "confirmFavor" | "payment" | "completed">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [waitList, setWaitList] = useState<string[]>([]);
   const [montoAFavor, setMontoAFavor] = useState(0);
   const [viewAll, setViewAll] = useState(false);
-  const [clienteId, setClienteId] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [enrolledClassIds, setEnrolledClassIds] = useState<Set<number>>(() => new Set());
 
-  const API_BASE = "http://localhost:3000";
+  const [checkoutItems, setCheckoutItems] = useState<ClassSlot[]>([]);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [checkoutFromCart, setCheckoutFromCart] = useState(false);
 
-  // Obtener clienteId desde el token
+  const { clienteId, error: clienteError, isLoading: clienteLoading } = useClienteId();
+  const {
+    cartItems,
+    cartCount,
+    addToCart,
+    removeFromCart,
+    removePaidFromCart,
+    isInCart,
+  } = useClassCart();
+
   useEffect(() => {
-    const token = localStorage.getItem('miToken');
-    if (token) {
-      fetch(`${API_BASE}/shifts/cliente-id`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => res.json())
-        .then(data => setClienteId(data.id_cliente))
-        .catch(err => console.error("Error al obtener ID del cliente:", err));
-    }
-  }, []);
-
-  useEffect(() => {
-    const fetchClasses = async () => {
+    const loadClasses = async () => {
       setLoading(true);
       setError(null);
       try {
         const response = await fetch(`${API_BASE}/clases`);
         if (!response.ok) throw new Error(`Error al cargar clases: ${response.status}`);
-        const data = (await response.json()) as Clase[];
+        const data = (await response.json()) as Class[];
         setClasses(data);
-        if (data.length > 0) {
-          setSelectedDate(formatDate(data[0].fecha));
-        }
+        setSelectedDate((current) =>
+          current || (data.length > 0 ? formatDate(data[0].fecha) : "")
+        );
       } catch (fetchError) {
         setError(fetchError instanceof Error ? fetchError.message : "Error desconocido");
       } finally {
         setLoading(false);
       }
     };
-    void fetchClasses();
-  }, []);
+    void loadClasses();
+  }, [refreshKey]);
 
   useEffect(() => {
     if (!clienteId) return;
-    const fetchMontoAFavor = async () => {
+    void fetchMontoAFavor(clienteId).then(setMontoAFavor);
+  }, [clienteId, refreshKey]);
+
+  useEffect(() => {
+    if (!clienteId) {
+      setEnrolledClassIds(new Set());
+      return;
+    }
+    const loadEnrollments = async () => {
       try {
-        const res = await fetch(`${API_BASE}/clases/cliente/${clienteId}/monto-a-favor`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setMontoAFavor(Number(data.monto_a_favor) ?? 0);
+        const response = await fetch(`${API_BASE}/shifts/mis-clases/${clienteId}`);
+        if (!response.ok) return;
+        const data = (await response.json()) as MisClaseInscripcion[];
+        setEnrolledClassIds(new Set(data.map((item) => item.id_clase)));
+        console.log(data);
       } catch {
-        // si falla, queda en 0
+        setEnrolledClassIds(new Set());
       }
     };
-    void fetchMontoAFavor();
-  }, [clienteId]);
+    void loadEnrollments();
+  }, [clienteId, refreshKey]);
 
-  const appointmentSlots = useMemo<AppointmentSlot[]>(() => {
+  useEffect(() => {
+    const channel = new BroadcastChannel("kinescius-payment");
+    channel.onmessage = (e: MessageEvent<{ type: string }>) => {
+      if (e.data?.type === "payment-completed") {
+        setRefreshKey((k) => k + 1);
+        setMessage("¡Pago confirmado! Tu inscripción fue procesada correctamente.");
+      }
+    };
+    return () => channel.close();
+  }, []);
+
+  useEffect(() => {
+    if (clienteError) {
+      setError(clienteError);
+    }
+  }, [clienteError]);
+
+  const appointmentSlots = useMemo<ClassSlot[]>(() => {
     return classes.map((clase) => {
       const cupo = clase.cupo ?? 0;
       return {
@@ -211,12 +123,12 @@ function RouteComponent() {
         dayLabel: formatDayLabel(clase.fecha),
         time: formatTime(clase.hora),
         className: clase.tipo ?? "Clase",
-        price: 100,
+        price: CLASS_PRICE,
         cupo,
         full: cupo <= 0,
         sinCupo: cupo <= 0,
         favorAmount: montoAFavor,
-        source: clase
+        source: clase,
       };
     });
   }, [classes, montoAFavor]);
@@ -235,33 +147,18 @@ function RouteComponent() {
     [appointmentSlots, selectedDate]
   );
 
-  const handleSelectSlot = (slot: AppointmentSlot) => {
-    if (slot.sinCupo) return;
-    setSelectedSlot(slot);
-    setMessage(null);
-    setPhase("idle");
-    if (slot.favorAmount > 0) {
-      setPhase("confirmFavor");
-    } else {
-      setPhase("payment");
-    }
-  };
-
-  const handleAddWaitList = async (slot: AppointmentSlot) => {
+  const handleAddWaitList = async (slot: ClassSlot) => {
     if (!clienteId) {
       setMessage("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
       return;
     }
     const waitKey = `${slot.date} ${slot.time}hs ${slot.className}`;
     try {
-      const res = await fetch(
-        `${API_BASE}/listaEspera/clase/${slot.source.id}/join`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ clienteId }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/listaEspera/clase/${slot.source.id}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clienteId }),
+      });
       if (!res.ok) throw new Error(`Error: ${res.status}`);
       if (!waitList.includes(waitKey)) {
         setWaitList((list) => [...list, waitKey]);
@@ -270,97 +167,95 @@ function RouteComponent() {
         `Fuiste añadido a la lista de espera para ${slot.className} el ${slot.date} a las ${slot.time}hs.`
       );
     } catch (err) {
-      setMessage(
-        err instanceof Error ? err.message : "Error al unirse a lista de espera"
-      );
+      setMessage(err instanceof Error ? err.message : "Error al unirse a lista de espera");
     }
   };
 
-  const handleConfirmFavor = (apply: boolean) => {
-    if (!selectedSlot || !clienteId) return;
-    if (apply) {
-      void (async () => {
-        try {
-          setMessage("Enviando inscripción...");
-          const res = await fetch(`${API_BASE}/clases/${selectedSlot.source.id}/turnos`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ clienteId, estado: "pagado" })
-          });
-          if (res.status === 409) throw new Error("Ya estás inscripto en esta clase.");
-          if (!res.ok) throw new Error(`Error: ${res.status}`);
-          await res.json();
-          setPhase("completed");
-          setMessage(
-            `¡Turno confirmado! Se aplicó el monto a favor de $${selectedSlot.favorAmount}.`
-          );
-        } catch (err) {
-          setMessage(err instanceof Error ? err.message : "Error al crear turno");
-        }
-      })();
+  const openCheckout = (items: ClassSlot[], fromCart: boolean) => {
+    if (!clienteId) {
+      setMessage("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
       return;
     }
-    setPhase("payment");
+    setCheckoutItems(items);
+    setCheckoutFromCart(fromCart);
+    setIsPaymentModalOpen(true);
   };
 
-  const handlePayment = async (method: string) => {
-    if (!selectedSlot || !clienteId) return;
-    try {
-      setMessage("Procesando pago...");
-      const res = await fetch(`${API_BASE}/clases/${selectedSlot.source.id}/turnos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clienteId, estado: "pagado" })
-      });
-      if (res.status === 409) throw new Error("Ya estás inscripto en esta clase.");
-      if (!res.ok) throw new Error(`Error: ${res.status}`);
-      await res.json();
-      setPhase("completed");
-      setMessage(`¡Turno confirmado! Método de pago: ${method}.`);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Error al procesar pago");
+  const handleEnroll = (slot: ClassSlot) => {
+    if (enrolledClassIds.has(slot.source.id)) return;
+    openCheckout([slot], false);
+  };
+
+  const handleAddToCart = (slot: ClassSlot) => {
+    if (enrolledClassIds.has(slot.source.id)) return;
+    const added = addToCart(slot);
+    if (added) {
+      toast.success("Clase agregada al carrito");
+    } else {
+      removeFromCart(slot.key);
+      toast.info(`${slot.className} quitada del carrito`);
     }
   };
 
-  const priceToPay = selectedSlot ? selectedSlot.price / 2 : 0;
+  const handleCartCheckout = () => {
+    openCheckout(cartItems, true);
+  };
+
+  const handlePaymentSuccess = (paidKeys: string[], newSaldo?: number) => {
+    removePaidFromCart(paidKeys);
+    if (newSaldo !== undefined) {
+      setMontoAFavor(newSaldo);
+    }
+    setRefreshKey((k) => k + 1);
+    setCheckoutItems([]);
+  };
+
+  const handleRemoveFromCheckout = (key: string) => {
+    removeFromCart(key);
+    setCheckoutItems((prev) => {
+      const next = prev.filter((slot) => slot.key !== key);
+      if (next.length === 0) setIsPaymentModalOpen(false);
+      return next;
+    });
+  };
 
   const handleToggleViewAll = () => {
     setViewAll((v) => !v);
-    setSelectedSlot(null);
-    setPhase("idle");
     setMessage(null);
   };
 
-  const formCardClass =
-    "rounded-ks-lg border border-[rgba(82,183,136,0.18)] bg-white p-7 shadow-[0_8px_32px_rgba(26,58,42,0.12)] animate-ks-slide-up max-sm:p-5";
+  const renderClassCard = (slot: ClassSlot) => (
+    <ClassCard
+      key={slot.key}
+      slot={slot}
+      isEnrolled={enrolledClassIds.has(slot.source.id)}
+      isWaited={waitList.includes(`${slot.date} ${slot.time}hs ${slot.className}`)}
+      isInCart={isInCart(slot.key)}
+      onEnroll={handleEnroll}
+      onAddToCart={handleAddToCart}
+      onWaitList={handleAddWaitList}
+    />
+  );
 
   return (
-    <main
-      className={cn(
-        "mx-auto grid min-h-svh max-w-[760px] gap-4 px-6 pt-10 pb-16 font-dm-sans text-ks-gray-text antialiased",
-        "bg-[radial-gradient(ellipse_80%_50%_at_10%_0%,rgba(82,183,136,0.12)_0%,transparent_60%),radial-gradient(ellipse_60%_40%_at_90%_100%,rgba(183,224,85,0.1)_0%,transparent_55%),var(--ks-off-white)]",
-        "max-sm:px-4 max-sm:pt-5 max-sm:pb-12"
-      )}
-    >
+    <main className={pageMainClass}>
       <Link
         to="/"
-        className="size-fit p-4 rounded-full transition-all duration-300 hover:bg-ks-gray-soft text-ks-green-dark"
+        className="size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
       >
         <ArrowLeftIcon className="size-6" />
       </Link>
 
-      <section
-        className={cn(
-          "ks-hero-card relative overflow-hidden rounded-ks-lg px-10 py-12 shadow-[0_20px_60px_rgba(26,58,42,0.18)] animate-ks-slide-up",
-          "bg-[linear-gradient(135deg,var(--ks-green-dark)_0%,var(--ks-green-mid)_60%,var(--ks-green-light)_100%)]",
-          "max-sm:px-6 max-sm:py-8"
-        )}
-      >
+      <section className={heroSectionClass}>
         <h1 className="relative m-0 mb-2 font-outfit text-[38px] font-bold tracking-[-1px] text-white max-sm:text-[28px]">
           Reservá tu clase
         </h1>
         <p className="relative text-[15px] font-light text-white/72">
           Elegí el día y la clase que querés tomar en Kinescius
+        </p>
+        <p className="relative mt-3 text-[14px] font-medium text-white/90">
+          Todas las clases tienen el mismo valor:{" "}
+          <strong className="text-white">${CLASS_PRICE.toLocaleString("es-AR")}</strong>
         </p>
       </section>
 
@@ -383,7 +278,7 @@ function RouteComponent() {
           </button>
         </div>
 
-        {loading ? (
+        {loading || clienteLoading ? (
           <p className="py-2 text-sm text-ks-gray-text">Cargando clases...</p>
         ) : error ? (
           <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-ks-full border border-[rgba(192,57,43,0.2)] bg-ks-red-soft px-3.5 py-[7px] font-outfit text-[13px] font-semibold text-ks-red">
@@ -403,8 +298,6 @@ function RouteComponent() {
                 )}
                 onClick={() => {
                   setSelectedDate(slot.date);
-                  setSelectedSlot(null);
-                  setPhase("idle");
                   setMessage(null);
                 }}
               >
@@ -444,18 +337,7 @@ function RouteComponent() {
                         </span>
                       </div>
                       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 max-sm:grid-cols-2">
-                        {slotsForDate.map((slot) => (
-                          <ClassCard
-                            key={slot.key}
-                            slot={slot}
-                            isSelected={selectedSlot?.key === slot.key}
-                            isWaited={waitList.includes(
-                              `${slot.date} ${slot.time}hs ${slot.className}`
-                            )}
-                            onSelect={handleSelectSlot}
-                            onWaitList={handleAddWaitList}
-                          />
-                        ))}
+                        {slotsForDate.map(renderClassCard)}
                       </div>
                     </div>
                   );
@@ -466,83 +348,27 @@ function RouteComponent() {
             <p className="py-2 text-sm text-ks-gray-text">No hay clases para este día.</p>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 max-sm:grid-cols-2">
-              {classesByDate.map((slot) => (
-                <ClassCard
-                  key={slot.key}
-                  slot={slot}
-                  isSelected={selectedSlot?.key === slot.key}
-                  isWaited={waitList.includes(`${slot.date} ${slot.time}hs ${slot.className}`)}
-                  onSelect={handleSelectSlot}
-                  onWaitList={handleAddWaitList}
-                />
-              ))}
+              {classesByDate.map(renderClassCard)}
             </div>
           )}
         </section>
       )}
 
-      {phase === "confirmFavor" && selectedSlot && (
-        <section className={cn(formCardClass, "animate-ks-slide-up")}>
-          <p className="mb-1 text-[15px] leading-relaxed text-ks-text-dark">
-            Tenés <strong className="text-ks-green-mid">${selectedSlot.favorAmount}</strong> de
-            monto a favor. ¿Querés aplicarlo?
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              className={cn(btnBase, btnPrimary)}
-              type="button"
-              onClick={() => handleConfirmFavor(true)}
-            >
-              Aplicar monto a favor
-            </button>
-            <button
-              className={cn(btnBase, btnSecondary)}
-              type="button"
-              onClick={() => handleConfirmFavor(false)}
-            >
-              Pagar sin monto a favor
-            </button>
-          </div>
-        </section>
-      )}
+      {message && toast.error(message)}
 
-      {phase === "payment" && selectedSlot && (
-        <section className={cn(formCardClass, "animate-ks-slide-up")}>
-          <p className="mb-1 text-[15px] leading-relaxed text-ks-text-dark">
-            Monto a pagar: <strong className="text-ks-green-mid">${priceToPay}</strong>
-          </p>
-          <p className="mb-1 text-[15px] leading-relaxed text-ks-text-dark">
-            Elegí un método de pago:
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              className={cn(btnBase, btnPrimary)}
-              type="button"
-              onClick={() => handlePayment("tarjeta")}
-            >
-              Tarjeta
-            </button>
-            <button
-              className={cn(btnBase, btnSecondary)}
-              type="button"
-              onClick={() => handlePayment("transferencia")}
-            >
-              Transferencia
-            </button>
-          </div>
-        </section>
-      )}
+      <CartFloatingBar count={cartCount} onCheckout={handleCartCheckout} />
 
-      {message && (
-        <section
-          className={cn(
-            "animate-ks-slide-up rounded-ks-md border border-[rgba(82,183,136,0.25)] px-5 py-4",
-            "bg-[linear-gradient(135deg,rgba(82,183,136,0.08),rgba(183,224,85,0.08))]"
-          )}
-        >
-          <p className="text-sm leading-relaxed font-medium text-ks-green-dark">{message}</p>
-        </section>
-      )}
+      <PaymentSummaryModal
+        isOpen={isPaymentModalOpen}
+        items={checkoutItems}
+        montoAFavor={montoAFavor}
+        clienteId={clienteId}
+        allowRemove={checkoutFromCart}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onRemoveItem={handleRemoveFromCheckout}
+        onPaymentStarted={removePaidFromCart}
+        onSuccess={handlePaymentSuccess}
+      />
     </main>
   );
 }

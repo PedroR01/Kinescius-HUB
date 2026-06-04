@@ -1,12 +1,22 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect } from 'react';
+import { cn } from "@/lib/utils";
+import {
+  btnBase,
+  btnPrimary,
+  btnSecondary,
+  fieldStackClass,
+  formCardClass
+} from "@/lib/ks-page-styles";
+import { AuthPageLayout } from "@/modules/auth/components/AuthPageLayout";
+import { AuthFormField } from "@/modules/auth/components/AuthFormField";
+import { AuthFeedback } from "@/modules/auth/components/AuthFeedback";
 
 type FormData = {
   passwdActual: string;
   passwdNueva: string;
   passwdConfirmacion: string; 
 };
-
 
 const CambiarPasswd = () => {
   const navigate = useNavigate(); 
@@ -57,7 +67,7 @@ const CambiarPasswd = () => {
       // Agarro el token de la sesión actual
       const token = localStorage.getItem('miToken');
 
-      const response = await fetch('http://localhost:3000/auth/cambiar-password', {
+      const response = await fetch(`${API_BASE}/auth/cambiar-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,42 +97,82 @@ const CambiarPasswd = () => {
   };
 
   return (
-    <div>
-      <button onClick={() => navigate({to: "/"})}>Volver a la página principal</button>
+    <AuthPageLayout
+      title="Cambio de contraseña"
+      subtitle="Por favor ingrese su contraseña actual, y la nueva contraseña para actualizarla."
+    >
       {estaLogueado ? (
-        <>
-          <h1>Cambio de contraseña</h1>
-          <p>Por favor ingrese su contraseña actual, y la nueva contraseña en los dos campos que la solicitan.</p>
-
+        <section className={formCardClass}>
           <form onSubmit={e => e.preventDefault()}>
-            <label>Contraseña actual:</label>
-            <input type="password" name="passwdActual" value={formData.passwdActual} onChange={handleChange} required />
-            <br />
-            <label>Contraseña nueva:</label>
-            <input type="password" name="passwdNueva" value={formData.passwdNueva} onChange={handleChange} required />
-            <br />
-            <label>Vuelva a ingresar su nueva contraseña:</label>
-            <input type="password" name="passwdConfirmacion" value={formData.passwdConfirmacion} onChange={handleChange} required />
-            <br />
-            <div style={{ marginTop: '1rem' }}>
-              <button type="button" onClick={handleCambioPasswd} disabled={isProcessing}>
+            <div className={fieldStackClass}>
+              <AuthFormField
+                label="Contraseña actual:"
+                name="passwdActual"
+                type="password"
+                value={formData.passwdActual}
+                onChange={handleChange}
+                required
+              />
+              <AuthFormField
+                label="Contraseña nueva:"
+                name="passwdNueva"
+                type="password"
+                value={formData.passwdNueva}
+                onChange={handleChange}
+                required
+              />
+              <AuthFormField
+                label="Vuelva a ingresar su nueva contraseña:"
+                name="passwdConfirmacion"
+                type="password"
+                value={formData.passwdConfirmacion}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            
+            <div className="mt-4 flex flex-col gap-3">
+              <button 
+                type="button" 
+                onClick={handleCambioPasswd} 
+                disabled={isProcessing}
+                className={cn(btnBase, btnPrimary, "w-full")}
+              >
                 {isProcessing ? 'Procesando...' : 'Cambiar contraseña'}
               </button>
             </div>
-          </form>
-        </>
-      ) : (
-        <>
-          <h1>No iniciaste sesión!</h1>
-          <p>Vuelve a la página principal e inicia sesión para cambiar tu contraseña.</p>
-        </>
-        
-      )}
-      
 
-      {message && <p style={{ color: 'green', marginTop: '1rem' }}>{message}</p>}
-      {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
-    </div>
+            <div className="mt-8 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => navigate({to: "/"})}
+                className={cn(btnBase, btnSecondary, "w-full")}
+              >
+                Volver a la página principal
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : (
+        <section className={formCardClass}>
+          <h2 className="m-0 mb-2 font-outfit text-[22px] font-bold tracking-[-0.5px] text-ks-text-dark">
+            No iniciaste sesión!
+          </h2>
+          <p className="m-0 mb-6 text-[15px] leading-relaxed text-ks-gray-text">
+            Vuelve a la página principal e inicia sesión para cambiar tu contraseña.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate({to: "/"})}
+            className={cn(btnBase, btnSecondary, "w-full")}
+          >
+            Volver a la página principal
+          </button>
+        </section>
+      )}
+
+      <AuthFeedback message={message} error={error} />
+    </AuthPageLayout>
   );
 }
 

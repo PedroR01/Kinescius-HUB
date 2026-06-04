@@ -5,6 +5,7 @@ import { btnBase, btnPrimary, fieldStackClass, formCardClass } from "@/lib/ks-pa
 import { AuthPageLayout } from "@/modules/auth/components/AuthPageLayout";
 import { AuthFormField } from "@/modules/auth/components/AuthFormField";
 import { AuthFeedback } from "@/modules/auth/components/AuthFeedback";
+import { API_BASE } from "@/lib/constants";
 
 type FormData = {
   nombre: string;
@@ -53,7 +54,7 @@ const Registro = () => {
     setIsProcessing(true); //Esto bloquea el botón para la carga y pone texto informando (al final del HTML)
     try {
       //Envio los datos al controlador en formato JSON
-      const response = await fetch("http://localhost:3000/auth/registro", {
+      const response = await fetch(`${API_BASE}/auth/registro`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -63,12 +64,12 @@ const Registro = () => {
 
       if (response.ok) {
         //Si recibo status 201 Significa que se registró el usuario
-        setMessage("Registro exitoso. Redirigiendo...");
+        setMessage("Registro exitoso. Se envió tu contraseña al correo que ingresaste. Redirigiendo...");
 
         //TimeOut va a ser el tiempo en milisegundos que se espera para navegar al inicio de sesión
         setTimeout(() => {
           navigate({ to: "/iniciarSesion" });
-        }, 5000);
+        }, 7000);
       } else {
         // Si el backend devuelve BadRequestException por algun error como un dato duplicado, seteamos de error el msje recibido
         setError(data.message);

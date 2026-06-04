@@ -111,7 +111,7 @@ export class AuthService {
       throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
     }
 
-    console.log(`¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}`); //Esto es lo que se debería enviar por mail
+    console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
     try {
       await this.emailService.enviarCorreo(
         datos.email, //Hay que usar el mail carlo.castro247390@alumnos.info.unlp.edu.ar para el testeo
@@ -183,7 +183,7 @@ export class AuthService {
       success: true,
       mensaje: "Inicio de sesión exitoso :)",
       token: data.session.access_token, 
-      usuarioId: data.user.id,
+      usuarioId: persona.id,
       rol: rolUsuario
     };
   }
@@ -207,6 +207,7 @@ export class AuthService {
     try {
       //Generamos la nueva contraseña usando tu método existente
       const nuevaPassword = this.generarPasswordAleatoria(8);
+      console.log(`----------¡ATENCIÓN! La nueva contraseña generada para ${email} es: ${nuevaPassword}----------`);
 
       //Forzamos el cambio de contraseña en Supabase
       const { error: updateError } = await this.supabaseService.client.auth.admin.updateUserById(
@@ -236,7 +237,7 @@ export class AuthService {
     const { data: userData, error: userError } = await this.supabaseService.client.auth.getUser(token);
 
     if (userError || !userData.user) {
-      throw new UnauthorizedException('Sesión inválida o expirada. Por favor, iniciá sesión nuevamente.');
+      throw new UnauthorizedException('La contraseña actual ingresada no es correcta.');
     }
 
     const email = userData.user.email!; //El signo de exclamación le die a TypeScript que no va a venir un undefined
