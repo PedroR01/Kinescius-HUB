@@ -220,18 +220,10 @@ export class ConfirmarTurnoService {
     clienteId: number,
     claseId: number,
   ): Promise<void> {
-    const { data: listaRow } = await this.supabase.client
-      .from('Lista de espera')
-      .select('id')
-      .eq('id_clase', claseId)
-      .single();
-
-    if (!listaRow) return;
-
     await this.supabase.client
-      .from('No abonado')
+      .from('Lista de espera')
       .delete()
-      .eq('id_cliente', clienteId)
-      .eq('id_listaEspera', listaRow.id);
+      .eq('id_clase', claseId)
+      .eq('id_cliente', clienteId);
   }
 }

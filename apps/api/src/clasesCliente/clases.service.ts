@@ -20,7 +20,7 @@ export class ClasesService {
 
     const { data, error } = await this.supabaseService.client
       .from("Clase")
-      .select("*, Se_inscribe(count)")
+      .select("*, Se_inscribe(count), Profesor(Usuario(Persona(nombre, apellido)))")
       .gte("fecha", todayStr)
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
@@ -33,10 +33,13 @@ export class ClasesService {
 
     return data.map((clase) => {
       const inscriptos = Number(clase.Se_inscribe?.[0]?.count ?? 0);
+      const persona = (clase.Profesor as any)?.Usuario?.Persona;
       return {
         ...clase,
         cupo: (clase.cupo ?? 0) - inscriptos,
+        profesor: persona ? `${persona.nombre} ${persona.apellido}` : null,
         Se_inscribe: undefined,
+        Profesor: undefined,
       };
     });
   }
@@ -57,13 +60,37 @@ export class ClasesService {
     return data;
   }
 
-  async createTurno(claseId: number, dto: CreateTurnoDto) {
-    const payload = {
-      id_cliente: dto.clienteId,
-      id_clase: claseId,
-      estado: dto.estado ?? "pendiente",
-    };
+  private async verificarConflictoHorario(clienteId: number, claseId: number): Promise<void> {
+    const { data: claseNueva, error: claseError } = await this.supabaseService.client
+      .from("Clase")
+      .select("fecha, hora")
+      .eq("id", claseId)
+      .single();
 
+    if (claseError || !claseNueva) {
+      throw new BadRequestException(`La clase ${claseId} no existe.`);
+    }
+
+    const { data: inscripciones, error: inscError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .select("id_clase, Clase(fecha, hora)")
+      .eq("id_cliente", clienteId);
+
+    if (inscError) {
+      throw new InternalServerErrorException("Error al verificar conflicto de horario.");
+    }
+
+    const conflicto = (inscripciones ?? []).some((insc: any) => {
+      const c = insc.Clase;
+      return c?.fecha === claseNueva.fecha && c?.hora === claseNueva.hora;
+    });
+
+    if (conflicto) {
+      throw new ConflictException("Ya tenés una clase en ese horario.");
+    }
+  }
+
+  async createTurno(claseId: number, dto: CreateTurnoDto) {
     const { data: existing, error: selectError } = await this.supabaseService.client
       .from("Se_inscribe")
       .select("id_cliente,id_clase")
@@ -85,6 +112,14 @@ export class ClasesService {
       throw new ConflictException("Ya estás inscripto en esta clase.");
     }
 
+    await this.verificarConflictoHorario(dto.clienteId, claseId);
+
+    const payload = {
+      id_cliente: dto.clienteId,
+      id_clase: claseId,
+      estado: dto.estado ?? "pendiente",
+    };
+
     const { data, error } = await this.supabaseService.client
       .from("Se_inscribe")
       .insert(payload)
@@ -98,7 +133,6 @@ export class ClasesService {
       ) {
         throw new ConflictException("Ya estás inscripto en esta clase.");
       }
-
       throw new InternalServerErrorException(
         `Error al crear inscripcion: ${error.message}`
       );
@@ -182,6 +216,8 @@ export class ClasesService {
       if (alreadyInscribed) {
         throw new ConflictException(`Ya estás inscripto en la clase ${clase.id}.`);
       }
+
+      await this.verificarConflictoHorario(clienteId, clase.id);
     }
 
     const inscripciones = clases.map((clase) => ({

@@ -24,32 +24,19 @@ export class NotificacionEsperaService {
   }
 
   async notificarProximoEnEspera(claseId: number): Promise<void> {
-    const { data: listaRows, error: listaError } = await this.supabase.client
+    const { data: enEspera, error: esperaError } = await this.supabase.client
       .from('Lista de espera')
-      .select('id')
+      .select('id_cliente')
       .eq('id_clase', claseId)
-      .single();
-
-    if (listaError || !listaRows) {
-      this.logger.log(`No hay lista de espera para la clase ${claseId}`);
-      return;
-    }
-
-    const listaEsperaId = listaRows.id;
-
-    const { data: noAbonados, error: naError } = await this.supabase.client
-      .from('No abonado')
-      .select('id, id_cliente')
-      .eq('id_listaEspera', listaEsperaId)
       .order('id', { ascending: true })
       .limit(1);
 
-    if (naError || !noAbonados || noAbonados.length === 0) {
+    if (esperaError || !enEspera || enEspera.length === 0) {
       this.logger.log(`Lista de espera vacía para clase ${claseId}`);
       return;
     }
 
-    const { id_cliente: clienteId } = noAbonados[0];
+    const { id_cliente: clienteId } = enEspera[0];
 
     const { data: persona, error: personaError } = await this.supabase.client
       .from('Persona')
@@ -118,7 +105,6 @@ export class NotificacionEsperaService {
         subject: `¡Tu lugar está disponible! – ${clase.tipo ?? 'Clase'} del ${clase.fecha}`,
         html,
       });
-
       this.logger.log(
         `Email enviado a ${persona.mail} para clase ${claseId}`,
       );

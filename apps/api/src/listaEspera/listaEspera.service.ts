@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  ConflictException,
 } from "@nestjs/common";
 
 import { SupabaseService } from "../integrations/supabase/supabase.service";
@@ -45,25 +46,10 @@ export class ListaEsperaService {
   }
 
   async countByClase(claseId: number) {
-    const hoy = new Date().toISOString().split("T")[0];
-
-    const { data: clase, error: claseError } =
-      await this.supabaseService.client
-        .from("Clase")
-        .select("id")
-        .eq("id", claseId)
-        .gte("fecha", hoy)
-        .single();
-
-    if (claseError || !clase) return 0;
-
     const { count, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
+        .select("*", { count: "exact", head: true })
         .eq("id_clase", claseId);
 
     if (error) {
@@ -76,49 +62,21 @@ export class ListaEsperaService {
   }
 
   async findByClase(claseId: number) {
-    const hoy = new Date().toISOString().split("T")[0];
-
-    const { data: clase, error: claseError } =
-      await this.supabaseService.client
-        .from("Clase")
-        .select("id")
-        .eq("id", claseId)
-        .gte("fecha", hoy)
-        .single();
-
-    if (claseError || !clase) return [];
-
-    const { data: listas, error: listaError } =
+    const { data, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("id")
+        .select("id_cliente, fecha")
         .eq("id_clase", claseId);
 
-    if (listaError) {
+    if (error) {
       throw new InternalServerErrorException(
-        `Error lista: ${listaError.message}`
+        `Error lista: ${error.message}`
       );
     }
 
-    if (!listas || listas.length === 0) return [];
+    if (!data || data.length === 0) return [];
 
-    const listaEsperaId = listas[0].id;
-
-    const { data: clientesEnEspera, error: clientesError } =
-      await this.supabaseService.client
-        .from("No abonado")
-        .select("id_cliente")
-        .eq("id_listaEspera", listaEsperaId);
-
-    if (clientesError) {
-      throw new InternalServerErrorException(
-        `Error clientes: ${clientesError.message}`
-      );
-    }
-
-    if (!clientesEnEspera || clientesEnEspera.length === 0) return [];
-
-    const clienteIds = clientesEnEspera.map(c => c.id_cliente);
+    const clienteIds = data.map(d => d.id_cliente).filter(Boolean);
 
     const { data: personas, error: personasError } =
       await this.supabaseService.client
@@ -141,51 +99,31 @@ export class ListaEsperaService {
   }
 
   async joinListaEspera(claseId: number, clienteId: number) {
-    let { data: lista, error: listaError } =
+    const { data: existing } =
       await this.supabaseService.client
         .from("Lista de espera")
         .select("id")
         .eq("id_clase", claseId)
-        .single();
-
-    if (listaError || !lista) {
-      const { data: nuevaLista, error: createError } =
-        await this.supabaseService.client
-          .from("Lista de espera")
-          .insert({ id_clase: claseId })
-          .select("id")
-          .single();
-
-      if (createError || !nuevaLista) {
-        throw new InternalServerErrorException(
-          `Error al crear lista de espera: ${createError?.message}`
-        );
-      }
-
-      lista = nuevaLista;
-    }
-
-    const { data: existing } =
-      await this.supabaseService.client
-        .from("No abonado")
-        .select("id")
-        .eq("id_listaEspera", lista.id)
         .eq("id_cliente", clienteId)
-        .single();
+        .maybeSingle();
 
     if (existing) {
-      return { message: "Ya estás en la lista de espera." };
+      throw new ConflictException("Ya estás en la lista de espera.");
     }
+
+    const hoy = new Date().toISOString().split("T")[0];
 
     const { error: insertError } =
       await this.supabaseService.client
-        .from("No abonado")
+        .from("Lista de espera")
         .insert({
-          id_listaEspera: lista.id,
+          id_clase: claseId,
           id_cliente: clienteId,
+          fecha: hoy,
         });
 
     if (insertError) {
+      console.error("Error al insertar en lista de espera:", insertError);
       throw new InternalServerErrorException(
         `Error al unirse a lista de espera: ${insertError.message}`
       );
