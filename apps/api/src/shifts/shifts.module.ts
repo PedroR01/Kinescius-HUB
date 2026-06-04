@@ -6,12 +6,14 @@ import { ShiftsService } from './shifts.service';
 import { SupabaseModule } from '../integrations/supabase/supabase.module';
 import { ConfirmarTurnoModule } from '../confirmarTurno/confirmarTurno.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PagosModule } from '../pagos/pagos.module';
 
 @Module({
   imports: [
     SupabaseModule,
     ConfirmarTurnoModule,
     NotificationsModule,
+    PagosModule,
   ],
   controllers: [ShiftsController],
   providers: [ShiftsService],

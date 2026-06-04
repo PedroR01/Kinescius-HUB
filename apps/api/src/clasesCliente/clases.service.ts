@@ -7,7 +7,8 @@ import {
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 import { InscribirConSaldoDto } from "./dto/inscribir-con-saldo.dto";
-import { CLASS_UNIT_PRICE } from "../pagos/pagos.service";
+import { CLASS_UNIT_PRICE } from "../pagos/class-price.constant";
+import { desgloseSoloSaldo } from "../pagos/inscripcion-desglose.util";
 
 @Injectable()
 export class ClasesService {
@@ -177,10 +178,14 @@ export class ClasesService {
       }
     }
 
+    const desglose = desgloseSoloSaldo();
     const inscripciones = clases.map((clase) => ({
       id_cliente: clienteId,
       id_clase: clase.id,
       estado: "pagado",
+      id_pago_mp: desglose.id_pago_mp,
+      monto_mp: desglose.monto_mp,
+      monto_saldo: desglose.monto_saldo,
     }));
 
     const { data: inserted, error: insertError } = await this.supabaseService.client

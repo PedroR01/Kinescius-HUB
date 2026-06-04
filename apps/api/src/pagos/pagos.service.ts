@@ -5,8 +5,10 @@ import { getFrontendUrl } from "../config/frontend-url";
 import { MpCheckoutProService } from "../integrations/mercado-pago/mp-checkoutPro.service";
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { ClasePayload, CreatePreferenceBody } from "./pagos.controller";
+import { CLASS_UNIT_PRICE } from "./class-price.constant";
+import { repartirMontoAFavorEntreClases } from "./inscripcion-desglose.util";
 
-export const CLASS_UNIT_PRICE = 10_000;
+export { CLASS_UNIT_PRICE } from "./class-price.constant";
 
 type PagoInsert = {
     id_cliente: number;
@@ -19,7 +21,22 @@ type SeInscribeInsert = {
     id_clase: number;
     id_cliente: number;
     estado: string;
+    id_pago_mp: string | null;
+    monto_mp: number;
+    monto_saldo: number;
 };
+
+function leerMetadataPago(metadata: Record<string, unknown> | undefined) {
+    const clases = (metadata?.clases ?? []) as ClasePayload[];
+    const idCliente = Number(
+        metadata?.clienteId ?? metadata?.cliente_id,
+    );
+    const montoAFavorAplicado = Number(
+        metadata?.montoAFavorAplicado ?? metadata?.monto_a_favor_aplicado,
+    ) || 0;
+
+    return { clases, idCliente, montoAFavorAplicado };
+}
 
 @Injectable()
 export class PagosService {
@@ -65,7 +82,7 @@ export class PagosService {
                     montoAFavorAplicado,
                 },
                 back_urls: {
-                    success: `https://6b19-2800-810-5c2-569-fdde-7d2d-5db5-2ee9.ngrok-free.app/success`, // Forwarding de ngrok
+                    success: `https://f3ab-2800-810-5c2-569-3461-666-84ef-4044.ngrok-free.app/success`, // Forwarding de ngrok
                     failure: `${frontendUrl}/failure`,
                     pending: `${frontendUrl}/pending`,
                 },
@@ -83,9 +100,19 @@ export class PagosService {
             return { received: true, status: payment.status };
         }
 
-        const clases: ClasePayload[] = payment.metadata?.clases ?? [];
-        const idCliente = Number(payment.metadata?.cliente_id);
-        const montoAFavorAplicado = Number(payment.metadata?.monto_afavor_aplicado) || 0;
+        const { clases, idCliente, montoAFavorAplicado } = leerMetadataPago(
+            payment.metadata as Record<string, unknown> | undefined,
+        );
+
+        if (!idCliente || !clases.length) {
+            throw new BadRequestException('Metadata de pago incompleta.');
+        }
+
+        const desgloses = repartirMontoAFavorEntreClases(
+            clases,
+            montoAFavorAplicado,
+            paymentId,
+        );
         const now = new Date();
 
         const pago: PagoInsert = {
@@ -101,10 +128,13 @@ export class PagosService {
 
         if (pagoError) throw new Error(pagoError.message);
 
-        const inscripciones: SeInscribeInsert[] = clases.map((clase) => ({
+        const inscripciones: SeInscribeInsert[] = clases.map((clase, index) => ({
             id_clase: clase.id,
             id_cliente: idCliente,
             estado: "pagado",
+            id_pago_mp: desgloses[index].id_pago_mp,
+            monto_mp: desgloses[index].monto_mp,
+            monto_saldo: desgloses[index].monto_saldo,
         }));
 
         const { error: inscripcionError } = await this.supabaseService.client
@@ -118,6 +148,32 @@ export class PagosService {
         }
 
         return { received: true };
+    }
+
+    async acreditarMontoAFavor(clienteId: number, amount: number) {
+        if (amount <= 0) return;
+
+        const { data: cliente, error: fetchError } = await this.supabaseService.client
+            .from('Cliente')
+            .select('monto_a_favor')
+            .eq('id', clienteId)
+            .single();
+
+        if (fetchError || !cliente) {
+            throw new Error(`Error al obtener saldo del cliente: ${fetchError?.message}`);
+        }
+
+        const saldoActual = Number(cliente.monto_a_favor) || 0;
+        const nuevoSaldo = saldoActual + amount;
+
+        const { error: updateError } = await this.supabaseService.client
+            .from('Cliente')
+            .update({ monto_a_favor: nuevoSaldo })
+            .eq('id', clienteId);
+
+        if (updateError) {
+            throw new Error(`Error al acreditar monto a favor: ${updateError.message}`);
+        }
     }
 
     private async deductMontoAFavor(clienteId: number, amount: number) {
@@ -148,6 +204,36 @@ export class PagosService {
         const pagoClient = new Payment(this.mpCheckoutProService.client);
         const pago = await pagoClient.get({ id });
         return pago;
+    }
+
+    async createPartialRefund(idPago: string, amount: number) {
+        if (amount <= 0) {
+            throw new BadRequestException('El monto de reembolso debe ser mayor a 0.');
+        }
+
+        const payment = await this.getPago(idPago);
+        if (payment.status !== 'approved') {
+            throw new BadRequestException('El pago no está aprobado para reembolso.');
+        }
+
+        const refunds = await this.getAllRefunds(idPago);
+        const totalRefunded = (refunds ?? []).reduce(
+            (sum, refund) => sum + (Number(refund.amount) || 0),
+            0,
+        );
+        const paidAmount = Number(payment.transaction_amount) || 0;
+
+        if (totalRefunded + amount > paidAmount) {
+            throw new BadRequestException(
+                'El monto de reembolso excede el saldo disponible del pago.',
+            );
+        }
+
+        const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
+        return refundClient.create({
+            payment_id: idPago,
+            body: { amount },
+        });
     }
 
     async createRefund(idPago: string) {

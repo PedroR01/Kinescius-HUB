@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { cancelarTurnoRequest } from '../../../api/shifts'; 
+import { cancelarTurnoRequest } from '../../../api/shifts';
 
 interface CancelarTurnoProps {
   clienteId: number;
   claseId: number;
   fechaClase: string;
-  horaClase: string;  
+  horaClase: string;
   actividad: string;
-  onCancelSuccess: () => void; 
-  onClose: () => void; 
+  montoMp?: number;
+  onCancelSuccess: (message: string) => void;
+  onClose: () => void;
 }
 
 type TipoReembolso = 'REEMBOLSO' | 'A_FAVOR' | 'NINGUNO';
@@ -19,6 +20,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   fechaClase,
   horaClase,
   actividad,
+  montoMp = 0,
   onCancelSuccess,
   onClose,
 }) => {
@@ -30,6 +32,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   const ahora = new Date();
   const diferenciaHoras = (fechaCompleta.getTime() - ahora.getTime()) / (1000 * 60 * 60);
   const permiteReembolso = diferenciaHoras >= 24;
+  const tienePagoMercadoPago = montoMp > 0;
 
   const handleConfirmar = async () => {
     if (permiteReembolso && !opcionSeleccionada) {
@@ -47,8 +50,8 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
         tipoReembolso: permiteReembolso ? opcionSeleccionada! : 'NINGUNO',
       };
 
-      await cancelarTurnoRequest(payload);
-      onCancelSuccess();
+      const result = await cancelarTurnoRequest(payload);
+      onCancelSuccess(result.message);
     } catch (error: any) {
       setErrorMensaje(error.message);
     } finally {
@@ -72,6 +75,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
             Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:
           </p>
           <div className="flex flex-col gap-3">
+            {tienePagoMercadoPago && (
             <label 
               className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
                 opcionSeleccionada === 'REEMBOLSO' 
@@ -90,6 +94,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
                 Exigir reembolso
               </span>
             </label>
+            )}
             <label 
               className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
                 opcionSeleccionada === 'A_FAVOR' 
