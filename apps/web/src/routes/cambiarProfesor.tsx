@@ -6,7 +6,7 @@ type Clase = {
   fecha: string
   hora: string
   tipo: string | null
-  profesor_dni?: string | null
+  profesor_nombre?: string | null
 }
 
 type Profesor = {
@@ -257,7 +257,8 @@ function RouteComponent() {
                 <option value="">-- Seleccioná una clase --</option>
                 {clases.map((clase) => (
                   <option key={clase.id} value={clase.id}>
-                    {formatTime(clase.hora)} — {clase.tipo ?? 'Sin tipo'}
+                    {formatTime(clase.hora)} — {clase.tipo ?? 'Sin tipo'} —{' '}
+                    {clase.profesor_nombre ?? 'Sin profesor'}
                   </option>
                 ))}
               </select>
