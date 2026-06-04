@@ -8,11 +8,7 @@ import ClassCard from "@/modules/turnos/components/classCard";
 import { CartFloatingBar } from "@/modules/turnos/components/CartFloatingBar";
 import { PaymentSummaryModal } from "@/modules/turnos/components/PaymentSummaryModal";
 import { useClassCart } from "@/modules/turnos/hooks/useClassCart";
-<<<<<<< fix/obtenerID-modularizado
 import { useClienteId } from "@/hooks/useClienteId";
-=======
-import { useClienteId } from "@/modules/turnos/hooks/useClienteId";
->>>>>>> dev
 import { API_BASE, CLASS_PRICE } from "@/lib/constants";
 import { fetchMontoAFavor } from "@/api/payments";
 import {
