@@ -1,19 +1,26 @@
 import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { CambiarTurnoDto } from './dto/cambiar-turno-dto';
-import { CancelarTurnoDto } from './dto/cancelar-turno-dto';
+import { CancelarTurnoDto, TipoReembolso } from './dto/cancelar-turno-dto';
 import { CancelacionNoAbonadoStrategy } from './strategies/cancelacion-no-abonado.strategy';
 import { NotificacionEsperaService } from '../confirmarTurno/notificacion-espera.service';
 import { MisClasesResponseDto } from './dto/ver-clases-dto';
+import { ReembolsoService, ResultadoReembolso } from '../pagos/reembolso.service';
+import {
+  construirMensajeReembolso,
+  debeEjecutarReembolso,
+} from './cancelacion-reembolso.util';
+
 @Injectable()
 export class ShiftsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly notificacionEspera: NotificacionEsperaService,
+    private readonly reembolsoService: ReembolsoService,
   ) { }
 
   async cancelar(cancelarTurnoDto: CancelarTurnoDto) {
-    const { clienteId, claseId } = cancelarTurnoDto;
+    const { clienteId, claseId, tipoReembolso } = cancelarTurnoDto;
 
     const { data: inscripcion, error: errorInscripcion } = await this.supabase.client
       .from('Se_inscribe')
@@ -26,6 +33,15 @@ export class ShiftsService {
       throw new NotFoundException('El cliente no está inscripto en la clase seleccionada.');
     }
 
+    if (
+      inscripcion.estado !== 'pagado' &&
+      tipoReembolso !== TipoReembolso.NINGUNO
+    ) {
+      throw new BadRequestException(
+        'Solo los turnos pagados admiten reembolso o saldo a favor.',
+      );
+    }
+
     const datosTurno = {
       fecha: inscripcion.clase.fecha,
       hora: inscripcion.clase.hora,
@@ -34,7 +50,17 @@ export class ShiftsService {
     const estrategia = new CancelacionNoAbonadoStrategy();
     const resultado = estrategia.evaluarReglas(datosTurno, cancelarTurnoDto);
 
+    let detalleReembolso: ResultadoReembolso | null = null;
+
     if (resultado.permitido) {
+      if (debeEjecutarReembolso(tipoReembolso, inscripcion.estado)) {
+        detalleReembolso = await this.reembolsoService.ejecutarReembolso(
+          inscripcion,
+          tipoReembolso,
+        );
+        await this.reembolsoService.marcarReembolsado(clienteId, claseId);
+      }
+
       const { error: errorDelete } = await this.supabase.client
         .from('Se_inscribe')
         .delete()
@@ -45,13 +71,17 @@ export class ShiftsService {
         throw new InternalServerErrorException('No se pudo procesar la cancelación en la base de datos.');
       }
 
-      // 👇 Al liberarse el cupo, notificar al próximo en lista de espera
       await this.notificacionEspera.notificarProximoEnEspera(claseId);
     }
 
     return {
-      message: resultado.mensaje,
+      message: construirMensajeReembolso(
+        resultado.mensaje,
+        resultado.reembolsoAplicado,
+        detalleReembolso,
+      ),
       reembolso: resultado.reembolsoAplicado,
+      detalleReembolso,
     };
   }
 
@@ -159,6 +189,8 @@ export class ShiftsService {
       .select(`
         id_cliente,
         id_clase,
+        monto_a_favor,
+        estado,
         Clase!inner (
           id,
           fecha,

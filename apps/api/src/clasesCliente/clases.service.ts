@@ -7,7 +7,8 @@ import {
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 import { InscribirConSaldoDto } from "./dto/inscribir-con-saldo.dto";
-import { CLASS_UNIT_PRICE } from "../pagos/pagos.service";
+import { CLASS_UNIT_PRICE } from "../pagos/class-price.constant";
+import { inscripcionSoloSaldo } from "../pagos/inscripcion-desglose.util";
 
 @Injectable()
 export class ClasesService {
@@ -220,10 +221,13 @@ export class ClasesService {
       await this.verificarConflictoHorario(clienteId, clase.id);
     }
 
+    const datosPago = inscripcionSoloSaldo();
     const inscripciones = clases.map((clase) => ({
       id_cliente: clienteId,
       id_clase: clase.id,
       estado: "pagado",
+      id_pago_mp: datosPago.id_pago_mp,
+      monto_a_favor: datosPago.monto_a_favor,
     }));
 
     const { data: inserted, error: insertError } = await this.supabaseService.client

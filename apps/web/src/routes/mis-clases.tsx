@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { motion } from 'motion/react';
-import { Calendar, Clock, Activity, ArrowRightLeft, X } from 'lucide-react';
+import { Calendar, Clock, ArrowRightLeft, X } from 'lucide-react';
 import { CambiarTurno } from '../modules/turnos/components/cambiarTurnoModal';
 import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ interface ClaseDto {
 interface MisClasesResponseDto {
     id_clase: number;
     id_cliente: number;
+    monto_a_favor?: boolean;
     Clase: ClaseDto;
 }
 
@@ -31,6 +32,7 @@ export default function GestionClases() {
     const [modalActivo, setModalActivo] = useState<'CAMBIAR' | 'CANCELAR' | null>(null);
     const [claseSeleccionada, setClaseSeleccionada] = useState<MisClasesResponseDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
     const { clienteId: idCliente, isLoading: clienteLoading } = useClienteId();
 
@@ -67,7 +69,10 @@ export default function GestionClases() {
         setClaseSeleccionada(null);
     };
 
-    const handleExito = () => {
+    const handleExito = (message?: string) => {
+        if (message) {
+            setMensajeExito(message);
+        }
         cerrarModal();
         cargarClases();
     };
@@ -101,6 +106,11 @@ export default function GestionClases() {
                             <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                                 Gestioná tus próximos turnos y mantené tu rutina al día. Revisa, cambia o cancela tus clases programadas con facilidad.
                             </p>
+                            {mensajeExito && (
+                                <p className="mt-4 max-w-2xl rounded-2xl bg-main/10 px-4 py-3 text-sm font-medium text-main">
+                                    {mensajeExito}
+                                </p>
+                            )}
                         </motion.div>
                     </motion.div>
                 </div>
@@ -218,6 +228,7 @@ export default function GestionClases() {
                         actividad={claseSeleccionada.Clase.tipo}
                         fechaClase={claseSeleccionada.Clase.fecha}
                         horaClase={claseSeleccionada.Clase.hora}
+                        pagoConMontoAFavor={Boolean(claseSeleccionada.monto_a_favor)}
                         onClose={cerrarModal}
                         onCancelSuccess={handleExito}
                     />
