@@ -6,6 +6,7 @@ import { CambiarTurno } from '../modules/turnos/components/cambiarTurnoModal';
 import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
+import { API_BASE } from '@/lib/constants';
 
 export const Route = createFileRoute('/mis-clases')({
     component: () => <GestionClases />,
@@ -36,7 +37,7 @@ export default function GestionClases() {
     const cargarClases = () => {
         if (!idCliente) return;
         setIsLoading(true);
-        fetch(`http://localhost:3000/shifts/mis-clases/${idCliente}`)
+        fetch(`${API_BASE}/shifts/mis-clases/${idCliente}`)
             .then((res) => res.json())
             .then((data) => {
                 setMisClases(data);
@@ -51,7 +52,7 @@ export default function GestionClases() {
     // 1. Obtener el idCliente al cargar la vista
     useEffect(() => {
         if (token) {
-            fetch('http://localhost:3000/shifts/cliente-id', {
+            fetch(`${API_BASE}/shifts/cliente-id`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

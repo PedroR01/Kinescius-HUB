@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 export const Route = createFileRoute('/clientes')({
   component: RouteComponent,
@@ -23,7 +24,7 @@ function RouteComponent() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:3000/admin/clases/clientes')
+      const response = await fetch(`${API_BASE}/admin/clases/clientes`)
 
       if (!response.ok) {
         throw new Error('Error al obtener clientes')

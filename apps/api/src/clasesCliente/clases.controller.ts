@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, BadRequestException } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
+import { InscribirConSaldoDto } from "./dto/inscribir-con-saldo.dto";
 
 @Controller("clases")
 export class ClasesController {
@@ -18,6 +19,11 @@ export class ClasesController {
       throw new BadRequestException("Invalid cliente id");
     }
     return this.clasesService.getMontoAFavor(clienteId);
+  }
+
+  @Post("inscribir-con-saldo")
+  async inscribirConSaldo(@Body() dto: InscribirConSaldoDto) {
+    return this.clasesService.inscribirConSaldo(dto);
   }
 
   @Post(":id/turnos")

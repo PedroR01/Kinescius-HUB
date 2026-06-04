@@ -1,6 +1,7 @@
 ﻿import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { API_BASE } from '@/lib/constants'
 
 type Clase = {
   id: number
@@ -59,7 +60,7 @@ function RouteComponent() {
   const [actionLoading, setActionLoading] = useState(false)
   const [modal, setModal] = useState<ModalData | null>(null)
 
-  const apiBase = 'http://localhost:3000'
+  const apiBase = API_BASE
 
   useEffect(() => {
     const fetchClases = async () => {

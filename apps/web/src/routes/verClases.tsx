@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 export const Route = createFileRoute('/verClases')({
   component: RouteComponent,
@@ -186,7 +187,7 @@ function RouteComponent() {
     setError(null)
 
     try {
-      let url = 'http://localhost:3000/admin/clases'
+      let url = `${API_BASE}/admin/clases`
       if (currentMode === 'filtrar') {
         const params = new URLSearchParams()
         if (startDate) params.append('startDate', startDate)

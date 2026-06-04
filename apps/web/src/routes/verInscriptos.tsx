@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 export const Route = createFileRoute('/verInscriptos')({
   component: RouteComponent,
@@ -231,7 +232,7 @@ function RouteComponent() {
     setLoadingClases(true)
     setError(null)
     try {
-      const res = await fetch('http://localhost:3000/admin/clases')
+      const res = await fetch(`${API_BASE}/admin/clases`)
       const data = await res.json()
       setClases(data ?? [])
     } catch {
@@ -252,7 +253,7 @@ function RouteComponent() {
     setInscriptos([])
     try {
       const res = await fetch(
-        `http://localhost:3000/admin/clases/inscriptos?fecha=${clase.fecha}&tipo=${encodeURIComponent(clase.tipo)}`
+        `${API_BASE}/admin/clases/inscriptos?fecha=${clase.fecha}&tipo=${encodeURIComponent(clase.tipo)}`
       )
       const data = await res.json()
       if (!res.ok) throw new Error(data?.message ?? `Error ${res.status}`)

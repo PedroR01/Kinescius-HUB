@@ -183,7 +183,7 @@ export class AuthService {
       success: true,
       mensaje: "Inicio de sesión exitoso :)",
       token: data.session.access_token, 
-      usuarioId: data.user.id,
+      usuarioId: persona.id,
       rol: rolUsuario
     };
   }

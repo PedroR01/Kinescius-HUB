@@ -9,6 +9,8 @@ export type ClasePayload = {
 
 export type CreatePreferenceBody = {
     clases: ClasePayload[];
+    clienteId: number;
+    montoAFavorAplicado?: number;
 };
 
 // Tipo de dato de notificaciones concreto manejado por el webhook de mercadopago.
@@ -31,7 +33,7 @@ export class PagosController {
 
     @Post()
     async createPreference(@Body() body: CreatePreferenceBody) {
-        return this.pagosService.createPreference(body.clases);
+        return this.pagosService.createPreference(body);
     }
 
     @Post("notificacion")
