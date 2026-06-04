@@ -7,10 +7,7 @@ import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
 import { API_BASE } from '@/lib/constants';
-<<<<<<< fix/obtenerID-modularizado
 import { useClienteId } from '@/hooks/useClienteId';
-=======
->>>>>>> dev
 
 export const Route = createFileRoute('/mis-clases')({
     component: () => <GestionClases />,
@@ -52,34 +49,6 @@ export default function GestionClases() {
             });
     };
 
-<<<<<<< fix/obtenerID-modularizado
-=======
-    // 1. Obtener el idCliente al cargar la vista
-    useEffect(() => {
-        if (token) {
-            fetch(`${API_BASE}/shifts/cliente-id`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-                .then(res => {
-                    if (!res.ok) throw new Error("Token inválido o expirado");
-                    return res.json();
-                })
-                .then(data => {
-                    setIdCliente(data.id_cliente);
-                })
-                .catch(err => {
-                    console.error("Error al obtener ID del cliente:", err);
-                    setIsLoading(false);
-                });
-        } else {
-            setIsLoading(false);
-        }
-    }, [token]);
-
-    // 2. Cargar clases cuando ya tenemos el idCliente
->>>>>>> dev
     useEffect(() => {
         if (idCliente) {
             cargarClases();
@@ -112,7 +81,6 @@ export default function GestionClases() {
 
     return (
         <div className="min-h-svh flex flex-col">
-            {/* Header section */}
             <section className="bg-white px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
                 <div className="mx-auto w-full max-w-5xl">
                     <motion.div
@@ -138,7 +106,6 @@ export default function GestionClases() {
                 </div>
             </section>
 
-            {/* Content section */}
             <section className="bg-surface flex-1 px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
                 <div className="mx-auto w-full max-w-5xl">
                     <motion.div
@@ -146,7 +113,6 @@ export default function GestionClases() {
                         initial="hidden"
                         animate="visible"
                     >
-                        {/* Contenido */}
                         {isLoading ? (
                             <motion.div variants={fadeUp} className="flex flex-col items-center justify-center py-20 gap-4">
                                 <div className="w-12 h-12 border-4 border-main/20 border-t-main rounded-full animate-spin" />
@@ -178,14 +144,11 @@ export default function GestionClases() {
                                             transition={EASE_OUT}
                                             className="bg-white rounded-2xl shadow-md relative overflow-hidden flex flex-col transition-shadow hover:shadow-xl"
                                         >
-                                            {/* Subtle background decoration */}
                                             <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-main/10 to-transparent rounded-bl-full -z-10" />
-
                                             <div className="p-5 flex-1">
                                                 <h3 className="font-heading font-extrabold text-2xl text-main tracking-tight leading-tight mb-4">
                                                     {item.Clase.tipo}
                                                 </h3>
-
                                                 <div className="flex flex-col gap-3">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-main/10 text-main shrink-0">
@@ -205,8 +168,6 @@ export default function GestionClases() {
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Actions */}
                                             <div className="p-4 pt-0 mt-auto flex flex-row gap-2 bg-transparent">
                                                 <Button
                                                     variant="secondary"
@@ -235,7 +196,6 @@ export default function GestionClases() {
                 </div>
             </section>
 
-            {/* MODALES */}
             {modalActivo === 'CAMBIAR' && claseSeleccionada && (
                 <div className="fixed inset-0 bg-dark-accent/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
                     <CambiarTurno
@@ -266,4 +226,3 @@ export default function GestionClases() {
         </div>
     );
 }
-
