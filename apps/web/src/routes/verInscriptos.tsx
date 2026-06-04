@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { API_BASE } from '@/lib/constants'
 
 export const Route = createFileRoute('/verInscriptos')({
   component: RouteComponent,
@@ -41,6 +42,7 @@ type Clase = {
   fecha: string
   hora: string
   tipo: string | null
+  profesor_nombre?: string | null
 }
 
 type Inscripto = {
@@ -59,6 +61,14 @@ function formatDate(fecha: string) {
 
 function formatTime(hora: string) {
   return hora.replace(/:00$/, 'hs')
+}
+
+function formatClaseLabel(clase: Clase) {
+  const fecha = formatDate(clase.fecha)
+  const hora = formatTime(clase.hora)
+  const tipo = clase.tipo ?? 'Sin tipo'
+  const profesor = clase.profesor_nombre ?? 'Sin profesor'
+  return `${fecha} ${hora} — ${tipo} (${profesor})`
 }
 
 function DatePicker({
@@ -222,7 +232,7 @@ function RouteComponent() {
     setLoadingClases(true)
     setError(null)
     try {
-      const res = await fetch('http://localhost:3000/admin/clases')
+      const res = await fetch(`${API_BASE}/admin/clases`)
       const data = await res.json()
       setClases(data ?? [])
     } catch {
@@ -243,7 +253,7 @@ function RouteComponent() {
     setInscriptos([])
     try {
       const res = await fetch(
-        `http://localhost:3000/admin/clases/inscriptos?fecha=${clase.fecha}&tipo=${encodeURIComponent(clase.tipo)}`
+        `${API_BASE}/admin/clases/inscriptos?fecha=${clase.fecha}&tipo=${encodeURIComponent(clase.tipo)}`
       )
       const data = await res.json()
       if (!res.ok) throw new Error(data?.message ?? `Error ${res.status}`)
@@ -338,7 +348,7 @@ function RouteComponent() {
               <option value="">-- Seleccioná una clase --</option>
               {filteredClases.map(clase => (
                 <option key={clase.id} value={clase.id}>
-                  #{clase.id} — {formatDate(clase.fecha)} {formatTime(clase.hora)} — {clase.tipo ?? 'Sin tipo'}
+                  {formatClaseLabel(clase)}
                 </option>
               ))}
             </select>

@@ -26,6 +26,7 @@ export function HomeNavbar() {
   const confirmarCerrarSesion = () => {
     localStorage.removeItem("miToken");
     localStorage.removeItem("rol");
+    localStorage.removeItem("userId");
     setEstaLogueado(false);
     setIsLogoutModalOpen(false);
     closeMenu();

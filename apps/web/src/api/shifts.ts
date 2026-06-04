@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE } from '@/lib/constants';
 
 export interface CancelarTurnoPayload {
   clienteId: number;
@@ -21,7 +21,7 @@ export interface ClaseDisponible {
 }
 
 export const obtenerClasesDisponiblesRequest = async (): Promise<ClaseDisponible[]> => {
-  const response = await fetch(`${API_URL}/shifts`, {
+  const response = await fetch(`${API_BASE}/shifts`, {
     method: 'GET',
   });
 
@@ -33,7 +33,7 @@ export const obtenerClasesDisponiblesRequest = async (): Promise<ClaseDisponible
 };
 
 export const cambiarTurnoRequest = async (payload: CambiarTurnoPayload) => {
-  const response = await fetch(`${API_URL}/shifts/cambiar`, {
+  const response = await fetch(`${API_BASE}/shifts/cambiar`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ export const cambiarTurnoRequest = async (payload: CambiarTurnoPayload) => {
 };
 
 export const cancelarTurnoRequest = async (payload: CancelarTurnoPayload) => {
-  const response = await fetch(`${API_URL}/shifts/cancelar`, {
+  const response = await fetch(`${API_BASE}/shifts/cancelar`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',

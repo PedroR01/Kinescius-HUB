@@ -7,6 +7,7 @@ import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { emailLugarDisponible } from './templates/email-lugar-disponible.template';
 import { Resend } from 'resend';
 import * as crypto from 'crypto';
+import { getFrontendUrl } from '../config/frontend-url';
 
 const PRECIO_CLASE = 5000;
 const PORCENTAJE_SENIA = 0.5;
@@ -20,7 +21,7 @@ export class NotificacionEsperaService {
 
   constructor(private readonly supabase: SupabaseService) {
     this.resend = new Resend(process.env.RESEND_API_KEY);
-      this.baseUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+    this.baseUrl = getFrontendUrl();
   }
 
   async notificarProximoEnEspera(claseId: number): Promise<void> {
