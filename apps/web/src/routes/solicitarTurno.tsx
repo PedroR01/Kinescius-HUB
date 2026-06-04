@@ -129,6 +129,7 @@ function RouteComponent() {
         sinCupo: cupo <= 0,
         favorAmount: montoAFavor,
         source: clase,
+        profesor: clase.profesor ?? null,
       };
     });
   }, [classes, montoAFavor]);
@@ -152,6 +153,7 @@ function RouteComponent() {
       setMessage("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
       return;
     }
+    console.log("clienteId:", clienteId);
     const waitKey = `${slot.date} ${slot.time}hs ${slot.className}`;
     try {
       const res = await fetch(`${API_BASE}/listaEspera/clase/${slot.source.id}/join`, {

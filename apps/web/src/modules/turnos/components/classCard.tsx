@@ -1,4 +1,4 @@
-import { CheckIcon, ShoppingCartIcon } from "lucide-react";
+import { CheckIcon, ShoppingCartIcon, UserIcon } from "lucide-react";
 import type { ClassSlot } from "@/lib/class-interface";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,20 @@ export default function ClassCard({
       >
         {slot.time} hs
       </div>
-      <div className="mb-2 text-[13px] font-normal text-ks-gray-text">{slot.className}</div>
+      <div className="mb-1 text-[13px] font-normal text-ks-gray-text">{slot.className}</div>
+
+      {slot.profesor && (
+        <div
+          className={cn(
+            "mb-2 flex items-center gap-1 text-[12px] font-medium",
+            isInactive ? "text-ks-gray-text" : "text-ks-green-mid"
+          )}
+        >
+          <UserIcon className="size-3" />
+          {slot.profesor}
+        </div>
+      )}
+
       {isEnrolled ? (
         <span className="inline-flex w-fit items-center gap-[5px] rounded-ks-full bg-ks-green-pale px-2.5 py-1 font-outfit text-xs font-semibold text-ks-green-mid">
           <CheckIcon className="size-3.5" />
