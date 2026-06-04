@@ -11,8 +11,7 @@ import { PagosService } from './pagos.service';
 export type InscripcionReembolso = {
   id_cliente: number;
   id_clase: number;
-  monto_mp: number | string | null;
-  monto_saldo: number | string | null;
+  monto_a_favor: boolean;
   id_pago_mp: string | null;
   reembolsado_at: string | null;
 };
@@ -41,38 +40,30 @@ export class ReembolsoService {
       return { montoMp: 0, montoSaldo: 0 };
     }
 
-    const montoMp = Number(inscripcion.monto_mp) || 0;
-    const montoSaldo = Number(inscripcion.monto_saldo) || 0;
+    const pagoConMontoAFavor = Boolean(inscripcion.monto_a_favor);
 
-    if (tipo === TipoReembolso.A_FAVOR) {
-      await this.pagosService.acreditarMontoAFavor(
-        inscripcion.id_cliente,
-        CLASS_UNIT_PRICE,
-      );
-      return { montoMp: 0, montoSaldo: CLASS_UNIT_PRICE };
-    }
-
-    const saldoAcreditar = montoSaldo;
-    if (saldoAcreditar > 0) {
-      await this.pagosService.acreditarMontoAFavor(
-        inscripcion.id_cliente,
-        saldoAcreditar,
-      );
-    }
-
-    if (montoMp > 0) {
+    if (tipo === TipoReembolso.REEMBOLSO) {
+      if (pagoConMontoAFavor) {
+        throw new BadRequestException(
+          'Esta inscripción se abonó con saldo a favor; solo podés solicitar reembolso como monto a favor.',
+        );
+      }
       if (!inscripcion.id_pago_mp) {
         throw new BadRequestException(
           'No hay pago de Mercado Pago asociado a esta inscripción.',
         );
       }
-      await this.pagosService.createPartialRefund(
+      await this.pagosService.createRefund(
         inscripcion.id_pago_mp,
-        montoMp,
       );
+      return { montoMp: CLASS_UNIT_PRICE, montoSaldo: 0 };
     }
 
-    return { montoMp, montoSaldo: saldoAcreditar };
+    await this.pagosService.acreditarMontoAFavor(
+      inscripcion.id_cliente,
+      CLASS_UNIT_PRICE,
+    );
+    return { montoMp: 0, montoSaldo: CLASS_UNIT_PRICE };
   }
 
   async marcarReembolsado(clienteId: number, claseId: number): Promise<void> {

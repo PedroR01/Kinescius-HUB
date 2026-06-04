@@ -189,8 +189,7 @@ export class ShiftsService {
       .select(`
         id_cliente,
         id_clase,
-        monto_mp,
-        monto_saldo,
+        monto_a_favor,
         estado,
         Clase!inner (
           id,

@@ -22,7 +22,7 @@ interface ClaseDto {
 interface MisClasesResponseDto {
     id_clase: number;
     id_cliente: number;
-    monto_mp?: number;
+    monto_a_favor?: boolean;
     Clase: ClaseDto;
 }
 
@@ -260,7 +260,7 @@ export default function GestionClases() {
                         actividad={claseSeleccionada.Clase.tipo}
                         fechaClase={claseSeleccionada.Clase.fecha}
                         horaClase={claseSeleccionada.Clase.hora}
-                        montoMp={Number(claseSeleccionada.monto_mp) || 0}
+                        pagoConMontoAFavor={Boolean(claseSeleccionada.monto_a_favor)}
                         onClose={cerrarModal}
                         onCancelSuccess={handleExito}
                     />

@@ -1,43 +1,38 @@
 import {
-  desgloseSoloSaldo,
-  repartirMontoAFavorEntreClases,
+  inscripcionPorClaseEnCarrito,
+  inscripcionSoloSaldo,
 } from './inscripcion-desglose.util';
-import { CLASS_UNIT_PRICE } from './class-price.constant';
 
-describe('repartirMontoAFavorEntreClases', () => {
+describe('inscripcionPorClaseEnCarrito', () => {
   const clases = [{ id: 1 }, { id: 2 }];
 
-  it('1 clase 100% MP: monto_mp=10000, monto_saldo=0', () => {
-    const [d] = repartirMontoAFavorEntreClases([{ id: 1 }], 0, 'pay-1');
-    expect(d.monto_mp).toBe(CLASS_UNIT_PRICE);
-    expect(d.monto_saldo).toBe(0);
+  it('1 clase 100% MP: monto_a_favor=false, id_pago_mp set', () => {
+    const [d] = inscripcionPorClaseEnCarrito([{ id: 1 }], 0, 'pay-1');
+    expect(d.monto_a_favor).toBe(false);
     expect(d.id_pago_mp).toBe('pay-1');
   });
 
-  it('1 clase 100% saldo: monto_mp=0, monto_saldo=10000', () => {
-    const [d] = repartirMontoAFavorEntreClases([{ id: 1 }], CLASS_UNIT_PRICE, null);
-    expect(d.monto_mp).toBe(0);
-    expect(d.monto_saldo).toBe(CLASS_UNIT_PRICE);
+  it('1 clase 100% saldo: monto_a_favor=true, id_pago_mp null', () => {
+    const [d] = inscripcionPorClaseEnCarrito([{ id: 1 }], 10_000, null);
+    expect(d.monto_a_favor).toBe(true);
     expect(d.id_pago_mp).toBeNull();
   });
 
   it('carrito 2 clases con saldo parcial reparte en orden', () => {
-    const desgloses = repartirMontoAFavorEntreClases(
+    const inscripciones = inscripcionPorClaseEnCarrito(
       clases,
-      CLASS_UNIT_PRICE,
+      10_000,
       'pay-mix',
     );
-    expect(desgloses[0].monto_saldo).toBe(CLASS_UNIT_PRICE);
-    expect(desgloses[0].monto_mp).toBe(0);
-    expect(desgloses[1].monto_saldo).toBe(0);
-    expect(desgloses[1].monto_mp).toBe(CLASS_UNIT_PRICE);
-    expect(desgloses[1].id_pago_mp).toBe('pay-mix');
+    expect(inscripciones[0].monto_a_favor).toBe(true);
+    expect(inscripciones[0].id_pago_mp).toBeNull();
+    expect(inscripciones[1].monto_a_favor).toBe(false);
+    expect(inscripciones[1].id_pago_mp).toBe('pay-mix');
   });
 
-  it('desgloseSoloSaldo coincide con inscripción solo saldo', () => {
-    const d = desgloseSoloSaldo();
-    expect(d.monto_mp).toBe(0);
-    expect(d.monto_saldo).toBe(CLASS_UNIT_PRICE);
+  it('inscripcionSoloSaldo coincide con inscripción solo saldo', () => {
+    const d = inscripcionSoloSaldo();
+    expect(d.monto_a_favor).toBe(true);
     expect(d.id_pago_mp).toBeNull();
   });
 });

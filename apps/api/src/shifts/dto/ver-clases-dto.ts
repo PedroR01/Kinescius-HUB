@@ -8,8 +8,7 @@ export class ClaseDto {
 export class MisClasesResponseDto {
     id_clase: number;
     id_cliente: number;
-    monto_mp?: number;
-    monto_saldo?: number;
+    monto_a_favor?: boolean;
     estado?: string;
     Clase: ClaseDto;
 }

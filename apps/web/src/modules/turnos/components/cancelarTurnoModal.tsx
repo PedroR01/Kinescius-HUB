@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { cancelarTurnoRequest } from '../../../api/shifts';
 
 interface CancelarTurnoProps {
@@ -7,12 +7,15 @@ interface CancelarTurnoProps {
   fechaClase: string;
   horaClase: string;
   actividad: string;
-  montoMp?: number;
+  pagoConMontoAFavor: boolean;
   onCancelSuccess: (message: string) => void;
   onClose: () => void;
 }
 
 type TipoReembolso = 'REEMBOLSO' | 'A_FAVOR' | 'NINGUNO';
+
+const TOOLTIP_REEMBOLSO_MP =
+  'No es posible solicitar reembolso por Mercado Pago porque esta clase se abonó utilizando saldo a favor.';
 
 export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   clienteId,
@@ -20,11 +23,13 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   fechaClase,
   horaClase,
   actividad,
-  montoMp = 0,
+  pagoConMontoAFavor,
   onCancelSuccess,
   onClose,
 }) => {
-  const [opcionSeleccionada, setOpcionSeleccionada] = useState<TipoReembolso | null>(null);
+  const [opcionSeleccionada, setOpcionSeleccionada] = useState<TipoReembolso | null>(
+    pagoConMontoAFavor ? 'A_FAVOR' : null,
+  );
   const [loading, setLoading] = useState(false);
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
 
@@ -32,7 +37,13 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   const ahora = new Date();
   const diferenciaHoras = (fechaCompleta.getTime() - ahora.getTime()) / (1000 * 60 * 60);
   const permiteReembolso = diferenciaHoras >= 24;
-  const tienePagoMercadoPago = montoMp > 0;
+  const permiteReembolsoMercadoPago = !pagoConMontoAFavor;
+
+  useEffect(() => {
+    if (pagoConMontoAFavor) {
+      setOpcionSeleccionada('A_FAVOR');
+    }
+  }, [pagoConMontoAFavor]);
 
   const handleConfirmar = async () => {
     if (permiteReembolso && !opcionSeleccionada) {
@@ -52,8 +63,11 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
 
       const result = await cancelarTurnoRequest(payload);
       onCancelSuccess(result.message);
-    } catch (error: any) {
-      setErrorMensaje(error.message);
+    } catch (error: unknown) {
+      console.log(clienteId);
+      const message =
+        error instanceof Error ? error.message : 'No se pudo cancelar el turno.';
+      setErrorMensaje(message);
     } finally {
       setLoading(false);
     }
@@ -62,7 +76,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   return (
     <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
       <h2 className="text-2xl font-heading font-extrabold text-dark-accent mb-6">Cancelar Turno</h2>
-      
+
       <div className="mb-6 bg-surface p-5 rounded-2xl text-slate-700">
         <p className="mb-1"><strong className="font-semibold text-dark-accent">Actividad:</strong> {actividad}</p>
         <p className="mb-1"><strong className="font-semibold text-dark-accent">Fecha:</strong> {fechaClase}</p>
@@ -75,30 +89,46 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
             Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:
           </p>
           <div className="flex flex-col gap-3">
-            {tienePagoMercadoPago && (
-            <label 
+            <div className="group relative">
+              <label
+                className={`flex items-center p-4 rounded-2xl transition-all duration-200 ${
+                  permiteReembolsoMercadoPago
+                    ? opcionSeleccionada === 'REEMBOLSO'
+                      ? 'bg-white shadow-md scale-[1.02] ring-1 ring-main/20 cursor-pointer'
+                      : 'bg-surface hover:bg-main/5 cursor-pointer'
+                    : 'bg-surface opacity-50 cursor-not-allowed'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="reembolso"
+                  value="REEMBOLSO"
+                  className="sr-only"
+                  disabled={!permiteReembolsoMercadoPago || loading}
+                  checked={opcionSeleccionada === 'REEMBOLSO'}
+                  onChange={() => setOpcionSeleccionada('REEMBOLSO')}
+                />
+                <span
+                  className={`font-semibold ${
+                    opcionSeleccionada === 'REEMBOLSO' ? 'text-main' : 'text-slate-600'
+                  }`}
+                >
+                  Exigir reembolso
+                </span>
+              </label>
+              {!permiteReembolsoMercadoPago ? (
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-xl bg-dark-accent px-3 py-2 text-center text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100"
+                >
+                  {TOOLTIP_REEMBOLSO_MP}
+                </span>
+              ) : null}
+            </div>
+            <label
               className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
-                opcionSeleccionada === 'REEMBOLSO' 
-                  ? 'bg-white shadow-md scale-[1.02] ring-1 ring-main/20' 
-                  : 'bg-surface hover:bg-main/5'
-              }`}
-            >
-              <input
-                type="radio"
-                name="reembolso"
-                value="REEMBOLSO"
-                className="sr-only"
-                onChange={() => setOpcionSeleccionada('REEMBOLSO')}
-              />
-              <span className={`font-semibold ${opcionSeleccionada === 'REEMBOLSO' ? 'text-main' : 'text-slate-600'}`}>
-                Exigir reembolso
-              </span>
-            </label>
-            )}
-            <label 
-              className={`flex items-center p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
-                opcionSeleccionada === 'A_FAVOR' 
-                  ? 'bg-white shadow-md scale-[1.02] ring-1 ring-main/20' 
+                opcionSeleccionada === 'A_FAVOR'
+                  ? 'bg-white shadow-md scale-[1.02] ring-1 ring-main/20'
                   : 'bg-surface hover:bg-main/5'
               }`}
             >
@@ -107,9 +137,15 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
                 name="reembolso"
                 value="A_FAVOR"
                 className="sr-only"
+                checked={opcionSeleccionada === 'A_FAVOR'}
+                disabled={loading}
                 onChange={() => setOpcionSeleccionada('A_FAVOR')}
               />
-              <span className={`font-semibold ${opcionSeleccionada === 'A_FAVOR' ? 'text-main' : 'text-slate-600'}`}>
+              <span
+                className={`font-semibold ${
+                  opcionSeleccionada === 'A_FAVOR' ? 'text-main' : 'text-slate-600'
+                }`}
+              >
                 Dejar monto a favor
               </span>
             </label>

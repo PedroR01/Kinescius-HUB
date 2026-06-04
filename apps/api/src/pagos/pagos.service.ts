@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { Payment, PaymentRefund, Preference } from 'mercadopago';
 import { PreferenceResponse } from "mercadopago/dist/clients/preference/commonTypes";
 import { getFrontendUrl } from "../config/frontend-url";
+import { MpAccountService } from "../integrations/mercado-pago/mp-account.service";
+import {
+    createRefundIdempotencyKey,
+    throwMercadoPagoHttpException,
+} from "../integrations/mercado-pago/mp-errors.util";
 import { MpCheckoutProService } from "../integrations/mercado-pago/mp-checkoutPro.service";
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { ClasePayload, CreatePreferenceBody } from "./pagos.controller";
 import { CLASS_UNIT_PRICE } from "./class-price.constant";
-import { repartirMontoAFavorEntreClases } from "./inscripcion-desglose.util";
+import { inscripcionPorClaseEnCarrito } from "./inscripcion-desglose.util";
 
 export { CLASS_UNIT_PRICE } from "./class-price.constant";
 
@@ -22,8 +27,7 @@ type SeInscribeInsert = {
     id_cliente: number;
     estado: string;
     id_pago_mp: string | null;
-    monto_mp: number;
-    monto_saldo: number;
+    monto_a_favor: boolean;
 };
 
 function leerMetadataPago(metadata: Record<string, unknown> | undefined) {
@@ -39,12 +43,26 @@ function leerMetadataPago(metadata: Record<string, unknown> | undefined) {
 }
 
 @Injectable()
-export class PagosService {
+export class PagosService implements OnModuleInit {
+    private readonly logger = new Logger(PagosService.name);
 
     constructor(
         private readonly mpCheckoutProService: MpCheckoutProService,
+        private readonly mpAccountService: MpAccountService,
         private readonly supabaseService: SupabaseService,
     ) { }
+
+    async onModuleInit(): Promise<void> {
+        await this.mpAccountService.resolveAccountContext();
+    }
+
+    private async runMercadoPagoCall<T>(operation: () => Promise<T>): Promise<T> {
+        try {
+            return await operation();
+        } catch (error) {
+            throwMercadoPagoHttpException(error);
+        }
+    }
 
     async createPreference(body: CreatePreferenceBody): Promise<{ initPoint: string }> {
         const { clases, clienteId, montoAFavorAplicado = 0 } = body;
@@ -82,7 +100,7 @@ export class PagosService {
                     montoAFavorAplicado,
                 },
                 back_urls: {
-                    success: `https://f3ab-2800-810-5c2-569-3461-666-84ef-4044.ngrok-free.app/success`, // Forwarding de ngrok
+                    success: `https://2dd6-186-125-2-103.ngrok-free.app/success`, // Forwarding de ngrok
                     failure: `${frontendUrl}/failure`,
                     pending: `${frontendUrl}/pending`,
                 },
@@ -108,7 +126,7 @@ export class PagosService {
             throw new BadRequestException('Metadata de pago incompleta.');
         }
 
-        const desgloses = repartirMontoAFavorEntreClases(
+        const datosPorClase = inscripcionPorClaseEnCarrito(
             clases,
             montoAFavorAplicado,
             paymentId,
@@ -132,9 +150,8 @@ export class PagosService {
             id_clase: clase.id,
             id_cliente: idCliente,
             estado: "pagado",
-            id_pago_mp: desgloses[index].id_pago_mp,
-            monto_mp: desgloses[index].monto_mp,
-            monto_saldo: desgloses[index].monto_saldo,
+            id_pago_mp: datosPorClase[index].id_pago_mp,
+            monto_a_favor: datosPorClase[index].monto_a_favor,
         }));
 
         const { error: inscripcionError } = await this.supabaseService.client
@@ -201,14 +218,24 @@ export class PagosService {
     }
 
     async getPago(id: string) {
-        const pagoClient = new Payment(this.mpCheckoutProService.client);
-        const pago = await pagoClient.get({ id });
-        return pago;
+        return this.runMercadoPagoCall(async () => {
+            const pagoClient = new Payment(this.mpCheckoutProService.client);
+            return pagoClient.get({ id });
+        });
     }
 
-    async createPartialRefund(idPago: string, amount: number) {
-        if (amount <= 0) {
-            throw new BadRequestException('El monto de reembolso debe ser mayor a 0.');
+    async createRefund(idPago: string) {
+
+        if (this.mpAccountService.shouldSimulateRefunds()) {
+            this.logger.warn(
+                `Reembolso MP simulado (dev/test_user): pago=${idPago}`,
+            );
+            return {
+                id: `simulated-refund-${idPago}`,
+                payment_id: Number(idPago),
+                status: 'approved',
+                simulated: true,
+            };
         }
 
         const payment = await this.getPago(idPago);
@@ -216,35 +243,21 @@ export class PagosService {
             throw new BadRequestException('El pago no está aprobado para reembolso.');
         }
 
-        const refunds = await this.getAllRefunds(idPago);
-        const totalRefunded = (refunds ?? []).reduce(
-            (sum, refund) => sum + (Number(refund.amount) || 0),
-            0,
-        );
-        const paidAmount = Number(payment.transaction_amount) || 0;
-
-        if (totalRefunded + amount > paidAmount) {
-            throw new BadRequestException(
-                'El monto de reembolso excede el saldo disponible del pago.',
-            );
-        }
-
-        const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
-        return refundClient.create({
-            payment_id: idPago,
-            body: { amount },
+        return this.runMercadoPagoCall(async () => {
+            const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
+            return refundClient.total({
+                payment_id: idPago,
+                requestOptions: {
+                    idempotencyKey: createRefundIdempotencyKey('total-refund', idPago),
+                },
+            });
         });
     }
 
-    async createRefund(idPago: string) {
-        const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
-        const refund = await refundClient.total({ payment_id: idPago });
-        return refund;
-    }
-
     async getAllRefunds(idPago: string) {
-        const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
-        const refunds = await refundClient.list({ payment_id: idPago });
-        return refunds;
+        return this.runMercadoPagoCall(async () => {
+            const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
+            return refundClient.list({ payment_id: idPago });
+        });
     }
 }
