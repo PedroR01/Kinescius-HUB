@@ -25,7 +25,8 @@ export function emailLugarDisponible(params: EmailLugarDisponibleParams): string
     montosenia,
   } = params;
 
-const confirmarUrl = `${baseUrl}/confirmar-turno?token=${token}&claseId=${claseId}&clienteId=${clienteId}`;
+  const confirmarUrl = `${baseUrl}/confirmar-turno/confirmar?token=${token}&claseId=${claseId}&clienteId=${clienteId}`;
+
   const fechaFormateada = new Date(fecha).toLocaleDateString('es-AR', {
     weekday: 'long',
     year: 'numeric',
@@ -69,7 +70,7 @@ const confirmarUrl = `${baseUrl}/confirmar-turno?token=${token}&claseId=${claseI
               </p>
               <p style="margin:0 0 24px;color:#555555;font-size:15px;line-height:1.6;">
                 ¡Buenas noticias! Se liberó un lugar en la clase a la que querías asistir.
-                Tenés <strong>24 horas</strong> para confirmar tu turno abonando la seña.
+                Tenés <strong>24 horas</strong> para confirmar tu turno haciendo clic en el botón.
               </p>
 
               <!-- Info de la clase -->

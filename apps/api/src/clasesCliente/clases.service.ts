@@ -20,7 +20,7 @@ export class ClasesService {
 
     const { data, error } = await this.supabaseService.client
       .from("Clase")
-      .select("*")
+      .select("*, Se_inscribe(count)")
       .gte("fecha", todayStr)
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
@@ -31,7 +31,14 @@ export class ClasesService {
       );
     }
 
-    return data;
+    return data.map((clase) => {
+      const inscriptos = Number(clase.Se_inscribe?.[0]?.count ?? 0);
+      return {
+        ...clase,
+        cupo: (clase.cupo ?? 0) - inscriptos,
+        Se_inscribe: undefined,
+      };
+    });
   }
 
   async getMontoAFavor(clienteId: number) {
