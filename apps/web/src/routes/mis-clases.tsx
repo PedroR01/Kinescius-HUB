@@ -7,7 +7,10 @@ import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
 import { API_BASE } from '@/lib/constants';
+<<<<<<< fix/obtenerID-modularizado
 import { useClienteId } from '@/hooks/useClienteId';
+=======
+>>>>>>> dev
 
 export const Route = createFileRoute('/mis-clases')({
     component: () => <GestionClases />,
@@ -49,6 +52,34 @@ export default function GestionClases() {
             });
     };
 
+<<<<<<< fix/obtenerID-modularizado
+=======
+    // 1. Obtener el idCliente al cargar la vista
+    useEffect(() => {
+        if (token) {
+            fetch(`${API_BASE}/shifts/cliente-id`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error("Token inválido o expirado");
+                    return res.json();
+                })
+                .then(data => {
+                    setIdCliente(data.id_cliente);
+                })
+                .catch(err => {
+                    console.error("Error al obtener ID del cliente:", err);
+                    setIsLoading(false);
+                });
+        } else {
+            setIsLoading(false);
+        }
+    }, [token]);
+
+    // 2. Cargar clases cuando ya tenemos el idCliente
+>>>>>>> dev
     useEffect(() => {
         if (idCliente) {
             cargarClases();

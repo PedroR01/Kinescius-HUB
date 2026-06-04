@@ -105,6 +105,9 @@ function DatePicker({
 
   const handleDay = (day: number) => {
     const date = new Date(viewYear, viewMonth, day)
+    const dow = date.getDay()
+    // Block weekends
+    if (dow === 0 || dow === 6) return
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     if (minDate && dateStr < minDate) return
     if (maxDate && dateStr > maxDate) return
@@ -163,10 +166,12 @@ function DatePicker({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
             {cells.map((day, i) => {
               if (day === null) return <div key={`e-${i}`} />
+              const date = new Date(viewYear, viewMonth, day)
+              const dow = date.getDay()
+              const isWeekend = dow === 0 || dow === 6
               const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
               const isSelected = value === dateStr
-              const isDisabled = (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate)
-              const date = new Date(viewYear, viewMonth, day)
+              const isDisabled = isWeekend || (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate)
               const isToday = date.getTime() === today.getTime()
               return (
                 <div
