@@ -41,6 +41,7 @@ type Clase = {
   fecha: string
   hora: string
   tipo: string | null
+  profesor_nombre?: string | null
 }
 
 type Inscripto = {
@@ -59,6 +60,14 @@ function formatDate(fecha: string) {
 
 function formatTime(hora: string) {
   return hora.replace(/:00$/, 'hs')
+}
+
+function formatClaseLabel(clase: Clase) {
+  const fecha = formatDate(clase.fecha)
+  const hora = formatTime(clase.hora)
+  const tipo = clase.tipo ?? 'Sin tipo'
+  const profesor = clase.profesor_nombre ?? 'Sin profesor'
+  return `${fecha} ${hora} — ${tipo} (${profesor})`
 }
 
 function DatePicker({
@@ -338,7 +347,7 @@ function RouteComponent() {
               <option value="">-- Seleccioná una clase --</option>
               {filteredClases.map(clase => (
                 <option key={clase.id} value={clase.id}>
-                  #{clase.id} — {formatDate(clase.fecha)} {formatTime(clase.hora)} — {clase.tipo ?? 'Sin tipo'}
+                  {formatClaseLabel(clase)}
                 </option>
               ))}
             </select>

@@ -6,7 +6,7 @@ type Clase = {
   fecha: string
   hora: string
   tipo: string | null
-  profesor_dni?: string | null
+  profesor_nombre?: string | null
   cupo?: number | null
 }
 
@@ -106,7 +106,7 @@ function RouteComponent() {
   }, [])
 
   const cancelClass = async (id: number) => {
-    const confirmed = window.confirm(`¿Confirmás la cancelación de la clase ${id}?`)
+    const confirmed = window.confirm(`¿Confirmás la cancelación de la clase?`)
     if (!confirmed) return
 
     setCancelingId(id)
@@ -125,7 +125,7 @@ function RouteComponent() {
       }
 
       setClasses((currentClasses) => currentClasses.filter((clase) => clase.id !== id))
-      setMessage(data?.message ?? `Clase ${id} cancelada correctamente`)
+      setMessage(data?.message ?? `Clase cancelada correctamente`)
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
     } finally {
@@ -137,11 +137,10 @@ function RouteComponent() {
     () =>
       classes.map((clase) => (
         <tr key={clase.id}>
-          <td>{clase.id}</td>
           <td>{formatDate(clase.fecha)}</td>
           <td>{formatTime(clase.hora)}</td>
           <td>{clase.tipo ?? 'Sin tipo'}</td>
-          <td>{clase.profesor_dni ?? 'Sin profesor'}</td>
+          <td>{clase.profesor_nombre ?? 'Sin profesor'}</td>
           <td>{clase.cupo ?? 'N/A'}</td>
           <td>
             <button
@@ -253,11 +252,10 @@ function RouteComponent() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Fecha</th>
                   <th>Hora</th>
                   <th>Actividad</th>
-                  <th>Profesor DNI</th>
+                  <th>Profesor</th>
                   <th>Cupo</th>
                   <th>Acción</th>
                 </tr>
