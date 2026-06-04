@@ -61,6 +61,8 @@ export default function GestionClases() {
                     return res.json();
                 })
                 .then(data => {
+                    console.log("==== DEBUG: Respuesta de cliente-id ====", data);
+                    console.log("==== DEBUG: Seteando idCliente a ====", data.id_cliente);
                     setIdCliente(data.id_cliente);
                 })
                 .catch(err => {
@@ -74,6 +76,7 @@ export default function GestionClases() {
 
     // 2. Cargar clases cuando ya tenemos el idCliente
     useEffect(() => {
+        console.log("==== DEBUG: hook useEffect reaccionando a idCliente ====", idCliente);
         if (idCliente) {
             cargarClases();
         }
