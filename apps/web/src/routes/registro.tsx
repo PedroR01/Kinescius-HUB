@@ -63,12 +63,12 @@ const Registro = () => {
 
       if (response.ok) {
         //Si recibo status 201 Significa que se registró el usuario
-        setMessage("Registro exitoso. Redirigiendo...");
+        setMessage("Registro exitoso. Se envió tu contraseña al correo que ingresaste. Redirigiendo...");
 
         //TimeOut va a ser el tiempo en milisegundos que se espera para navegar al inicio de sesión
         setTimeout(() => {
           navigate({ to: "/iniciarSesion" });
-        }, 5000);
+        }, 7000);
       } else {
         // Si el backend devuelve BadRequestException por algun error como un dato duplicado, seteamos de error el msje recibido
         setError(data.message);
