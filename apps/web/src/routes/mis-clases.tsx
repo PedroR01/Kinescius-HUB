@@ -7,6 +7,10 @@ import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
 import { API_BASE } from '@/lib/constants';
+<<<<<<< fix/obtenerID-modularizado
+import { useClienteId } from '@/hooks/useClienteId';
+=======
+>>>>>>> dev
 
 export const Route = createFileRoute('/mis-clases')({
     component: () => <GestionClases />,
@@ -31,8 +35,7 @@ export default function GestionClases() {
     const [claseSeleccionada, setClaseSeleccionada] = useState<MisClasesResponseDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const token = localStorage.getItem('miToken');
-    const [idCliente, setIdCliente] = useState<number | null>(null);
+    const { clienteId: idCliente, isLoading: clienteLoading } = useClienteId();
 
     const cargarClases = () => {
         if (!idCliente) return;
@@ -49,6 +52,8 @@ export default function GestionClases() {
             });
     };
 
+<<<<<<< fix/obtenerID-modularizado
+=======
     // 1. Obtener el idCliente al cargar la vista
     useEffect(() => {
         if (token) {
@@ -74,11 +79,14 @@ export default function GestionClases() {
     }, [token]);
 
     // 2. Cargar clases cuando ya tenemos el idCliente
+>>>>>>> dev
     useEffect(() => {
         if (idCliente) {
             cargarClases();
+        } else if (!clienteLoading) {
+            setIsLoading(false);
         }
-    }, [idCliente]);
+    }, [idCliente, clienteLoading]);
 
     const abrirModal = (tipo: 'CAMBIAR' | 'CANCELAR', clase: MisClasesResponseDto) => {
         setClaseSeleccionada(clase);
