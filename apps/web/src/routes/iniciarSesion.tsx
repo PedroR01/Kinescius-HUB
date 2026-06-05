@@ -118,7 +118,7 @@ const IniciarSesion = () => {
         setMessage(data.mensaje || "Vas a recibir una nueva contraseña pronto en tu email.");
         setTimeout(() => {
           navigate({ to: "/" }); //espera un segundo para redirigir al inicio de Kinescius
-        }, 1000);
+        }, 3000);
       } else {
         //Y si el backend frena la petición seteo también mensaje
         setError(data.message || "Hubo un error al intentar recuperar la contraseña.");
