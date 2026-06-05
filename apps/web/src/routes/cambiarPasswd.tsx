@@ -11,23 +11,24 @@ import {
 import { AuthPageLayout } from "@/modules/auth/components/AuthPageLayout";
 import { AuthFormField } from "@/modules/auth/components/AuthFormField";
 import { AuthFeedback } from "@/modules/auth/components/AuthFeedback";
+import { API_BASE } from "@/lib/constants";
 
 type FormData = {
   passwdActual: string;
   passwdNueva: string;
-  passwdConfirmacion: string; 
+  passwdConfirmacion: string;
 };
 
 const CambiarPasswd = () => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   const [estaLogueado, setEstaLogueado] = useState(false);
-     useEffect(() => {
-      const token = localStorage.getItem('miToken');
-      if (token) {
-        setEstaLogueado(true);
-      }
-    })
+  useEffect(() => {
+    const token = localStorage.getItem('miToken');
+    if (token) {
+      setEstaLogueado(true);
+    }
+  })
 
   const [formData, setFormData] = useState<FormData>({
     passwdActual: '',
@@ -71,11 +72,11 @@ const CambiarPasswd = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           passwdActual: formData.passwdActual,
-          passwdNueva: formData.passwdNueva 
+          passwdNueva: formData.passwdNueva
         }),
       });
 
@@ -131,11 +132,11 @@ const CambiarPasswd = () => {
                 required
               />
             </div>
-            
+
             <div className="mt-4 flex flex-col gap-3">
-              <button 
-                type="button" 
-                onClick={handleCambioPasswd} 
+              <button
+                type="button"
+                onClick={handleCambioPasswd}
                 disabled={isProcessing}
                 className={cn(btnBase, btnPrimary, "w-full")}
               >
@@ -146,7 +147,7 @@ const CambiarPasswd = () => {
             <div className="mt-8 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => navigate({to: "/"})}
+                onClick={() => navigate({ to: "/" })}
                 className={cn(btnBase, btnSecondary, "w-full")}
               >
                 Volver a la página principal
@@ -164,7 +165,7 @@ const CambiarPasswd = () => {
           </p>
           <button
             type="button"
-            onClick={() => navigate({to: "/"})}
+            onClick={() => navigate({ to: "/" })}
             className={cn(btnBase, btnSecondary, "w-full")}
           >
             Volver a la página principal

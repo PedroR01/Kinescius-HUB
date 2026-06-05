@@ -16,6 +16,7 @@ import {
   heroSectionClass,
   formCardClass,
 } from "@/lib/ks-page-styles";
+import { BackPreviousRouteButton } from "@/components/BackPreviousRouteButton";
 
 export const Route = createFileRoute("/solicitarTurno")({
   component: RouteComponent,
@@ -267,12 +268,7 @@ function RouteComponent() {
 
   return (
     <main className={pageMainClass}>
-      <Link
-        to="/"
-        className="size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
-      >
-        <ArrowLeftIcon className="size-6" />
-      </Link>
+      <BackPreviousRouteButton />
 
       <section className={heroSectionClass}>
         <h1 className="relative m-0 mb-2 font-outfit text-[38px] font-bold tracking-[-1px] text-white max-sm:text-[28px]">
@@ -283,7 +279,11 @@ function RouteComponent() {
         </p>
         <p className="relative mt-3 text-[14px] font-medium text-white/90">
           Todas las clases tienen el mismo valor:{" "}
-          <strong className="text-white">${CLASS_PRICE.toLocaleString("es-AR")}</strong>
+          <strong className="text-white">${(CLASS_PRICE*2).toLocaleString("es-AR")}</strong>
+        </p>
+        <p className="relative mt-3 text-[14px] font-medium text-white/90">
+          La reserva del turno tiene un costo de seña inicial del 50% del valor de la clase:{" "}
+          <strong className="text-white">${(CLASS_PRICE).toLocaleString("es-AR")}</strong>
         </p>
       </section>
 

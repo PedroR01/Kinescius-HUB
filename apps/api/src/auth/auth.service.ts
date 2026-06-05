@@ -1,4 +1,4 @@
-  import { Injectable, BadRequestException, InternalServerErrorException, UnauthorizedException} from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { RegistroDto } from './dto/registro.dto';
 import { InicioDto } from './dto/inicio.dto';
@@ -12,7 +12,7 @@ export class AuthService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly emailService: EmailService
-  ) {}
+  ) { }
 
   //Generación de contraseña aleatoria para el registro
   private generarPasswordAleatoria(longitud: number = 8): string {
@@ -20,14 +20,14 @@ export class AuthService {
   }
   //-------------------------------------Método/servicio para registrar-------------------------------------
   async registrarUsuario(datos: RegistroDto) {
-  console.log("Datos recibidos del frontend:", datos);
+    console.log("Datos recibidos del frontend:", datos);
 
-  //Reviso si alguno de los campos está vacío o con un espacio
-  if (!datos.nombre?.trim() || !datos.apellido?.trim() || !datos.dni?.trim() || !datos.email?.trim()) {
-    throw new BadRequestException("No se pudieron registrar los datos porque hay campos obligatorios vacíos.");
-  }
+    //Reviso si alguno de los campos está vacío o con un espacio
+    if (!datos.nombre?.trim() || !datos.apellido?.trim() || !datos.dni?.trim() || !datos.email?.trim()) {
+      throw new BadRequestException("No se pudieron registrar los datos porque hay campos obligatorios vacíos.");
+    }
 
-  //Busco si el DNI o el Mail ya están en la base de datos
+    //Busco si el DNI o el Mail ya están en la base de datos
     const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
       .from('Persona')
       .select('dni, mail')
@@ -49,102 +49,102 @@ export class AuthService {
       }
     }
 
-  // Estructura de control para intentar la inserción segura en la base de datos y capturar cualquier falla imprevista
-  try {
-    //Genero la contraseña base para el registro
-    const passwordBase = this.generarPasswordAleatoria(8);
+    // Estructura de control para intentar la inserción segura en la base de datos y capturar cualquier falla imprevista
+    try {
+      //Genero la contraseña base para el registro
+      const passwordBase = this.generarPasswordAleatoria(8);
 
-    //Registro al usuario en supabase auth
-    const { data: authData, error: authError } = await this.supabaseService.client.auth.admin.createUser({
+      //Registro al usuario en supabase auth
+      const { data: authData, error: authError } = await this.supabaseService.client.auth.admin.createUser({
         email: datos.email,
         password: passwordBase,
         email_confirm: true // Lo confirmamos automáticamente para evitar el paso del email de verificación por ahora
       });
 
-    if (authError) { //Si supabase auth falla por algun error, informa
+      if (authError) { //Si supabase auth falla por algun error, informa
         throw new BadRequestException(`Error en autenticación: ${authError.message}`);
-    }
+      }
 
-    //Recupero el ID generado para el nuevo usuario en Persona
-    const { data: personaData, error } = await this.supabaseService.client
-      .from('Persona') 
-      .insert([
-        {
-          user_id: authData.user.id, //Acá se vincula la entrada de la tabla con el sistema de auth
-          nombre: datos.nombre,
-          apellido: datos.apellido,
-          mail: datos.email,
-          dni: datos.dni,
-          telefono: datos.telefono || null //Si el teléfono viene vacío, se guarda como null
-        }
-      ])
-      .select('id')
-      .single();
-    if (error || !personaData) {      
-      await this.supabaseService.client.auth.admin.deleteUser(authData.user.id); //Si no se pudo registrar el usuario en la DB, lo eliminamos del sistema Auth de supabase
-      throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
-    }
+      //Recupero el ID generado para el nuevo usuario en Persona
+      const { data: personaData, error } = await this.supabaseService.client
+        .from('Persona')
+        .insert([
+          {
+            user_id: authData.user.id, //Acá se vincula la entrada de la tabla con el sistema de auth
+            nombre: datos.nombre,
+            apellido: datos.apellido,
+            mail: datos.email,
+            dni: datos.dni,
+            telefono: datos.telefono || null //Si el teléfono viene vacío, se guarda como null
+          }
+        ])
+        .select('id')
+        .single();
+      if (error || !personaData) {
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id); //Si no se pudo registrar el usuario en la DB, lo eliminamos del sistema Auth de supabase
+        throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
+      }
 
-    //Inserto el ID de la persona en la tabla Usuario    
-    const { error: errorUsuario } = await this.supabaseService.client
-      .from('Usuario')
-      .insert([
-        {
-          id: personaData.id
-        }
-      ]);
-    if (errorUsuario) {
-      // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
-      await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
-      throw new BadRequestException(`No se pudo asignar el id como usuario en la base de datos: ${errorUsuario.message}`);
-    }
-    const { error: errorCliente } = await this.supabaseService.client
-      .from('Cliente')
-      .insert([
-        {
-          id: personaData.id
-        }
-      ]);
-    if (errorCliente) {
-      // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
-      await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
-      throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
-    }
+      //Inserto el ID de la persona en la tabla Usuario    
+      const { error: errorUsuario } = await this.supabaseService.client
+        .from('Usuario')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorUsuario) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como usuario en la base de datos: ${errorUsuario.message}`);
+      }
+      const { error: errorCliente } = await this.supabaseService.client
+        .from('Cliente')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorCliente) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
+      }
 
-    console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
-    try {
-      await this.emailService.enviarCorreo(
-        datos.email, //Hay que usar el mail carlo.castro247390@alumnos.info.unlp.edu.ar para el testeo
-        '¡Bienvenido a Kinescius-HUB!',
-        `<h2>Gracias por registrarte</h2>
+      console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
+      try {
+        await this.emailService.enviarCorreo(
+          datos.email, //Hay que usar el mail carlo.castro247390@alumnos.info.unlp.edu.ar para el testeo
+          '¡Bienvenido a Kinescius-HUB!',
+          `<h2>Gracias por registrarte</h2>
          <p>Tu cuenta ha sido creada con éxito, y tu contraseña es: <strong>${passwordBase}</strong></p>
          <p>Puedes cambiar tu contraseña cuando quieras luego de iniciar sesión en el sistema. Que tenga un buen día!</p>`
-      );
-    } catch (emailError) {
-      // Si el correo falla, lo anotamos en la consola, pero NO lanzamos el error
-      // para que el proceso de registro pueda terminar exitosamente.
-      console.error('El usuario se registró, pero falló el envío del correo de bienvenida:', emailError);
-    }
+        );
+      } catch (emailError) {
+        // Si el correo falla, lo anotamos en la consola, pero NO lanzamos el error
+        // para que el proceso de registro pueda terminar exitosamente.
+        console.error('El usuario se registró, pero falló el envío del correo de bienvenida:', emailError);
+      }
 
-    return {
-      //con success y mensaje, Typescript arma el mensaje HTTP para devolver
-      success: true,
-      mensaje: "Datos registrados correctamente :)"
-    };
+      return {
+        //con success y mensaje, Typescript arma el mensaje HTTP para devolver
+        success: true,
+        mensaje: "Datos registrados correctamente :)"
+      };
 
-  } catch (err) {
-    // Si ya es un error de NestJS que lanzamos arriba, lo dejamos pasar
-    if (err instanceof BadRequestException) {
-      throw err;
+    } catch (err) {
+      // Si ya es un error de NestJS que lanzamos arriba, lo dejamos pasar
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      // Si es un error desconocido (se cayó el internet, etc), lanzamos un 500 (Internal Server Error)
+      throw new InternalServerErrorException("Error interno al intentar comunicarse con la base de datos");
     }
-    // Si es un error desconocido (se cayó el internet, etc), lanzamos un 500 (Internal Server Error)
-    throw new InternalServerErrorException("Error interno al intentar comunicarse con la base de datos");
   }
- }
 
   //----------------------Método para iniciar sesión----------------------
   async iniciarSesion(datosIngresados: InicioDto) {
-    
+
     // supabase Auth valida los datos
     const { data, error } = await this.supabaseService.client.auth.signInWithPassword({
       email: datosIngresados.email,
@@ -173,7 +173,7 @@ export class AuthService {
       .from('Administrador')
       .select('id')
       .eq('id', persona.id)
-      .maybeSingle(); 
+      .maybeSingle();
 
     // Asigno el rol del usuario basándome en si se encontró o no
     const rolUsuario = admin ? 'admin' : 'usuario';
@@ -182,7 +182,7 @@ export class AuthService {
     return {
       success: true,
       mensaje: "Inicio de sesión exitoso :)",
-      token: data.session.access_token, 
+      token: data.session.access_token,
       usuarioId: persona.id,
       rol: rolUsuario
     };
@@ -190,7 +190,7 @@ export class AuthService {
 
   // ----------------------Método para Recuperar Contraseña----------------------
   async recuperarPasswd(email: string) {
-    
+
     //Buscamos el UUID del usuario con su email
     const { data: persona, error: errorPersona } = await this.supabaseService.client
       .from('Persona')
@@ -201,7 +201,7 @@ export class AuthService {
     if (errorPersona || !persona) {
       // Por convención de seguridad, no se avisa si el mail no existe para evitar que extraños 
       // averigüen quién es cliente, pero devolvemos un mensaje genérico de éxito.
-      return { success: true, mensaje: "Recibirás una nueva contraseña pronto en tu email" };
+      return { success: true, mensaje: "El mail ingresado no está registrado en el sistema." };
     }
 
     try {
@@ -220,9 +220,9 @@ export class AuthService {
       //Enviammos el correo con la nueva contraseña
       await this.emailService.enviarNuevaPassword(email, nuevaPassword);
 
-      return { 
-        success: true, 
-        mensaje: "Si el correo está registrado, recibirás una nueva contraseña pronto." 
+      return {
+        success: true,
+        mensaje: "Si el correo está registrado, recibirás una nueva contraseña pronto."
       };
 
     } catch (error) {
