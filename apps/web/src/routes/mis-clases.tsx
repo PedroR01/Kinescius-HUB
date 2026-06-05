@@ -214,6 +214,9 @@ export default function GestionClases() {
                         actividad={claseSeleccionada.Clase.tipo}
                         fechaActual={claseSeleccionada.Clase.fecha}
                         horaActual={claseSeleccionada.Clase.hora}
+                        horasOcupadasMismoDia={misClases
+                            .filter(c => c.Clase?.fecha === claseSeleccionada.Clase.fecha && c.id_clase !== claseSeleccionada.id_clase)
+                            .map(c => c.Clase.hora.slice(0, 5))}
                         onClose={cerrarModal}
                         onChangeSuccess={handleExito}
                     />
