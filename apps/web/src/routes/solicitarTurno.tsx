@@ -16,6 +16,7 @@ import {
   heroSectionClass,
   formCardClass,
 } from "@/lib/ks-page-styles";
+import { BackPreviousRouteButton } from "@/components/BackPreviousRouteButton";
 
 export const Route = createFileRoute("/solicitarTurno")({
   component: RouteComponent,
@@ -267,12 +268,7 @@ function RouteComponent() {
 
   return (
     <main className={pageMainClass}>
-      <Link
-        to="/"
-        className="size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
-      >
-        <ArrowLeftIcon className="size-6" />
-      </Link>
+      <BackPreviousRouteButton />
 
       <section className={heroSectionClass}>
         <h1 className="relative m-0 mb-2 font-outfit text-[38px] font-bold tracking-[-1px] text-white max-sm:text-[28px]">

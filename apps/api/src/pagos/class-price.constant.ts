@@ -1,1 +1,1 @@
-export const CLASS_UNIT_PRICE = 10_000;
+export const CLASS_UNIT_PRICE = 5_000;
