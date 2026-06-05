@@ -22,7 +22,6 @@ export function emailLugarDisponible(params: EmailLugarDisponibleParams): string
     clienteId,
     token,
     baseUrl,
-    montosenia,
   } = params;
 
   const confirmarUrl = `${baseUrl}/confirmar-turno/confirmar?token=${token}&claseId=${claseId}&clienteId=${clienteId}`;
@@ -70,7 +69,7 @@ export function emailLugarDisponible(params: EmailLugarDisponibleParams): string
               </p>
               <p style="margin:0 0 24px;color:#555555;font-size:15px;line-height:1.6;">
                 ¡Buenas noticias! Se liberó un lugar en la clase a la que querías asistir.
-                Tenés <strong>24 horas</strong> para confirmar tu turno haciendo clic en el botón.
+                Presioná el botón para confirmar tu lugar.
               </p>
 
               <!-- Info de la clase -->
@@ -95,15 +94,6 @@ export function emailLugarDisponible(params: EmailLugarDisponibleParams): string
                   </td>
                 </tr>
               </table>
-
-              <!-- Monto seña -->
-              <p style="margin:0 0 28px;color:#555555;font-size:15px;line-height:1.6;">
-                Para reservar tu lugar debés abonar una seña de
-                <strong style="color:#1a6b4a;font-size:16px;">
-                  $${montosenia.toLocaleString('es-AR')}
-                </strong>
-                (50% del valor de la clase).
-              </p>
 
               <!-- Botón -->
               <table width="100%" cellpadding="0" cellspacing="0">
