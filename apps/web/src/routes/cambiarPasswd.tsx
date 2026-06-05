@@ -100,6 +100,7 @@ const CambiarPasswd = () => {
     <AuthPageLayout
       title="Cambio de contraseña"
       subtitle="Por favor ingrese su contraseña actual, y la nueva contraseña para actualizarla."
+      showBackButton
     >
       {estaLogueado ? (
         <section className={formCardClass}>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { API_BASE } from '@/lib/constants'
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
 type Clase = {
   id: number
@@ -136,6 +137,7 @@ function RouteComponent() {
         'max-sm:px-4 max-sm:pt-5 max-sm:pb-12',
       )}
     >
+      <BackPreviousRouteButton />
       <section
         className={cn(
           'ks-hero-card relative overflow-hidden rounded-ks-lg px-10 py-12 shadow-[0_20px_60px_rgba(26,58,42,0.18)] animate-ks-slide-up',

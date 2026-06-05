@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
 export const Route = createFileRoute('/verInscriptos')({
   component: RouteComponent,
@@ -278,6 +279,7 @@ function RouteComponent() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#ffffff", padding: "40px 24px", boxSizing: "border-box" }}>
+      <BackPreviousRouteButton className="mb-6" />
 
       <div style={{
         display: "inline-flex", alignItems: "center", gap: "8px",

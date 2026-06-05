@@ -6,6 +6,15 @@ export interface CancelarTurnoPayload {
   tipoReembolso: 'REEMBOLSO' | 'A_FAVOR' | 'NINGUNO';
 }
 
+export interface CancelarTurnoResponse {
+  message: string;
+  reembolso: 'REEMBOLSO' | 'A_FAVOR' | 'NINGUNO';
+  detalleReembolso?: {
+    montoMp: number;
+    montoSaldo: number;
+  };
+}
+
 export interface CambiarTurnoPayload {
   clienteId: number;
   claseActualId: number;
@@ -49,11 +58,16 @@ export const cambiarTurnoRequest = async (payload: CambiarTurnoPayload) => {
   return response.json();
 };
 
-export const cancelarTurnoRequest = async (payload: CancelarTurnoPayload) => {
+export const cancelarTurnoRequest = async (
+  payload: CancelarTurnoPayload,
+  authToken?: string | null,
+): Promise<CancelarTurnoResponse> => {
+  const token = authToken ?? localStorage.getItem('miToken');
   const response = await fetch(`${API_BASE}/shifts/cancelar`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(payload),
   });

@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
 export const Route = createFileRoute('/clientes')({
   component: RouteComponent,
@@ -51,6 +52,7 @@ function RouteComponent() {
 
   return (
     <main className="min-h-screen bg-white px-8 py-14">
+      <BackPreviousRouteButton className="mb-6" />
 
       <section className="mx-auto max-w-7xl">
         <div className="mb-20 text-center">

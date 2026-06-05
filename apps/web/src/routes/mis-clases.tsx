@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { motion } from 'motion/react';
-import { Calendar, Clock, Activity, ArrowRightLeft, X } from 'lucide-react';
+import { Calendar, Clock, ArrowRightLeft, X } from 'lucide-react';
 import { CambiarTurno } from '../modules/turnos/components/cambiarTurnoModal';
 import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
 import { API_BASE } from '@/lib/constants';
+import { useClienteId } from '@/hooks/useClienteId';
 
 export const Route = createFileRoute('/mis-clases')({
     component: () => <GestionClases />,
@@ -22,6 +24,7 @@ interface ClaseDto {
 interface MisClasesResponseDto {
     id_clase: number;
     id_cliente: number;
+    monto_a_favor?: boolean;
     Clase: ClaseDto;
 }
 
@@ -30,9 +33,9 @@ export default function GestionClases() {
     const [modalActivo, setModalActivo] = useState<'CAMBIAR' | 'CANCELAR' | null>(null);
     const [claseSeleccionada, setClaseSeleccionada] = useState<MisClasesResponseDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
-    const token = localStorage.getItem('miToken');
-    const [idCliente, setIdCliente] = useState<number | null>(null);
+    const { clienteId: idCliente, isLoading: clienteLoading } = useClienteId();
 
     const cargarClases = () => {
         if (!idCliente) return;
@@ -49,36 +52,13 @@ export default function GestionClases() {
             });
     };
 
-    // 1. Obtener el idCliente al cargar la vista
-    useEffect(() => {
-        if (token) {
-            fetch(`${API_BASE}/shifts/cliente-id`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-                .then(res => {
-                    if (!res.ok) throw new Error("Token inválido o expirado");
-                    return res.json();
-                })
-                .then(data => {
-                    setIdCliente(data.id_cliente);
-                })
-                .catch(err => {
-                    console.error("Error al obtener ID del cliente:", err);
-                    setIsLoading(false);
-                });
-        } else {
-            setIsLoading(false);
-        }
-    }, [token]);
-
-    // 2. Cargar clases cuando ya tenemos el idCliente
     useEffect(() => {
         if (idCliente) {
             cargarClases();
+        } else if (!clienteLoading) {
+            setIsLoading(false);
         }
-    }, [idCliente]);
+    }, [idCliente, clienteLoading]);
 
     const abrirModal = (tipo: 'CAMBIAR' | 'CANCELAR', clase: MisClasesResponseDto) => {
         setClaseSeleccionada(clase);
@@ -90,7 +70,10 @@ export default function GestionClases() {
         setClaseSeleccionada(null);
     };
 
-    const handleExito = () => {
+    const handleExito = (message?: string) => {
+        if (message) {
+            setMensajeExito(message);
+        }
         cerrarModal();
         cargarClases();
     };
@@ -104,7 +87,7 @@ export default function GestionClases() {
 
     return (
         <div className="min-h-svh flex flex-col">
-            {/* Header section */}
+                <BackPreviousRouteButton />
             <section className="bg-white px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
                 <div className="mx-auto w-full max-w-5xl">
                     <motion.div
@@ -125,12 +108,16 @@ export default function GestionClases() {
                             <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                                 Gestioná tus próximos turnos y mantené tu rutina al día. Revisa, cambia o cancela tus clases programadas con facilidad.
                             </p>
+                            {mensajeExito && (
+                                <p className="mt-4 max-w-2xl rounded-2xl bg-main/10 px-4 py-3 text-sm font-medium text-main">
+                                    {mensajeExito}
+                                </p>
+                            )}
                         </motion.div>
                     </motion.div>
                 </div>
             </section>
 
-            {/* Content section */}
             <section className="bg-surface flex-1 px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
                 <div className="mx-auto w-full max-w-5xl">
                     <motion.div
@@ -138,7 +125,6 @@ export default function GestionClases() {
                         initial="hidden"
                         animate="visible"
                     >
-                        {/* Contenido */}
                         {isLoading ? (
                             <motion.div variants={fadeUp} className="flex flex-col items-center justify-center py-20 gap-4">
                                 <div className="w-12 h-12 border-4 border-main/20 border-t-main rounded-full animate-spin" />
@@ -170,14 +156,11 @@ export default function GestionClases() {
                                             transition={EASE_OUT}
                                             className="bg-white rounded-2xl shadow-md relative overflow-hidden flex flex-col transition-shadow hover:shadow-xl"
                                         >
-                                            {/* Subtle background decoration */}
                                             <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-main/10 to-transparent rounded-bl-full -z-10" />
-
                                             <div className="p-5 flex-1">
                                                 <h3 className="font-heading font-extrabold text-2xl text-main tracking-tight leading-tight mb-4">
                                                     {item.Clase.tipo}
                                                 </h3>
-
                                                 <div className="flex flex-col gap-3">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-main/10 text-main shrink-0">
@@ -197,8 +180,6 @@ export default function GestionClases() {
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Actions */}
                                             <div className="p-4 pt-0 mt-auto flex flex-row gap-2 bg-transparent">
                                                 <Button
                                                     variant="secondary"
@@ -227,7 +208,6 @@ export default function GestionClases() {
                 </div>
             </section>
 
-            {/* MODALES */}
             {modalActivo === 'CAMBIAR' && claseSeleccionada && (
                 <div className="fixed inset-0 bg-dark-accent/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
                     <CambiarTurno
@@ -250,6 +230,7 @@ export default function GestionClases() {
                         actividad={claseSeleccionada.Clase.tipo}
                         fechaClase={claseSeleccionada.Clase.fecha}
                         horaClase={claseSeleccionada.Clase.hora}
+                        pagoConMontoAFavor={Boolean(claseSeleccionada.monto_a_favor)}
                         onClose={cerrarModal}
                         onCancelSuccess={handleExito}
                     />
@@ -258,4 +239,3 @@ export default function GestionClases() {
         </div>
     );
 }
-

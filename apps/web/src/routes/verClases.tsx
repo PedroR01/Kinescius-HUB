@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
 export const Route = createFileRoute('/verClases')({
   component: RouteComponent,
@@ -246,6 +247,7 @@ function RouteComponent() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#ffffff", padding: "40px 24px" }}>
+      <BackPreviousRouteButton className="mb-6" />
       <h1 style={{ color: TEXT, marginBottom: '24px' }}>Ver clases</h1>
 
       <div style={{ background: CARD, borderRadius: '20px', padding: '24px', marginBottom: '24px' }}>

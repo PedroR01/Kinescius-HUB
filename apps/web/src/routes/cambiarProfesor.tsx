@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { API_BASE } from '@/lib/constants'
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
 type Clase = {
   id: number
@@ -299,6 +300,7 @@ function RouteComponent() {
 
   return (
     <main className="page-shell">
+      <BackPreviousRouteButton className="mb-4" />
       <section className="hero-card" style={{ background: '#f0faf5' }}>
         <h1>Cambiar profesor</h1>
         <p>Seleccioná una clase y asigná un nuevo profesor.</p>
