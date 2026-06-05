@@ -9,7 +9,6 @@ import { NavLinks } from "../shared/NavLinks";
 import { ConfirmLogoutModal } from "./ConfirmLogoutModal";
 import { cn } from "@/lib/utils";
 import { btnBase, btnSecondary } from "@/lib/ks-page-styles";
-import { Link } from "@tanstack/react-router";
 
 export function HomeNavbar() {
   const [estaLogueado, setEstaLogueado] = useState(false);
@@ -47,16 +46,15 @@ export function HomeNavbar() {
           <BrandLogo />
 
           <div className="hidden  lg:flex lg:items-center lg:gap-5">
-            {estaLogueado ? (
-              <Link to="/home" className="text-text-h/80">
-                Home
-              </Link>
-            ) : null}
             <NavLinks className="text-text-h/80" links={NAV_LINKS} />
           </div>
 
           <div className="hidden lg:flex lg:flex-row lg:gap-2">
             {estaLogueado ? (
+              <div className="flex flex-row gap-2">
+              <ButtonLink to="/home" size="sm" className="text-sm font-medium  transition-colors hover:text-main sm:text-[0.95rem]">
+                  Home
+                </ButtonLink>
               <button
                 type="button"
                 onClick={() => setIsLogoutModalOpen(true)}
@@ -64,6 +62,7 @@ export function HomeNavbar() {
               >
                 Cerrar sesión
               </button>
+              </div>
             ) : (
               <>
                 <ButtonLink to="/iniciarSesion" size="sm">

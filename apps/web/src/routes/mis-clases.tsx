@@ -5,6 +5,7 @@ import { Calendar, Clock, ArrowRightLeft, X } from 'lucide-react';
 import { CambiarTurno } from '../modules/turnos/components/cambiarTurnoModal';
 import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
 import { API_BASE } from '@/lib/constants';
 import { useClienteId } from '@/hooks/useClienteId';
@@ -86,6 +87,7 @@ export default function GestionClases() {
 
     return (
         <div className="min-h-svh flex flex-col">
+                <BackPreviousRouteButton />
             <section className="bg-white px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
                 <div className="mx-auto w-full max-w-5xl">
                     <motion.div
