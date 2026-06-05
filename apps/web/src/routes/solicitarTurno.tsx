@@ -279,7 +279,11 @@ function RouteComponent() {
         </p>
         <p className="relative mt-3 text-[14px] font-medium text-white/90">
           Todas las clases tienen el mismo valor:{" "}
-          <strong className="text-white">${CLASS_PRICE.toLocaleString("es-AR")}</strong>
+          <strong className="text-white">${(CLASS_PRICE*2).toLocaleString("es-AR")}</strong>
+        </p>
+        <p className="relative mt-3 text-[14px] font-medium text-white/90">
+          La reserva del turno tiene un costo de seña inicial del 50% del valor de la clase:{" "}
+          <strong className="text-white">${(CLASS_PRICE).toLocaleString("es-AR")}</strong>
         </p>
       </section>
 

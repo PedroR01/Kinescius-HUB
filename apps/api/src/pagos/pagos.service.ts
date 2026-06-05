@@ -100,7 +100,7 @@ export class PagosService implements OnModuleInit {
                     montoAFavorAplicado,
                 },
                 back_urls: {
-                    success: `https://2dd6-186-125-2-103.ngrok-free.app/success`, // Forwarding de ngrok
+                    success: `${frontendUrl}/success`, // Forwarding de ngrok
                     failure: `${frontendUrl}/failure`,
                     pending: `${frontendUrl}/pending`,
                 },
