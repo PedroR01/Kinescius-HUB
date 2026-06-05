@@ -32,6 +32,7 @@ export function UserDashboard() {
   return (
     <>
       <AuthPageLayout
+        showBackButton={true}
         title={isAdmin ? "Panel de administración" : "Tu panel"}
         subtitle={
           isAdmin

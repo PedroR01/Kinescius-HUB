@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { NavLinkItem } from "../data/navLinks";
-
+    
 interface NavLinksProps {
   links: NavLinkItem[];
   className?: string;

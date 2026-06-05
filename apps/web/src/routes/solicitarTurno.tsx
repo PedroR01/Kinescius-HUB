@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn, formatDate, formatDateLabel, formatDayLabel, formatTime } from "@/lib/utils";
-import { ArrowLeftIcon } from "lucide-react";
 import type { Class, ClassSlot } from "@/lib/class-interface";
 import ClassCard from "@/modules/turnos/components/classCard";
 import { CartFloatingBar } from "@/modules/turnos/components/CartFloatingBar";
@@ -11,7 +10,7 @@ import { useClassCart } from "@/modules/turnos/hooks/useClassCart";
 import { useClienteId } from "@/hooks/useClienteId";
 import { API_BASE, CLASS_PRICE } from "@/lib/constants";
 import { fetchMontoAFavor } from "@/api/payments";
-import {
+import { BackPreviousRouteButton } from "@/components/BackPreviousRouteButton";import {
   pageMainClass,
   heroSectionClass,
   formCardClass,
@@ -241,13 +240,7 @@ function RouteComponent() {
 
   return (
     <main className={pageMainClass}>
-      <Link
-        to="/"
-        className="size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
-      >
-        <ArrowLeftIcon className="size-6" />
-      </Link>
-
+      <BackPreviousRouteButton />
       <section className={heroSectionClass}>
         <h1 className="relative m-0 mb-2 font-outfit text-[38px] font-bold tracking-[-1px] text-white max-sm:text-[28px]">
           Reservá tu clase

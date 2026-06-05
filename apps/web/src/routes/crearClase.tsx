@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { API_BASE } from '@/lib/constants'
+import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
 export const Route = createFileRoute('/crearClase')({
   component: RouteComponent,
@@ -259,6 +260,7 @@ function RouteComponent() {
       minHeight: "100vh", background: "#ffffff", padding: "40px 24px",
       boxSizing: "border-box", position: "relative", overflow: "hidden",
     }}>
+      <BackPreviousRouteButton className="relative z-10 mb-6" />
       <div style={{
         position: "absolute", top: "-80px", right: "-80px",
         width: "300px", height: "300px", borderRadius: "50%",

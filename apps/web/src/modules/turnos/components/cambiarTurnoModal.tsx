@@ -7,6 +7,7 @@ interface CambiarTurnoModalProps {
   actividad: string;
   fechaActual: string;
   horaActual: string;
+  horasOcupadasMismoDia?: string[];
   onClose: () => void;
   onChangeSuccess: () => void;
 }
@@ -17,6 +18,7 @@ export const CambiarTurno: React.FC<CambiarTurnoModalProps> = ({
   actividad,
   fechaActual,
   horaActual,
+  horasOcupadasMismoDia = [],
   onClose,
   onChangeSuccess,
 }) => {
@@ -36,7 +38,9 @@ export const CambiarTurno: React.FC<CambiarTurnoModalProps> = ({
           (clase) =>
             clase.fecha === fechaActual &&
             clase.id !== claseActualId &&
-            clase.cuposDisponibles > 0
+            clase.cuposDisponibles > 0 &&
+            !horasOcupadasMismoDia.includes(clase.hora.slice(0, 5)) &&
+            clase.hora.slice(0, 5) !== horaActual.slice(0, 5)
         );
 
         setClasesFiltradas(delMismoDia);

@@ -4,7 +4,7 @@ import { ShiftsService } from './shifts.service';
 import { CancelarTurnoDto } from './dto/cancelar-turno-dto';
 import { MisClasesResponseDto } from './dto/ver-clases-dto';
 import { RecordatoriosService } from '../notifications/shifts-reminders.service';
-import { Headers, UnauthorizedException } from '@nestjs/common';
+import { Headers, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 @Controller('shifts')
 export class ShiftsController {
 
@@ -37,8 +37,26 @@ export class ShiftsController {
   }
 
   @Patch('cancelar')
-  async cancelarTurno(@Body() cancelarTurnoDto: CancelarTurnoDto) {
+  async cancelarTurno(
+    @Body() cancelarTurnoDto: CancelarTurnoDto,
+    @Headers('authorization') authHeader: string,
+  ) {
+    const clienteIdToken = await this.resolverClienteIdDesdeToken(authHeader);
+    if (clienteIdToken !== cancelarTurnoDto.clienteId) {
+      throw new ForbiddenException('No podés cancelar turnos de otro cliente.');
+    }
     return this.shiftsService.cancelar(cancelarTurnoDto);
+  }
+
+  private async resolverClienteIdDesdeToken(authHeader: string): Promise<number> {
+    if (!authHeader) {
+      throw new UnauthorizedException('Token no proporcionado');
+    }
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      throw new UnauthorizedException('Formato de token inválido');
+    }
+    return this.recordatoriosService.obtenerIdDeUsuario(token);
   }
 
   @Get('mis-clases/:idCliente')
