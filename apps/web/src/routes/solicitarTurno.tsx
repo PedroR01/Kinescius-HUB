@@ -148,6 +148,17 @@ function RouteComponent() {
     [appointmentSlots, selectedDate]
   );
 
+  // Chequeo de conflicto de horario
+  const hasTimeConflict = (slot: ClassSlot): boolean => {
+    return classes
+      .filter((c) => enrolledClassIds.has(c.id))
+      .some(
+        (c) =>
+          formatDate(c.fecha) === slot.date &&
+          formatTime(c.hora) === slot.time
+      );
+  };
+
   const handleAddWaitList = async (slot: ClassSlot) => {
     if (!clienteId) {
       setMessage("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
@@ -185,11 +196,19 @@ function RouteComponent() {
 
   const handleEnroll = (slot: ClassSlot) => {
     if (enrolledClassIds.has(slot.source.id)) return;
+    if (hasTimeConflict(slot)) {
+      toast.error(`Ya tenés una clase a las ${slot.time}hs ese día.`);
+      return;
+    }
     openCheckout([slot], false);
   };
 
   const handleAddToCart = (slot: ClassSlot) => {
     if (enrolledClassIds.has(slot.source.id)) return;
+    if (hasTimeConflict(slot)) {
+      toast.error(`Ya tenés una clase a las ${slot.time}hs ese día.`);
+      return;
+    }
     const added = addToCart(slot);
     if (added) {
       toast.success("Clase agregada al carrito");
@@ -200,6 +219,13 @@ function RouteComponent() {
   };
 
   const handleCartCheckout = () => {
+    const conflictivo = cartItems.find(hasTimeConflict);
+    if (conflictivo) {
+      toast.error(
+        `Ya tenés una clase a las ${conflictivo.time}hs el ${conflictivo.date}. Quitala del carrito antes de continuar.`
+      );
+      return;
+    }
     openCheckout(cartItems, true);
   };
 
