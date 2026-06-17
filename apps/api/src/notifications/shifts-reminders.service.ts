@@ -34,7 +34,7 @@ export class RecordatoriosService {
     return persona.id;
   }
 
-  @Cron('0 45 15 * * *', {
+  @Cron('0 25 16 * * *', {
     timeZone: 'America/Argentina/Buenos_Aires'
   })
   async enviarRecordatoriosDiarios() {

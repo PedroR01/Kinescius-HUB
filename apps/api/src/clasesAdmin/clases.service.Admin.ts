@@ -17,7 +17,6 @@ export class ClasesAdminService {
   ) {}
 
   async findAll(startDate?: string, endDate?: string) {
-
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       throw new BadRequestException(
         "La fecha inicial no puede ser posterior a la fecha final"
@@ -133,7 +132,6 @@ export class ClasesAdminService {
     let profesorId = null;
 
     if (profesorDni) {
-
       const { data: persona, error: personaError } =
         await this.supabaseService.client
           .from("Persona")
@@ -150,13 +148,19 @@ export class ClasesAdminService {
       const { data: profesor, error: profesorError } =
         await this.supabaseService.client
           .from("Profesor")
-          .select("id")
+          .select("id, Usuario!inner(activo)")
           .eq("id", persona.id)
           .single();
 
       if (profesorError || !profesor) {
         throw new BadRequestException(
           "La persona existe pero no es profesor"
+        );
+      }
+
+      if ((profesor as any)?.Usuario?.activo === false) {
+        throw new BadRequestException(
+          "El profesor está dado de baja en el sistema"
         );
       }
 
@@ -230,7 +234,6 @@ export class ClasesAdminService {
       throw new NotFoundException("No existe una clase con ese id");
     }
 
-    // 1. Obtener IDs de clientes inscriptos
     const { data: inscripciones, error: inscripcionesQueryError } =
       await this.supabaseService.client
         .from("Se_inscribe")
@@ -245,7 +248,6 @@ export class ClasesAdminService {
 
     const clienteIds = (inscripciones ?? []).map((i: any) => i.id_cliente as number);
 
-    // 2. Obtener datos de contacto desde Persona
     let emailData: { mail: string | null; nombre: string }[] = [];
 
     if (clienteIds.length > 0) {
@@ -268,7 +270,6 @@ export class ClasesAdminService {
     console.log(`[cancel] Clase ${id} - inscriptos encontrados: ${clienteIds.length}`);
     console.log(`[cancel] Emails a notificar:`, emailData);
 
-    // 3. Eliminar inscripciones
     const { error: inscripcionesError } = await this.supabaseService.client
       .from("Se_inscribe")
       .delete()
@@ -280,7 +281,6 @@ export class ClasesAdminService {
       );
     }
 
-    // 3.5. Eliminar tokens de confirmación que referencian la clase
     const { error: tokenError } = await this.supabaseService.client
       .from("tokens_confirmacion")
       .delete()
@@ -292,7 +292,6 @@ export class ClasesAdminService {
       );
     }
 
-    // 4. Eliminar la clase
     const { error: deleteError } = await this.supabaseService.client
       .from("Clase")
       .delete()
@@ -304,7 +303,6 @@ export class ClasesAdminService {
       );
     }
 
-    // 5. Enviar emails de notificación
     const emailPromises = emailData.map(({ mail, nombre }) => {
       if (!mail) return Promise.resolve();
 
@@ -420,7 +418,8 @@ export class ClasesAdminService {
   async getClientes() {
     const { data, error } = await this.supabaseService.client
       .from("Cliente")
-      .select("id, Usuario!inner(Persona(nombre,apellido,dni,mail))");
+      .select("id, Usuario!inner(activo, Persona(nombre,apellido,dni,mail))")
+      .eq("Usuario.activo", true);
 
     if (error) {
       throw new InternalServerErrorException(
@@ -452,7 +451,8 @@ export class ClasesAdminService {
   async getProfesores() {
     const { data: profesores, error: profesorError } = await this.supabaseService.client
       .from("Profesor")
-      .select("id");
+      .select("id, Usuario!inner(activo)")
+      .eq("Usuario.activo", true);
 
     if (profesorError) {
       throw new InternalServerErrorException(
@@ -515,7 +515,8 @@ export class ClasesAdminService {
 
     const { data: todosProfesores, error: profesorError } = await this.supabaseService.client
       .from("Profesor")
-      .select("id");
+      .select("id, Usuario!inner(activo)")
+      .eq("Usuario.activo", true);
 
     if (profesorError) {
       throw new InternalServerErrorException(
@@ -583,7 +584,7 @@ export class ClasesAdminService {
 
     const { data: profesor, error: profesorError } = await this.supabaseService.client
       .from("Profesor")
-      .select("id")
+      .select("id, Usuario!inner(activo)")
       .eq("id", idProfesor)
       .maybeSingle();
 
@@ -595,6 +596,12 @@ export class ClasesAdminService {
 
     if (!profesor) {
       throw new NotFoundException("No existe un profesor con ese id");
+    }
+
+    if ((profesor as any)?.Usuario?.activo === false) {
+      throw new BadRequestException(
+        "El profesor está dado de baja en el sistema"
+      );
     }
 
     const { count, error: countError } = await this.supabaseService.client
@@ -632,6 +639,233 @@ export class ClasesAdminService {
       message: "Profesor actualizado correctamente",
       idClase,
       idProfesor,
+    };
+  }
+
+  async cargarProfesor({
+    dni,
+    mail,
+    nombre,
+    apellido,
+    telefono,
+  }: {
+    dni: string;
+    mail: string;
+    nombre: string;
+    apellido: string;
+    telefono?: string | null;
+  }) {
+    const { data: personaPorDni, error: dniError } =
+      await this.supabaseService.client
+        .from("Persona")
+        .select("id")
+        .eq("dni", dni)
+        .maybeSingle();
+
+    if (dniError) {
+      throw new InternalServerErrorException(
+        `Error al verificar DNI: ${dniError.message}`
+      );
+    }
+
+    if (personaPorDni) {
+      throw new BadRequestException("Ya existe una persona con ese DNI");
+    }
+
+    const { data: personaPorMail, error: mailError } =
+      await this.supabaseService.client
+        .from("Persona")
+        .select("id")
+        .eq("mail", mail)
+        .maybeSingle();
+
+    if (mailError) {
+      throw new InternalServerErrorException(
+        `Error al verificar mail: ${mailError.message}`
+      );
+    }
+
+    if (personaPorMail) {
+      throw new BadRequestException("Ya existe una persona con ese mail");
+    }
+
+    const { data: persona, error: personaError } =
+      await this.supabaseService.client
+        .from("Persona")
+        .insert([{ dni, mail, nombre, apellido, telefono: telefono ?? null }])
+        .select("id")
+        .single();
+
+    if (personaError || !persona) {
+      throw new InternalServerErrorException(
+        `Error al crear persona: ${personaError?.message}`
+      );
+    }
+
+    // activo: true por defecto al crear
+    const { error: usuarioError } = await this.supabaseService.client
+      .from("Usuario")
+      .insert([{ id: persona.id, activo: true }]);
+
+    if (usuarioError) {
+      throw new InternalServerErrorException(
+        `Error al crear usuario: ${usuarioError.message}`
+      );
+    }
+
+    const { error: profesorInsertError } = await this.supabaseService.client
+      .from("Profesor")
+      .insert([{ id: persona.id }]);
+
+    if (profesorInsertError) {
+      throw new InternalServerErrorException(
+        `Error al crear profesor: ${profesorInsertError.message}`
+      );
+    }
+
+    return {
+      message: "Profesor cargado correctamente",
+      profesor: {
+        id: persona.id,
+        dni,
+        mail,
+        nombre,
+        apellido,
+        telefono: telefono ?? null,
+      },
+    };
+  }
+
+  async getProfesoresConDisponibilidad() {
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data: profesores, error: profesorError } =
+      await this.supabaseService.client
+        .from("Profesor")
+        .select("id, Usuario!inner(activo)")
+        .eq("Usuario.activo", true);
+
+    if (profesorError) {
+      throw new InternalServerErrorException(
+        `Error al obtener profesores: ${profesorError.message}`
+      );
+    }
+
+    if (!profesores || profesores.length === 0) {
+      return { profesores: [] };
+    }
+
+    const ids = profesores.map((p: any) => p.id);
+
+    const { data: usuarios, error: usuarioError } =
+      await this.supabaseService.client
+        .from("Usuario")
+        .select("id, Persona(id, nombre, apellido, dni)")
+        .in("id", ids);
+
+    if (usuarioError) {
+      throw new InternalServerErrorException(
+        `Error al obtener datos de profesores: ${usuarioError.message}`
+      );
+    }
+
+    const { data: clasesFuturas, error: clasesError } =
+      await this.supabaseService.client
+        .from("Clase")
+        .select("id_profesor")
+        .in("id_profesor", ids)
+        .gte("fecha", today);
+
+    if (clasesError) {
+      throw new InternalServerErrorException(
+        `Error al obtener clases futuras: ${clasesError.message}`
+      );
+    }
+
+    const idsConClasesFuturas = new Set(
+      (clasesFuturas ?? []).map((c: any) => c.id_profesor)
+    );
+
+    const resultado = profesores.map((p: any) => {
+      const usuario = (usuarios ?? []).find((u: any) => u.id === p.id);
+      const persona = (usuario as any)?.Persona;
+      return {
+        id: p.id,
+        nombre: persona?.nombre ?? null,
+        apellido: persona?.apellido ?? null,
+        dni: persona?.dni ?? null,
+        tieneClasesFuturas: idsConClasesFuturas.has(p.id),
+      };
+    });
+
+    return { profesores: resultado };
+  }
+
+  async eliminarProfesor(idProfesor: number) {
+    if (!Number.isInteger(idProfesor) || idProfesor <= 0) {
+      throw new BadRequestException("El id del profesor debe ser mayor a 0");
+    }
+
+    // Verificar que el profesor existe y está activo
+    const { data: profesor, error: profesorError } =
+      await this.supabaseService.client
+        .from("Profesor")
+        .select("id, Usuario!inner(activo)")
+        .eq("id", idProfesor)
+        .maybeSingle();
+
+    if (profesorError) {
+      throw new InternalServerErrorException(
+        `Error al buscar el profesor: ${profesorError.message}`
+      );
+    }
+
+    if (!profesor) {
+      throw new NotFoundException("No existe un profesor con ese id");
+    }
+
+    if ((profesor as any)?.Usuario?.activo === false) {
+      throw new BadRequestException("El profesor ya está dado de baja");
+    }
+
+    // Verificar que no tenga clases futuras
+    const today = new Date().toISOString().split("T")[0];
+
+    const { count, error: clasesError } =
+      await this.supabaseService.client
+        .from("Clase")
+        .select("id", { count: "exact", head: true })
+        .eq("id_profesor", idProfesor)
+        .gte("fecha", today);
+
+    if (clasesError) {
+      throw new InternalServerErrorException(
+        `Error al verificar clases futuras: ${clasesError.message}`
+      );
+    }
+
+    if ((count ?? 0) > 0) {
+      throw new BadRequestException(
+        "El profesor tiene clases futuras asignadas y no puede ser eliminado"
+      );
+    }
+
+    // Baja lógica: setear activo = false en Usuario
+    const { error: updateError } =
+      await this.supabaseService.client
+        .from("Usuario")
+        .update({ activo: false })
+        .eq("id", idProfesor);
+
+    if (updateError) {
+      throw new InternalServerErrorException(
+        `Error al dar de baja el profesor: ${updateError.message}`
+      );
+    }
+
+    return {
+      message: "Profesor eliminado correctamente",
+      id: idProfesor,
     };
   }
 }
