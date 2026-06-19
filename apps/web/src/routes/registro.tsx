@@ -68,7 +68,7 @@ const Registro = () => {
 
         //TimeOut va a ser el tiempo en milisegundos que se espera para navegar al inicio de sesión
         setTimeout(() => {
-          navigate({ to: "/iniciarSesion" });
+          navigate({ to: "/iniciarSesion", search: { redirect: undefined } });
         }, 7000);
       } else {
         // Si el backend devuelve BadRequestException por algun error como un dato duplicado, seteamos de error el msje recibido

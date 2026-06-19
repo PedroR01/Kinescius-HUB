@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { RegistroDto } from './dto/registro.dto';
+import { RegistroProfesorDto } from './dto/registro-profesor.dto';
 import { InicioDto } from './dto/inicio.dto';
 import { EmailService } from '../email/email.service';
 import * as crypto from 'crypto';
@@ -168,15 +169,7 @@ export class AuthService {
       throw new InternalServerErrorException('Error al recuperar los datos internos del usuario.');
     }
 
-    // Reviso si el id le pertenece a algún administrador
-    const { data: admin } = await this.supabaseService.client
-      .from('Administrador')
-      .select('id')
-      .eq('id', persona.id)
-      .maybeSingle();
-
-    // Asigno el rol del usuario basándome en si se encontró o no
-    const rolUsuario = admin ? 'admin' : 'usuario';
+    const rolUsuario = await this.resolverRolUsuario(persona.id);
 
     //El token y el rol que devuelva al frontend va a validar al usuario como cliente o admin
     return {
@@ -228,6 +221,165 @@ export class AuthService {
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException("Ocurrió un error al intentar procesar la recuperación de contraseña.");
+    }
+  }
+
+  async registrarProfesor(token: string, datos: RegistroProfesorDto) {
+    await this.verificarEsAdmin(token);
+
+    if (!datos.nombre?.trim() || !datos.apellido?.trim() || !datos.dni?.trim() || !datos.email?.trim()) {
+      throw new BadRequestException('No se pudieron registrar los datos porque hay campos obligatorios vacíos.');
+    }
+
+    const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
+      .from('Persona')
+      .select('dni, mail')
+      .or(`dni.eq.${datos.dni},mail.eq.${datos.email}`);
+
+    if (errorBusqueda) {
+      throw new InternalServerErrorException('Error al verificar la disponibilidad de los datos en el sistema.');
+    }
+
+    if (usuariosExistentes && usuariosExistentes.length > 0) {
+      const dniOcupado = usuariosExistentes.some((usuario) => usuario.dni === datos.dni);
+      const mailOcupado = usuariosExistentes.some((usuario) => usuario.mail === datos.email);
+
+      if (dniOcupado && mailOcupado) {
+        throw new BadRequestException('El DNI y el Email ingresados ya se encuentran registrados en otra cuenta.');
+      }
+      if (dniOcupado) {
+        throw new BadRequestException('El DNI ingresado ya se encuentra registrado.');
+      }
+      if (mailOcupado) {
+        throw new BadRequestException('El Email ingresado ya pertenece a una cuenta existente.');
+      }
+    }
+
+    try {
+      const passwordBase = this.generarPasswordAleatoria(8);
+
+      const { data: authData, error: authError } = await this.supabaseService.client.auth.admin.createUser({
+        email: datos.email,
+        password: passwordBase,
+        email_confirm: true,
+        user_metadata: { rol: 'profesor' },
+      });
+
+      if (authError) {
+        throw new BadRequestException(`Error en autenticación: ${authError.message}`);
+      }
+
+      const { data: personaData, error } = await this.supabaseService.client
+        .from('Persona')
+        .insert([
+          {
+            user_id: authData.user.id,
+            nombre: datos.nombre,
+            apellido: datos.apellido,
+            mail: datos.email,
+            dni: datos.dni,
+            telefono: datos.telefono || null,
+          },
+        ])
+        .select('id')
+        .single();
+
+      if (error || !personaData) {
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
+      }
+
+      const { error: errorUsuario } = await this.supabaseService.client
+        .from('Usuario')
+        .insert([{ id: personaData.id }]);
+
+      if (errorUsuario) {
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como usuario: ${errorUsuario.message}`);
+      }
+
+      const { error: errorProfesor } = await this.supabaseService.client
+        .from('Profesor')
+        .insert([{ id: personaData.id }]);
+
+      if (errorProfesor) {
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el rol de profesor: ${errorProfesor.message}`);
+      }
+
+      try {
+        await this.emailService.enviarCorreo(
+          datos.email,
+          'Cuenta de profesor en Kinescius-HUB',
+          `<h2>Tu cuenta de profesor fue creada</h2>
+           <p>Tu contraseña temporal es: <strong>${passwordBase}</strong></p>
+           <p>Podés cambiarla luego de iniciar sesión.</p>`,
+        );
+      } catch (emailError) {
+        console.error('El profesor se registró, pero falló el envío del correo:', emailError);
+      }
+
+      return {
+        success: true,
+        mensaje: 'Profesor registrado correctamente.',
+      };
+    } catch (err) {
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      throw new InternalServerErrorException('Error interno al registrar el profesor.');
+    }
+  }
+
+  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'usuario'> {
+    const { data: admin } = await this.supabaseService.client
+      .from('Administrador')
+      .select('id')
+      .eq('id', personaId)
+      .maybeSingle();
+
+    if (admin) {
+      return 'admin';
+    }
+
+    const { data: profesor } = await this.supabaseService.client
+      .from('Profesor')
+      .select('id')
+      .eq('id', personaId)
+      .maybeSingle();
+
+    if (profesor) {
+      return 'profesor';
+    }
+
+    return 'usuario';
+  }
+
+  private async verificarEsAdmin(token: string): Promise<void> {
+    const { data: userData, error: userError } = await this.supabaseService.client.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      throw new UnauthorizedException('Sesión inválida o expirada.');
+    }
+
+    const { data: persona, error: personaError } = await this.supabaseService.client
+      .from('Persona')
+      .select('id')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (personaError || !persona) {
+      throw new UnauthorizedException('No se encontró el perfil del usuario.');
+    }
+
+    const { data: admin } = await this.supabaseService.client
+      .from('Administrador')
+      .select('id')
+      .eq('id', persona.id)
+      .maybeSingle();
+
+    if (!admin) {
+      throw new ForbiddenException('Solo los administradores pueden realizar esta acción.');
     }
   }
 

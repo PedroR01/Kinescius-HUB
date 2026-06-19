@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { API_BASE } from "@/lib/constants";
 
 export function useClienteId() {
   const [clienteId, setClienteId] = useState<number | null>(null);

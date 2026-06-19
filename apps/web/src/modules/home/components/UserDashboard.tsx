@@ -10,12 +10,12 @@ import { DashboardActionList } from "./DashboardActionList";
 
 export function UserDashboard() {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, isHydrated, clearSession } = useAuthSession();
+  const { isAuthenticated, role, isHydrated, clearSession } = useAuthSession();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
-      navigate({ to: "/iniciarSesion", replace: true });
+      navigate({ to: "/iniciarSesion", search: { redirect: undefined }, replace: true });
     }
   }, [isHydrated, isAuthenticated, navigate]);
 
@@ -33,11 +33,19 @@ export function UserDashboard() {
     <>
       <AuthPageLayout
         showBackButton={true}
-        title={isAdmin ? "Panel de administración" : "Tu panel"}
+        title={
+          role === "admin"
+            ? "Panel de administración"
+            : role === "profesor"
+              ? "Panel del profesor"
+              : "Tu panel"
+        }
         subtitle={
-          isAdmin
+          role === "admin"
             ? "Gestioná las operaciones del centro"
-            : "Accedé a las funcionalidades de tu cuenta"
+            : role === "profesor"
+              ? "Generá códigos QR para registrar asistencia"
+              : "Accedé a las funcionalidades de tu cuenta"
         }
       >
         <section className={formCardClass}>
@@ -50,7 +58,7 @@ export function UserDashboard() {
           </p>
         </section>
 
-        <DashboardActionList actions={getDashboardActions(isAdmin)} />
+        <DashboardActionList actions={getDashboardActions(role)} />
 
         <section className={formCardClass}>
           <button

@@ -24,6 +24,19 @@ const USER_ACTIONS: DashboardAction[] = [
     label: "Mis clases",
     to: "/mis-clases",
     description: "Ver tus clases agendadas"
+  },
+  {
+    label: "Escanear asistencia",
+    to: "/escanear-asistencia",
+    description: "Registrá tu presencia con la cámara"
+  }
+];
+
+const PROFESOR_ACTIONS: DashboardAction[] = [
+  {
+    label: "Generar QR de asistencia",
+    to: "/profesor",
+    description: "Mostrá el código QR para que los clientes pasen asistencia"
   }
 ];
 
@@ -31,7 +44,16 @@ const SHARED_ACTIONS: DashboardAction[] = [
   { label: "Cambiar contraseña", to: "/cambiarPasswd" }
 ];
 
-export function getDashboardActions(isAdmin: boolean): DashboardAction[] {
-  const roleActions = isAdmin ? ADMIN_ACTIONS : USER_ACTIONS;
-  return [...roleActions, ...SHARED_ACTIONS];
+export function getDashboardActions(
+  role: "admin" | "usuario" | "profesor" | null,
+): DashboardAction[] {
+  if (role === "admin") {
+    return [...ADMIN_ACTIONS, ...SHARED_ACTIONS];
+  }
+
+  if (role === "profesor") {
+    return [...PROFESOR_ACTIONS, ...SHARED_ACTIONS];
+  }
+
+  return [...USER_ACTIONS, ...SHARED_ACTIONS];
 }

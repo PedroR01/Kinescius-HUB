@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Headers, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegistroDto } from './dto/registro.dto';
+import { RegistroProfesorDto } from './dto/registro-profesor.dto';
 import { InicioDto } from './dto/inicio.dto';
 import { RecuperarDto } from './dto/recuperar.dto';
 import { CambioPasswordDto } from './dto/cambio-passwd.dto';
@@ -26,6 +27,18 @@ export class AuthController {
   @Post('recuperar')
   recuperarPasswd(@Body() datos: RecuperarDto){ //Si bien es un string, uso dto para validar el email
     return this.authService.recuperarPasswd(datos.email);
+  }
+
+  @Post('profesor')
+  registrarProfesor(
+    @Headers('authorization') authHeader: string,
+    @Body() datos: RegistroProfesorDto,
+  ) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('No se proporcionó un token de autorización válido.');
+    }
+    const token = authHeader.split(' ')[1];
+    return this.authService.registrarProfesor(token, datos);
   }
 
   @Post('cambiar-password')

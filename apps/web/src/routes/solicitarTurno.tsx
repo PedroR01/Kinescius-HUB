@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn, formatDate, formatDateLabel, formatDayLabel, formatTime } from "@/lib/utils";
-import { ArrowLeftIcon } from "lucide-react";
 import type { Class, ClassSlot } from "@/lib/class-interface";
 import ClassCard from "@/modules/turnos/components/classCard";
 import { CartFloatingBar } from "@/modules/turnos/components/CartFloatingBar";

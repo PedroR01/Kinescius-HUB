@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 
-export type UserRole = "admin" | "usuario";
+export type UserRole = "admin" | "usuario" | "profesor";
 
 const TOKEN_KEY = "miToken";
 const ROLE_KEY = "rol";
 
+function isUserRole(role: string | null): role is UserRole {
+  return role === "admin" || role === "usuario" || role === "profesor";
+}
+
 function readSession() {
   const token = localStorage.getItem(TOKEN_KEY);
-  const role = localStorage.getItem(ROLE_KEY) as UserRole | null;
+  const role = localStorage.getItem(ROLE_KEY);
 
   return {
     isAuthenticated: Boolean(token),
-    role: role === "admin" || role === "usuario" ? role : null,
-    isAdmin: role === "admin"
+    role: isUserRole(role) ? role : null,
+    isAdmin: role === "admin",
+    isProfesor: role === "profesor",
   };
 }
 
@@ -21,7 +26,8 @@ export function useAuthSession() {
     isAuthenticated: false,
     role: null as UserRole | null,
     isAdmin: false,
-    isHydrated: false
+    isProfesor: false,
+    isHydrated: false,
   });
 
   useEffect(() => {
@@ -35,7 +41,8 @@ export function useAuthSession() {
       isAuthenticated: false,
       role: null,
       isAdmin: false,
-      isHydrated: true
+      isProfesor: false,
+      isHydrated: true,
     });
   }, []);
 

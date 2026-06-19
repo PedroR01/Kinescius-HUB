@@ -20,6 +20,7 @@ type FormData = {
 
 const IniciarSesion = () => {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [estaLogueado, setEstaLogueado] = useState(false);
   useEffect(() => {
     const token = localStorage.getItem("miToken");
@@ -79,6 +80,16 @@ const IniciarSesion = () => {
 
         setMessage("Inicio de sesión exitoso!");
         setTimeout(() => {
+          if (redirect) {
+            window.location.href = redirect;
+            return;
+          }
+
+          if (data.rol === "profesor") {
+            navigate({ to: "/profesor" });
+            return;
+          }
+
           navigate({ to: "/home" });
         }, 1000);
       } else {
@@ -207,5 +218,8 @@ const IniciarSesion = () => {
 };
 
 export const Route = createFileRoute("/iniciarSesion")({
-  component: IniciarSesion
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
+  component: IniciarSesion,
 });
