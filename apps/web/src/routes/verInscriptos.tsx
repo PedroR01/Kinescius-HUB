@@ -2,210 +2,20 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
+import DatePicker from '@/components/DatePicker'
+import type { KinesciusClass } from '@/lib/class-interface'
+import type { User } from '@/lib/user-interface'
+import { formatClassLabel } from '@/lib/utils'
 
 export const Route = createFileRoute('/verInscriptos')({
   component: RouteComponent,
 })
 
-const GREEN = "#2DBE7F"
-const TEXT = "#0d1f18"
-const CARD = "#f0faf5"
-
-const labelStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  fontSize: "12px",
-  fontWeight: 500,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  color: GREEN,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 14px",
-  borderRadius: "10px",
-  border: "1px solid rgba(45,190,127,0.25)",
-  background: "#ffffff",
-  color: TEXT,
-  fontSize: "14px",
-  outline: "none",
-  boxSizing: "border-box",
-  marginTop: "6px",
-  cursor: "pointer",
-}
-
-const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-
-type Clase = {
-  id: number
-  fecha: string
-  hora: string
-  tipo: string | null
-  profesor_nombre?: string | null
-}
-
-type Inscripto = {
-  clienteId: number
-  nombre: string | null
-  apellido: string | null
-  dni: string | null
-  mail: string | null
-  estado: string | null
-}
-
-function formatDate(fecha: string) {
-  const [year, month, day] = fecha.split('T')[0].split('-')
-  return `${Number(day)}/${Number(month)}/${year}`
-}
-
-function formatTime(hora: string) {
-  return hora.replace(/:00$/, 'hs')
-}
-
-function formatClaseLabel(clase: Clase) {
-  const fecha = formatDate(clase.fecha)
-  const hora = formatTime(clase.hora)
-  const tipo = clase.tipo ?? 'Sin tipo'
-  const profesor = clase.profesor_nombre ?? 'Sin profesor'
-  return `${fecha} ${hora} — ${tipo} (${profesor})`
-}
-
-function DatePicker({
-  value,
-  onChange,
-  placeholder = 'Seleccionar fecha...',
-  minDate,
-  maxDate,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  minDate?: string
-  maxDate?: string
-}) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const [viewYear, setViewYear] = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
-  const [open, setOpen] = useState(false)
-
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
-    else setViewMonth(m => m - 1)
-  }
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
-    else setViewMonth(m => m + 1)
-  }
-
-  const handleDay = (day: number) => {
-    const date = new Date(viewYear, viewMonth, day)
-    const dow = date.getDay()
-    // Block weekends
-    if (dow === 0 || dow === 6) return
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    if (minDate && dateStr < minDate) return
-    if (maxDate && dateStr > maxDate) return
-    onChange(dateStr)
-    setOpen(false)
-  }
-
-  const displayValue = value
-    ? new Date(value + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
-    : ''
-
-  const cells: (number | null)[] = []
-  for (let i = 0; i < firstDay; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-
-  return (
-    <div style={{ position: 'relative', marginTop: '6px' }}>
-      <div
-        onClick={() => setOpen(o => !o)}
-        style={{
-          ...inputStyle,
-          marginTop: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          userSelect: 'none',
-          color: value ? TEXT : 'rgba(13,31,24,0.35)',
-        }}
-      >
-        <span>{displayValue || placeholder}</span>
-        <span style={{ fontSize: '12px', opacity: 0.5 }}>▼</span>
-      </div>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100,
-          background: '#fff', border: '1px solid rgba(45,190,127,0.3)',
-          borderRadius: '14px', padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)', width: '280px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: GREEN, padding: '4px 8px' }}>‹</button>
-            <span style={{ fontWeight: 600, fontSize: '14px', color: TEXT }}>{MONTHS[viewMonth]} {viewYear}</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: GREEN, padding: '4px 8px' }}>›</button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
-            {DAYS.map(d => (
-              <div key={d} style={{
-                textAlign: 'center', fontSize: '10px', fontWeight: 600,
-                color: d === 'Dom' || d === 'Sáb' ? 'rgba(13,31,24,0.25)' : 'rgba(13,31,24,0.45)',
-                padding: '4px 0', letterSpacing: '0.04em'
-              }}>{d}</div>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
-            {cells.map((day, i) => {
-              if (day === null) return <div key={`e-${i}`} />
-              const date = new Date(viewYear, viewMonth, day)
-              const dow = date.getDay()
-              const isWeekend = dow === 0 || dow === 6
-              const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-              const isSelected = value === dateStr
-              const isDisabled = isWeekend || (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate)
-              const isToday = date.getTime() === today.getTime()
-              return (
-                <div
-                  key={day}
-                  onClick={() => handleDay(day)}
-                  style={{
-                    textAlign: 'center', padding: '6px 2px', borderRadius: '8px', fontSize: '13px',
-                    cursor: isDisabled ? 'default' : 'pointer',
-                    fontWeight: isSelected ? 700 : 400,
-                    background: isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent',
-                    color: isSelected ? '#fff' : isDisabled ? 'rgba(13,31,24,0.2)' : TEXT,
-                    border: isToday && !isSelected ? `1px solid ${GREEN}` : '1px solid transparent',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!isDisabled) (e.currentTarget.style.background = isSelected ? GREEN : 'rgba(45,190,127,0.12)') }}
-                  onMouseLeave={e => { if (!isDisabled) (e.currentTarget.style.background = isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent') }}
-                >
-                  {day}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function RouteComponent() {
-  const [clases, setClases] = useState<Clase[]>([])
-  const [filteredClases, setFilteredClases] = useState<Clase[]>([])
-  const [selectedClase, setSelectedClase] = useState<Clase | null>(null)
-  const [inscriptos, setInscriptos] = useState<Inscripto[]>([])
+  const [clases, setClases] = useState<KinesciusClass[]>([])
+  const [filteredClases, setFilteredClases] = useState<KinesciusClass[]>([])
+  const [selectedClase, setSelectedClase] = useState<KinesciusClass | null>(null)
+  const [inscriptos, setInscriptos] = useState<User[]>([])
   const [loadingClases, setLoadingClases] = useState(false)
   const [loadingInscriptos, setLoadingInscriptos] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -248,7 +58,7 @@ function RouteComponent() {
     }
   }
 
-  const loadInscriptos = async (clase: Clase) => {
+  const loadInscriptos = async (clase: KinesciusClass) => {
     if (!clase.tipo) {
       setError('La clase no tiene tipo asignado')
       return
@@ -278,43 +88,31 @@ function RouteComponent() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#ffffff", padding: "40px 24px", boxSizing: "border-box" }}>
+    <main className='min-h-screen bg-white p-10 box-border'>
       <BackPreviousRouteButton className="mb-6" />
 
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: "8px",
-        background: "rgba(45,190,127,0.1)", border: "1px solid rgba(45,190,127,0.3)",
-        borderRadius: "100px", padding: "5px 14px", marginBottom: "24px",
-      }}>
-        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: GREEN, boxShadow: `0 0 8px ${GREEN}`, display: "inline-block" }} />
-        <span style={{ fontSize: "11px", fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: GREEN }}>Admin</span>
+      <div className='inline-flex items-center gap-2 bg-emerald-50/10 border border-(--green) rounded-full p-2.5 mb-6'>
+        <span className='w-2 h-2 rounded-full bg-(--green) shadow-[0_0_8px_var(--green)] inline-block' />
+        <span className='text-xs font-medium tracking-wide uppercase text-(--green)'>Admin</span>
       </div>
 
-      <h1 style={{ margin: "0 0 6px", fontSize: "36px", fontWeight: 700, color: TEXT, letterSpacing: "-0.01em" }}>
-        Ver <span style={{ color: GREEN, fontStyle: "italic" }}>inscriptos</span>
+      <h1 className='m-0 mb-1.5 text-3xl font-bold tracking-tight text-(--text-style)'>
+        Ver <span className='font-italic text-(--green)'>inscriptos</span>
       </h1>
-      <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, color: "rgba(13,31,24,0.55)" }}>
+      <p className='m-0 mb-12 text-sm font-light text-gray-500'>
         Filtrá por día y seleccioná una clase para ver los inscriptos.
       </p>
-      <div style={{ width: "36px", height: "2px", background: GREEN, boxShadow: `0 0 10px ${GREEN}88`, marginBottom: "32px" }} />
+      <div className='w-9 h-1 bg-(--green) shadow-[0_0_10px_var(--green)88] mb-12' />
 
-      <div style={{
-        background: CARD, border: "1px solid rgba(45,190,127,0.15)",
-        borderRadius: "20px", padding: "28px 24px", maxWidth: "600px",
-        display: "flex", flexDirection: "column", gap: "20px", marginBottom: "32px"
-      }}>
+      <div className='bg-(--card-style) border border-emerald-150 rounded-2xl p-7 max-w-600 flex flex-col gap-5 mb-12'>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ ...labelStyle, marginBottom: 0 }}>Filtrar por día</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="label mb-0">Filtrar por día</span>
             {fechaFiltro && (
               <button
                 onClick={clearFiltro}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: '11px', color: 'rgba(13,31,24,0.4)', letterSpacing: '0.06em',
-                  textTransform: 'uppercase', padding: 0,
-                }}
+                className="bg-transparent border-none cursor-pointer text-xs text-gray-400 tracking-wide uppercase px-0"
               >
                 Limpiar ×
               </button>
@@ -326,18 +124,18 @@ function RouteComponent() {
             placeholder="Cualquier fecha"
           />
           {fechaFiltro && (
-            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "rgba(13,31,24,0.45)" }}>
+            <p className="text-xs text-gray-500 mt-1">
               {filteredClases.length} clase{filteredClases.length !== 1 ? 's' : ''} en el día seleccionado
             </p>
           )}
         </div>
 
-        <div style={{ height: "1px", background: "rgba(45,190,127,0.15)" }} />
+        <div className='h-px bg-emerald-150' />
 
-        <label style={labelStyle}>
+        <label className="label">
           Clase
           {loadingClases ? (
-            <p style={{ fontSize: '12px', color: 'rgba(13,31,24,0.4)', marginTop: '8px', marginBottom: 0 }}>Cargando clases...</p>
+            <p className='text-xs text-gray-400 mt-2 mb-0'>Cargando clases...</p>
           ) : (
             <select
               value={selectedClase?.id ?? ''}
@@ -350,12 +148,12 @@ function RouteComponent() {
                 setMessage(null)
                 if (clase) void loadInscriptos(clase)
               }}
-              style={inputStyle}
+            className='input'
             >
               <option value="">-- Seleccioná una clase --</option>
               {filteredClases.map(clase => (
                 <option key={clase.id} value={clase.id}>
-                  {formatClaseLabel(clase)}
+                  {formatClassLabel(clase)}
                 </option>
               ))}
             </select>
@@ -363,44 +161,44 @@ function RouteComponent() {
         </label>
 
         {error && (
-          <p style={{ margin: 0, padding: "12px 16px", borderRadius: "10px", background: "rgba(220,50,50,0.1)", border: "1px solid rgba(220,50,50,0.3)", color: "#ff6b6b", fontSize: "13px" }}>
+          <p className='m-0 p-3 rounded-lg bg-red-50/10 border border-red-300 text-red-500 text-sm'>
             ✕ {error}
           </p>
         )}
 
         {message && (
-          <p style={{ margin: 0, padding: "12px 16px", borderRadius: "10px", background: "rgba(45,190,127,0.12)", border: "1px solid rgba(45,190,127,0.3)", color: GREEN, fontSize: "13px" }}>
+          <p className='m-0 p-3 rounded-lg bg-emerald-50/10 border border-emerald-300 text-emerald-500 text-sm'>
             {message}
           </p>
         )}
       </div>
 
       {loadingInscriptos && (
-        <p style={{ color: 'rgba(13,31,24,0.4)', fontSize: '14px' }}>Cargando inscriptos...</p>
+        <p className='text-gray-400 text-sm'>Cargando inscriptos...</p>
       )}
 
       {inscriptos.length > 0 && (
         <>
-          <p style={{ fontSize: '13px', color: 'rgba(13,31,24,0.5)', marginBottom: '16px' }}>
+          <p className='text-sm text-gray-500 mb-4'>
             {inscriptos.length} inscripto/s en la clase
           </p>
-          <div style={{ overflowX: 'auto' }}>
+          <div className='overflow-x-auto'>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
               <thead>
-                <tr style={{ borderBottom: `2px solid rgba(45,190,127,0.2)` }}>
+                <tr className='border-b border-emerald-200'>
                   {['Nombre', 'Apellido', 'DNI', 'Mail', 'Estado'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 14px', color: GREEN, fontWeight: 600, fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
+                    <th key={h} className='text-left p-2.5 text-(--green) font-semibold text-xs tracking-wide uppercase'>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {inscriptos.map((inscripto) => (
-                  <tr key={inscripto.clienteId} style={{ borderBottom: '1px solid rgba(45,190,127,0.1)' }}>
-                    <td style={{ padding: '12px 14px', color: TEXT }}>{inscripto.nombre ?? '-'}</td>
-                    <td style={{ padding: '12px 14px', color: TEXT }}>{inscripto.apellido ?? '-'}</td>
-                    <td style={{ padding: '12px 14px', color: TEXT }}>{inscripto.dni ?? '-'}</td>
-                    <td style={{ padding: '12px 14px', color: TEXT }}>{inscripto.mail ?? '-'}</td>
-                    <td style={{ padding: '12px 14px', color: TEXT }}>{inscripto.estado ?? '-'}</td>
+                  <tr key={inscripto.id} className='border-b border-emerald-100'>
+                    <td className='p-2.5 text-(--text-style)'>{inscripto.nombre ?? '-'}</td>
+                    <td className='p-2.5 text-(--text-style)'>{inscripto.apellido ?? '-'}</td>
+                    <td className='p-2.5 text-(--text-style)'>{inscripto.dni ?? '-'}</td>
+                    <td className='p-2.5 text-(--text-style)'>{inscripto.mail ?? '-'}</td>
+                    <td className='p-2.5 text-(--text-style)'>{inscripto.estado ?? '-'}</td>
                   </tr>
                 ))}
               </tbody>

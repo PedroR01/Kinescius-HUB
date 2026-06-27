@@ -1,8 +1,17 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { KinesciusClass } from "@/lib/class-interface"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+export function formatClassLabel(clase: KinesciusClass) {
+  const fecha = formatDate(clase.fecha)
+  const hora = formatTime(clase.hora)
+  const tipo = clase.tipo ?? 'Sin tipo'
+  const profesor = clase.profesor ?? 'Sin profesor' // Unificar nombre y apellido
+  return `${fecha} ${hora} — ${tipo} (${profesor})`
 }
 
 export function formatDate(fecha: string) {

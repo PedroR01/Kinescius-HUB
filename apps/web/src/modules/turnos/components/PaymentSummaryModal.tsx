@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { btnBase, btnPrimary, btnSecondary } from "@/lib/ks-page-styles";
 import { CLASS_PRICE } from "@/lib/constants";
-import { buildClasePayload } from "@/lib/clase-payload";
+import { buildClasePayload } from "@/lib/class-payload";
 import { EASE_OUT } from "@/lib/motion";
 import type { ClassSlot } from "@/lib/class-interface";
 import {
