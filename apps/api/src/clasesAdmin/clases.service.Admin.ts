@@ -14,7 +14,7 @@ export class ClasesAdminService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly emailService: EmailService,
-  ) {}
+  ) { }
 
   async findAll(startDate?: string, endDate?: string) {
 
@@ -420,7 +420,9 @@ export class ClasesAdminService {
   async getClientes() {
     const { data, error } = await this.supabaseService.client
       .from("Cliente")
-      .select("id, Usuario!inner(Persona(nombre,apellido,dni,mail))");
+      .select("id, Usuario!inner(activo, Persona(nombre,apellido,dni,mail))")
+      .eq("Usuario.activo", true)
+
 
     if (error) {
       throw new InternalServerErrorException(
@@ -633,5 +635,12 @@ export class ClasesAdminService {
       idClase,
       idProfesor,
     };
+  }
+
+  async suspenderUsuario(id: number) {
+    const { data, error } = await this.supabaseService.client
+      .from('Usuario')
+      .update({ activo: false })
+      .eq('id', id);
   }
 }

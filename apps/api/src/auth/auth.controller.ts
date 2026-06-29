@@ -9,7 +9,7 @@ import { CambioPasswordDto } from './dto/cambio-passwd.dto';
 @Controller('auth')
 export class AuthController {
   //agrego el archivo de servicios
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   // 2. Al agregar @Post('registro'), el endpoint final es: POST /api/auth/registro
   @Post('registro')
@@ -17,14 +17,20 @@ export class AuthController {
     // El controlador NO toma decisiones, solo recibe las peticiones y se las pasa al archivo con los servicios
     return this.authService.registrarUsuario(datosRegistro);
   }
-  
+
+  @Post('registroAbonado')
+  registrarUsuarioAbonado(@Body() datosRegistro: RegistroDto) {
+    // El controlador NO toma decisiones, solo recibe las peticiones y se las pasa al archivo con los servicios
+    return this.authService.registrarUsuarioAbonado(datosRegistro);
+  }
+
   @Post('login')
-  iniciarSesion(@Body() datosIngresados: InicioDto) { 
+  iniciarSesion(@Body() datosIngresados: InicioDto) {
     return this.authService.iniciarSesion(datosIngresados);
   }
 
   @Post('recuperar')
-  recuperarPasswd(@Body() datos: RecuperarDto){ //Si bien es un string, uso dto para validar el email
+  recuperarPasswd(@Body() datos: RecuperarDto) { //Si bien es un string, uso dto para validar el email
     return this.authService.recuperarPasswd(datos.email);
   }
 

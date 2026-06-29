@@ -46,6 +46,29 @@ function RouteComponent() {
     }
   }
 
+  const suspencionHandler = async (id: number) => {
+    console.log("Se ejecuta el Handler de suspencion para el id " + id)
+    try {
+      const response = await fetch(`${API_BASE}/admin/clases/suspender`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al suspender el cliente')
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido')
+      return null
+    }
+  }
+
   useEffect(() => {
     loadClientes()
   }, [])
@@ -91,7 +114,7 @@ function RouteComponent() {
 
         <div className="grid grid-cols-1 gap-14 md:grid-cols-2 xl:grid-cols-3">
           {clientes.map((cliente) => (
-            <button
+            <div
               key={cliente.clienteId}
               className="group relative overflow-hidden rounded-[42px] bg-[#f0faf5] p-10 text-left shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
             >
@@ -136,12 +159,25 @@ function RouteComponent() {
                     {cliente.mail}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm("¿Desea suspender al cliente?")) {
+                      suspencionHandler(cliente.clienteId)
+                    }
+                  }}
+                  className="mt-2 w-full rounded-[16px] bg-red-300 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-md transition-all duration-300 hover:bg-red-600 hover:shadow-lg"
+                >
+                  Suspender cliente
+                </button>
+
+
               </div>
 
               <div className="relative z-10 mt-8 flex justify-end">
                 <div className="h-4 w-4 rounded-full bg-[#2DBE7F] shadow-lg shadow-[#2DBE7F]"></div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </section>
