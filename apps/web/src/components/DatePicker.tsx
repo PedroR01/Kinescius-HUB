@@ -3,7 +3,7 @@ import { useState } from "react"
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-function DatePicker({
+export function DatePicker({
   value,
   onChange,
   placeholder = 'Seleccionar fecha...',
@@ -56,11 +56,10 @@ function DatePicker({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
-    <div style={{ position: 'relative', marginTop: '6px' }}>
+    <div className="relative mt-1.5">
       <div
         onClick={() => setOpen(o => !o)}
-        className='input mt-0 flex items-center justify-between user-select-none'
-        style={{ color: value ? 'var(--text-style)' : 'rgba(13,31,24,0.35)' }}
+        className={`input mt-0 flex items-center justify-between user-select-none ${value ? 'text-(--text-style)' : 'text-gray-400'}`}
       >
         <span>{displayValue || placeholder}</span>
         <span className='text-xs opacity-50'>▼</span>

@@ -418,4 +418,27 @@ export class AuthService {
     };
   }
 
+  async getUserProfile(token: string) {
+    const { data: userData, error: userError } = await this.supabaseService.client.auth.getUser(token);
+    if (userError || !userData.user) {
+      throw new UnauthorizedException('Sesión inválida o expirada.');
+    }
+
+    const { data: persona, error: personaError } = await this.supabaseService.client
+      .from('Persona')
+      .select('nombre, apellido, mail')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (personaError || !persona) {
+      throw new UnauthorizedException('No se encontró el perfil del usuario.');
+    }
+
+    return {
+      nombre: persona.nombre,
+      apellido: persona.apellido,
+      mail: persona.mail,
+    };
+  }
+
 }

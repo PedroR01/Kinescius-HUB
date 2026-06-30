@@ -37,11 +37,13 @@ const IniciarSesion = () => {
     email: "",
     passwd: ""
   });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleInicio = async () => {
+  const handleInicio = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError("");
     setMessage("");
 
@@ -149,7 +151,7 @@ const IniciarSesion = () => {
     >
       {!estaLogueado ? (
         <section className={formCardClass}>
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={handleInicio}>
             <div className={fieldStackClass}>
               <AuthFormField
                 label="Email:"
@@ -170,8 +172,7 @@ const IniciarSesion = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
-                type="button"
-                onClick={handleInicio}
+                type="submit"
                 disabled={isProcessing}
                 className={cn(btnBase, btnPrimary)}
               >

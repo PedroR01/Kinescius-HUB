@@ -14,6 +14,10 @@ export interface ClassToken extends KinesciusClass {
   id_administrador: number;
 }
 
+export interface ClientEnrollment {
+  id_clase: number;
+}
+
 export interface ClassSlot {
   key: string;
   date: string;

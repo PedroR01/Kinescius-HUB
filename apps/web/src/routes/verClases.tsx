@@ -4,8 +4,7 @@ import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import DatePicker from '@/components/DatePicker'
 import type { KinesciusClass } from '@/lib/class-interface'
-import type { User } from '@/lib/user-interface'
-import { formatClassLabel, formatDate, formatTime } from '@/lib/utils'
+import { formatDate, formatTime } from '@/lib/utils'
 
 export const Route = createFileRoute('/verClases')({
   component: RouteComponent,

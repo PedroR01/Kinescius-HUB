@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Headers, UnauthorizedException, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegistroDto } from './dto/registro.dto';
 import { RegistroProfesorDto } from './dto/registro-profesor.dto';
@@ -54,6 +54,15 @@ export class AuthController {
 
     // Le pasamos todo procesado al servicio de cambio de passwd
     return this.authService.cambiarPasswd(token, datos.passwdActual, datos.passwdNueva);
+  }
+  
+  @Get('me')
+  getUserProfile(@Headers('authorization') authHeader: string) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('No se proporcionó un token de autorización válido.');
+    }
+    const token = authHeader.split(' ')[1];
+    return this.authService.getUserProfile(token);
   }
 
 }

@@ -36,3 +36,33 @@ export function formatTime(hora: string) {
   const [hh, mm] = hora.split(":");
   return `${hh}:${mm}`;
 }
+
+export function normalizeFecha(fecha: string) {
+  const trimmed = fecha.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('T')) return trimmed.split('T')[0];
+  if (trimmed.includes('/')) {
+    const [day, month, year] = trimmed.split('/').map((part) => part.trim());
+    if (day && month && year) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+}
+
+export function getMinFecha() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0)
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getTodayDate() {
+  const today = new Date()
+  const y = today.getFullYear()
+  const m = String(today.getMonth() + 1).padStart(2, '0')
+  const d = String(today.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}

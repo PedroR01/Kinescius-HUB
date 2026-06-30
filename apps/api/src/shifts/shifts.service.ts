@@ -4,7 +4,7 @@ import { CambiarTurnoDto } from './dto/cambiar-turno-dto';
 import { CancelarTurnoDto, TipoReembolso } from './dto/cancelar-turno-dto';
 import { CancelacionNoAbonadoStrategy } from './strategies/cancelacion-no-abonado.strategy';
 import { NotificacionEsperaService } from '../confirmarTurno/notificacion-espera.service';
-import { MisClasesResponseDto } from './dto/ver-clases-dto';
+import { InscripcionConClase, MisClasesResponseDto } from './dto/ver-clases-dto';
 import { ReembolsoService, ResultadoReembolso } from '../pagos/reembolso.service';
 import {
   construirMensajeReembolso,
@@ -195,7 +195,9 @@ export class ShiftsService {
           id,
           fecha,
           hora,
-          tipo
+          tipo,
+          cupo,
+          id_profesor
         )
       `)
       .eq('id_cliente', idCliente)
@@ -205,9 +207,51 @@ export class ShiftsService {
       throw new InternalServerErrorException('Error al recuperar las clases: ' + error.message);
     }
 
-    return data as unknown as MisClasesResponseDto[];
+    
+  const inscripciones = (data ?? []) as unknown as InscripcionConClase[];
+  const profesorIds = [...new Set(
+    inscripciones
+      .map((item) => item.Clase?.id_profesor)
+      .filter((id): id is number => typeof id === 'number'),
+  )];
+  const profesorNombres = new Map<number, string>();
+  if (profesorIds.length > 0) {
+    const { data: personas, error: profesorError } = await this.supabase.client
+      .from('Persona')
+      .select('id, nombre, apellido')
+      .in('id', profesorIds);
+    if (profesorError) {
+      throw new InternalServerErrorException(
+        'Error al obtener profesores: ' + profesorError.message,
+      );
+    }
+    (personas ?? []).forEach((persona: {
+      id: number;
+      nombre?: string | null;
+      apellido?: string | null;
+    }) => {
+      const nombreCompleto = [persona.nombre, persona.apellido]
+        .filter(Boolean)
+        .join(' ');
+      profesorNombres.set(persona.id, nombreCompleto || 'Sin profesor');
+    });
   }
-
-
+  return inscripciones.map((item) => ({
+    id_clase: item.id_clase,
+    id_cliente: item.id_cliente,
+    monto_a_favor: item.monto_a_favor,
+    estado: item.estado,
+    Clase: {
+      id: item.Clase.id,
+      fecha: item.Clase.fecha,
+      hora: item.Clase.hora,
+      tipo: item.Clase.tipo,
+      cupo: item.Clase.cupo,
+      profesor: item.Clase.id_profesor
+        ? profesorNombres.get(item.Clase.id_profesor) ?? 'Sin profesor'
+        : 'Sin profesor',
+    },
+  }));
+  }
 
 }

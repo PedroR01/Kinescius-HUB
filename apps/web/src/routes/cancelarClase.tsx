@@ -2,47 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
-
-type Clase = {
-  id: number
-  fecha: string
-  hora: string
-  tipo: string | null
-  profesor_nombre?: string | null
-  cupo?: number | null
-}
-
-function formatDate(fecha: string) {
-  const [year, month, day] = fecha.split('T')[0].split('-')
-  return `${Number(day)}/${Number(month)}/${year}`
-}
-
-function formatTime(hora: string) {
-  return hora.replace(/:00$/, 'hs')
-}
-
-function getMinFecha() {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function normalizeFecha(fecha: string) {
-  const trimmed = fecha.trim()
-  if (!trimmed) return null
-  if (trimmed.includes('T')) return trimmed.split('T')[0]
-  if (trimmed.includes('/')) {
-    const [day, month, year] = trimmed.split('/').map((part) => part.trim())
-    if (day && month && year) {
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-    }
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
-  return null
-}
+import type { KinesciusClass } from '@/lib/class-interface'
+import { formatDate, formatTime, normalizeFecha, getMinFecha } from '@/lib/utils'
+import { DatePicker } from '@/components/DatePicker'
 
 function isClaseVisibleParaHoyOFuturo(fecha: string) {
   const normalizedFecha = normalizeFecha(fecha)
@@ -54,153 +16,8 @@ export const Route = createFileRoute('/cancelarClase')({
   component: RouteComponent,
 })
 
-// ── DatePicker ────────────────────────────────────────────────────────────────
-
-const GREEN = '#2DBE7F'
-const TEXT = '#0d1f18'
-
-const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-const MONTHS = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-]
-
-const dpTriggerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '8px 12px',
-  borderRadius: '8px',
-  border: '1px solid rgba(45,190,127,0.35)',
-  background: '#ffffff',
-  color: TEXT,
-  fontSize: '14px',
-  cursor: 'pointer',
-  userSelect: 'none',
-  minWidth: '160px',
-}
-
-function DatePicker({
-  value,
-  onChange,
-  placeholder = 'Seleccionar fecha...',
-  minDate,
-  maxDate,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  minDate?: string
-  maxDate?: string
-}) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const [viewYear, setViewYear] = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
-  const [open, setOpen] = useState(false)
-
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay()
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
-    else setViewMonth(m => m - 1)
-  }
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
-    else setViewMonth(m => m + 1)
-  }
-
-  const handleDay = (day: number) => {
-    const date = new Date(viewYear, viewMonth, day)
-    const dow = date.getDay()
-    if (dow === 0 || dow === 6) return // block weekends
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    if (minDate && dateStr < minDate) return
-    if (maxDate && dateStr > maxDate) return
-    onChange(dateStr)
-    setOpen(false)
-  }
-
-  const displayValue = value
-    ? new Date(value + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
-    : ''
-
-  const cells: (number | null)[] = []
-  for (let i = 0; i < firstDay; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(o => !o)} style={{ ...dpTriggerStyle, color: value ? TEXT : 'rgba(13,31,24,0.35)' }}>
-        <span>{displayValue || placeholder}</span>
-        <span style={{ fontSize: '11px', opacity: 0.5, marginLeft: '8px' }}>▼</span>
-      </div>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-          background: '#fff', border: '1px solid rgba(45,190,127,0.3)',
-          borderRadius: '14px', padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)', width: '280px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: GREEN, padding: '4px 8px' }}>‹</button>
-            <span style={{ fontWeight: 600, fontSize: '14px', color: TEXT }}>{MONTHS[viewMonth]} {viewYear}</span>
-            <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: GREEN, padding: '4px 8px' }}>›</button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
-            {DAYS.map(d => (
-              <div key={d} style={{
-                textAlign: 'center', fontSize: '10px', fontWeight: 600,
-                color: d === 'Dom' || d === 'Sáb' ? 'rgba(13,31,24,0.25)' : 'rgba(13,31,24,0.45)',
-                padding: '4px 0', letterSpacing: '0.04em',
-              }}>{d}</div>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
-            {cells.map((day, i) => {
-              if (day === null) return <div key={`e-${i}`} />
-              const date = new Date(viewYear, viewMonth, day)
-              const dow = date.getDay()
-              const isWeekend = dow === 0 || dow === 6
-              const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-              const isSelected = value === dateStr
-              const isDisabled = isWeekend || (!!minDate && dateStr < minDate) || (!!maxDate && dateStr > maxDate)
-              const isToday = date.getTime() === today.getTime()
-              return (
-                <div
-                  key={day}
-                  onClick={() => handleDay(day)}
-                  style={{
-                    textAlign: 'center', padding: '6px 2px', borderRadius: '8px', fontSize: '13px',
-                    cursor: isDisabled ? 'default' : 'pointer',
-                    fontWeight: isSelected ? 700 : 400,
-                    background: isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent',
-                    color: isSelected ? '#fff' : isDisabled ? 'rgba(13,31,24,0.2)' : TEXT,
-                    border: isToday && !isSelected ? `1px solid ${GREEN}` : '1px solid transparent',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!isDisabled) (e.currentTarget.style.background = isSelected ? GREEN : 'rgba(45,190,127,0.12)') }}
-                  onMouseLeave={e => { if (!isDisabled) (e.currentTarget.style.background = isSelected ? GREEN : isToday ? 'rgba(45,190,127,0.1)' : 'transparent') }}
-                >
-                  {day}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── RouteComponent ────────────────────────────────────────────────────────────
-
 function RouteComponent() {
-  const [classes, setClasses] = useState<Clase[]>([])
+  const [classes, setClasses] = useState<KinesciusClass[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -226,7 +43,7 @@ function RouteComponent() {
         throw new Error(data?.message ?? `Error ${response.status}`)
       }
 
-      const clases = (data ?? []) as Clase[]
+      const clases = (data ?? []) as KinesciusClass[]
       const clasesVisibles = clases.filter((clase) => isClaseVisibleParaHoyOFuturo(clase.fecha))
       setClasses(clasesVisibles)
 
@@ -280,19 +97,14 @@ function RouteComponent() {
           <td>{formatDate(clase.fecha)}</td>
           <td>{formatTime(clase.hora)}</td>
           <td>{clase.tipo ?? 'Sin tipo'}</td>
-          <td>{clase.profesor_nombre ?? 'Sin profesor'}</td>
+          <td>{clase.profesor ?? 'Sin profesor'}</td>
           <td>{clase.cupo ?? 'N/A'}</td>
           <td>
             <button
               type="button"
-              className="button button-secondary"
+              className="bg-ks-gray-soft text-ks-gray-text border border-ks-gray-border rounded-ks-full p-4"
               onClick={() => cancelClass(clase.id)}
               disabled={cancelingId === clase.id}
-              style={{
-                background: '#f0faf5',
-                border: '1px solid rgba(45,190,127,0.25)',
-                color: '#0d1f18',
-              }}
             >
               {cancelingId === clase.id ? 'Cancelando...' : 'Cancelar'}
             </button>
@@ -305,15 +117,15 @@ function RouteComponent() {
   return (
     <main className="page-shell">
       <BackPreviousRouteButton className="mb-4" />
-      <section className="hero-card" style={{ background: '#f0faf5' }}>
+      <section className="bg-ks-off-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]">
         <h1>Cancelar clase</h1>
         <p>Seleccioná una clase programada para cancelarla.</p>
       </section>
 
-      <section className="form-card" style={{ background: '#f0faf5' }}>
+      <section className="bg-ks-off-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]">
         <div className="field-column">
-          <div className="field-row" style={{ alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 500 }}>
+          <div className="flex items-end gap-4 flex-wrap">
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               Fecha desde
               <DatePicker
                 value={startDate}
@@ -322,7 +134,7 @@ function RouteComponent() {
                 placeholder="Fecha desde..."
               />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 500 }}>
+            <label className="flex flex-col gap-1.5 text-sm font-medium">
               Fecha hasta
               <DatePicker
                 value={endDate}
@@ -335,11 +147,10 @@ function RouteComponent() {
 
           <div className="actions-row">
             <button
-              className="button button-primary"
+              className="bg-ks-green-dark text-white rounded-ks-full p-4"
               type="button"
               onClick={() => void loadClasses()}
               disabled={loading}
-              style={{ background: '#2DBE7F', color: '#0d1f18' }}
             >
               {loading ? 'Cargando...' : 'Visualizar clases'}
             </button>
@@ -353,15 +164,7 @@ function RouteComponent() {
                   setClasses([])
                   setMessage(null)
                 }}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid rgba(45,190,127,0.4)',
-                  color: '#2DBE7F',
-                  borderRadius: '100px',
-                  padding: '8px 18px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                }}
+                className="bg-transparent border border-ks-green-light text-ks-green-light rounded-ks-full p-4 cursor-pointer text-sm"
               >
                 Limpiar filtros
               </button>
@@ -373,7 +176,7 @@ function RouteComponent() {
         {message ? <p className="status-badge success">{message}</p> : null}
 
         {classes.length > 0 ? (
-          <div className="table-card">
+          <div className="bg-ks-off-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]">
             <table>
               <thead>
                 <tr>

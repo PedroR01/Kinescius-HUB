@@ -4,7 +4,7 @@ import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import DatePicker from '@/components/DatePicker'
 import type { KinesciusClass } from '@/lib/class-interface'
-import type { User } from '@/lib/user-interface'
+import type { UserData } from '@/lib/user-interface'
 import { formatClassLabel } from '@/lib/utils'
 
 export const Route = createFileRoute('/verInscriptos')({
@@ -15,7 +15,7 @@ function RouteComponent() {
   const [clases, setClases] = useState<KinesciusClass[]>([])
   const [filteredClases, setFilteredClases] = useState<KinesciusClass[]>([])
   const [selectedClase, setSelectedClase] = useState<KinesciusClass | null>(null)
-  const [inscriptos, setInscriptos] = useState<User[]>([])
+  const [inscriptos, setInscriptos] = useState<UserData[]>([])
   const [loadingClases, setLoadingClases] = useState(false)
   const [loadingInscriptos, setLoadingInscriptos] = useState(false)
   const [error, setError] = useState<string | null>(null)

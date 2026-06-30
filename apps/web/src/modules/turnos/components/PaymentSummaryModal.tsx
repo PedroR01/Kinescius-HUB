@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { btnBase, btnPrimary, btnSecondary } from "@/lib/ks-page-styles";
 import { CLASS_PRICE } from "@/lib/constants";
-import { buildClasePayload } from "@/lib/class-payload";
+import { buildClassPayload } from "@/lib/class-payload";
 import { EASE_OUT } from "@/lib/motion";
 import type { ClassSlot } from "@/lib/class-interface";
 import {
@@ -72,7 +72,7 @@ export function PaymentSummaryModal({
     setErrorMessage(null);
 
     try {
-      const clases = items.map((slot) => buildClasePayload(slot.source));
+      const clases = items.map((slot) => buildClassPayload(slot.source));
       const paidKeys = items.map((slot) => slot.key);
 
       if (totalFinal === 0) {
@@ -116,7 +116,7 @@ export function PaymentSummaryModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(15,36,25,0.45)] p-6"
+          className="fixed inset-0 z-1000 flex items-center justify-center bg-[rgba(15,36,25,0.45)] p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

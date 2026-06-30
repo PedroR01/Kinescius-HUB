@@ -295,7 +295,7 @@ p {
 }
 
 .input{
-@apply w-full p-2.5 rounded-lg border border-emerald-200 bg-white text-text-style text-sm outline-none box-border mt-1.5 cursor-pointer;
+@apply w-full p-2.5 rounded-lg border border-emerald-200 bg-white text-(--text-style) text-sm outline-none box-border mt-1.5 cursor-pointer;
 }
 
 .toggle-base{

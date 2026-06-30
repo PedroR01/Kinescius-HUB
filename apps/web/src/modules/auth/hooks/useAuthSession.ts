@@ -1,3 +1,5 @@
+import { API_BASE } from "@/lib/constants";
+import type { UserProfile } from "@/lib/user-interface";
 import { useCallback, useEffect, useState } from "react";
 
 export type UserRole = "admin" | "usuario" | "profesor";
@@ -47,4 +49,28 @@ export function useAuthSession() {
   }, []);
 
   return { ...session, clearSession };
+}
+
+export function useCurrentUserProfile() {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      try {
+        const response = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        setUserProfile(data as UserProfile);
+      } catch (error) {
+        console.error("Error al obtener el perfil del usuario:", error);
+      }
+    };
+    fetchUserProfile();
+  }, []);
+  
+  return userProfile;
 }

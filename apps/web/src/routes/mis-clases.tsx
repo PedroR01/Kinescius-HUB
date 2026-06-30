@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { motion } from 'motion/react';
-import { Calendar, Clock, ArrowRightLeft, X } from 'lucide-react';
+import { Calendar, Clock, ArrowRightLeft, X, User2Icon } from 'lucide-react';
 import { CambiarTurno } from '../modules/turnos/components/cambiarTurnoModal';
 import { CancelarTurno } from '../modules/turnos/components/cancelarTurnoModal';
 import { Button } from '@/components/ui/button';
@@ -9,29 +9,23 @@ import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton';
 import { EASE_OUT, fadeUp, staggerContainer } from '@/lib/motion';
 import { API_BASE } from '@/lib/constants';
 import { useClienteId } from '@/hooks/useClienteId';
+import type { KinesciusClass } from '@/lib/class-interface';
 
 export const Route = createFileRoute('/mis-clases')({
     component: () => <GestionClases />,
 });
 
-interface ClaseDto {
-    id: number;
-    fecha: string;
-    hora: string;
-    tipo: string;
-}
-
-interface MisClasesResponseDto {
+interface MisInscripciones {
     id_clase: number;
     id_cliente: number;
     monto_a_favor?: boolean;
-    Clase: ClaseDto;
+    Clase: KinesciusClass;
 }
 
 export default function GestionClases() {
-    const [misClases, setMisClases] = useState<MisClasesResponseDto[]>([]);
+    const [misClases, setMisClases] = useState<MisInscripciones[]>([]);
     const [modalActivo, setModalActivo] = useState<'CAMBIAR' | 'CANCELAR' | null>(null);
-    const [claseSeleccionada, setClaseSeleccionada] = useState<MisClasesResponseDto | null>(null);
+    const [claseSeleccionada, setClaseSeleccionada] = useState<MisInscripciones | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
@@ -60,7 +54,7 @@ export default function GestionClases() {
         }
     }, [idCliente, clienteLoading]);
 
-    const abrirModal = (tipo: 'CAMBIAR' | 'CANCELAR', clase: MisClasesResponseDto) => {
+    const abrirModal = (tipo: 'CAMBIAR' | 'CANCELAR', clase: MisInscripciones) => {
         setClaseSeleccionada(clase);
         setModalActivo(tipo);
     };
@@ -176,6 +170,14 @@ export default function GestionClases() {
                                                         </div>
                                                         <span className="font-medium text-slate-700 text-[15px]">
                                                             {item.Clase.hora.slice(0, 5)} hs
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-main/10 text-main shrink-0">
+                                                            <User2Icon className="w-4 h-4" strokeWidth={2.5} />
+                                                        </div>
+                                                        <span className="font-medium text-slate-700 text-[15px]">
+                                                            {item.Clase.profesor}
                                                         </span>
                                                     </div>
                                                 </div>
