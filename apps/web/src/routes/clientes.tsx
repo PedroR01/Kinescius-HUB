@@ -2,21 +2,14 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
+import type { UserData } from '@/lib/user-interface'
 
 export const Route = createFileRoute('/clientes')({
   component: RouteComponent,
 })
 
-type Cliente = {
-  clienteId: number
-  nombre: string
-  apellido: string
-  dni: string
-  mail: string
-}
-
 function RouteComponent() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientes, setClientes] = useState<UserData[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate();

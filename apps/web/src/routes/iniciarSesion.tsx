@@ -20,6 +20,7 @@ type FormData = {
 
 const IniciarSesion = () => {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [estaLogueado, setEstaLogueado] = useState(false);
   useEffect(() => {
     const token = localStorage.getItem("miToken");
@@ -36,11 +37,13 @@ const IniciarSesion = () => {
     email: "",
     passwd: ""
   });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleInicio = async () => {
+  const handleInicio = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError("");
     setMessage("");
 
@@ -79,6 +82,16 @@ const IniciarSesion = () => {
 
         setMessage("Inicio de sesión exitoso!");
         setTimeout(() => {
+          if (redirect) {
+            window.location.href = redirect;
+            return;
+          }
+
+          if (data.rol === "profesor") {
+            navigate({ to: "/profesor" });
+            return;
+          }
+
           navigate({ to: "/home" });
         }, 1000);
       } else {
@@ -138,7 +151,7 @@ const IniciarSesion = () => {
     >
       {!estaLogueado ? (
         <section className={formCardClass}>
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={handleInicio}>
             <div className={fieldStackClass}>
               <AuthFormField
                 label="Email:"
@@ -159,8 +172,7 @@ const IniciarSesion = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
-                type="button"
-                onClick={handleInicio}
+                type="submit"
                 disabled={isProcessing}
                 className={cn(btnBase, btnPrimary)}
               >
@@ -207,5 +219,8 @@ const IniciarSesion = () => {
 };
 
 export const Route = createFileRoute("/iniciarSesion")({
-  component: IniciarSesion
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
+  component: IniciarSesion,
 });

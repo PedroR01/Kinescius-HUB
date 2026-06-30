@@ -1,5 +1,5 @@
 import { API_BASE } from "@/lib/constants";
-import type { ClasePayload } from "@/lib/clase-payload";
+import type { ClasePayload } from "@/lib/class-payload";
 
 export type CreatePreferencePayload = {
   clases: ClasePayload[];

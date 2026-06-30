@@ -1,95 +1,44 @@
 ﻿import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { formatDate, formatTime } from '@/lib/utils'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
-
-type Clase = {
-  id: number
-  tipo: string | null
-  fecha: string
-  hora: string
-  cupo: number | null
-}
+import { btnBase, btnPrimary, btnSecondary, formCardClass } from '@/lib/ks-page-styles'
+import type { KinesciusClass } from '@/lib/class-interface'
+import type { UserProfile } from '@/lib/user-interface'
+import { useClassFetcher } from '@/modules/turnos/hooks/useClassFetcher'
 
 type CountResponse = {
   claseId: number
   count: number
 }
 
-type Persona = {
-  nombre: string
-  apellido: string
-  dni: string
-  email: string
-}
-
 type ModalData =
-  | { type: 'single'; clase: Clase; claseIndex: number; count: number; personas: Persona[] }
+  | { type: 'single'; clase: KinesciusClass; claseIndex: number; count: number; personas: UserProfile[] }
   | { type: 'all'; results: { claseId: number; tipo: string | null; index: number; count: number }[] }
 
-const btnBase =
-  'font-outfit inline-block cursor-pointer rounded-full border-none px-7 py-[13px] text-[15px] font-semibold tracking-[0.2px] transition-all duration-150 hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:transform-none'
-
-const btnPrimary =
-  'bg-[linear-gradient(135deg,var(--ks-green-mid)_0%,var(--ks-green-light)_100%)] text-white shadow-[0_4px_16px_rgba(45,106,79,0.35)] hover:shadow-[0_8px_24px_rgba(45,106,79,0.45)]'
-
-const btnSecondary =
-  'border border-[rgba(82,183,136,0.3)] bg-ks-gray-soft text-ks-green-dark'
-
-const formCardClass =
-  'rounded-ks-lg border border-[rgba(82,183,136,0.18)] bg-white p-7 shadow-[0_8px_32px_rgba(26,58,42,0.12)] animate-ks-slide-up max-sm:p-5'
 
 export const Route = createFileRoute('/listaEspera')({
   component: () => <RouteComponent />,
 })
 
-function formatFecha(fecha: string) {
-  const [year, month, day] = fecha.split('T')[0].split('-').map(Number)
-  return `${day}/${month}/${year}`
-}
-
-function formatHora(hora: string) {
-  const [hh, mm] = hora.split(':')
-  return `${hh}:${mm}hs`
-}
-
 function RouteComponent() {
-  const [clases, setClases] = useState<Clase[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [modal, setModal] = useState<ModalData | null>(null)
 
-  const apiBase = API_BASE
+ const{classes: clases, loading: loading, error: error} = useClassFetcher();
 
-  useEffect(() => {
-    const fetchClases = async () => {
-      try {
-        const res = await fetch(`${apiBase}/clases`)
-        if (!res.ok) throw new Error(`Error al cargar clases: ${res.status}`)
-        const data = (await res.json()) as Clase[]
-        setClases(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error desconocido')
-      } finally {
-        setLoading(false)
-      }
-    }
-    void fetchClases()
-  }, [])
-
-  const handleViewWaitList = async (clase: Clase, index: number) => {
+  const handleViewWaitList = async (clase: KinesciusClass, index: number) => {
     setActionLoading(true)
     try {
       const [countRes, personasRes] = await Promise.all([
-        fetch(`${apiBase}/listaEspera/clase/${clase.id}/count`),
-        fetch(`${apiBase}/listaEspera/clase/${clase.id}`),
+        fetch(`${API_BASE}/listaEspera/clase/${clase.id}/count`),
+        fetch(`${API_BASE}/listaEspera/clase/${clase.id}`),
       ])
       if (!countRes.ok) throw new Error('Error al consultar lista de espera')
       if (!personasRes.ok) throw new Error('Error al consultar personas')
       const countData = (await countRes.json()) as CountResponse
-      const personas = (await personasRes.json()) as Persona[]
+      const personas = (await personasRes.json()) as UserProfile[]
       setModal({ type: 'single', clase, claseIndex: index + 1, count: countData.count, personas })
     } catch (err) {
       console.error(err)
@@ -104,7 +53,7 @@ function RouteComponent() {
       const results = await Promise.all(
         clases.map(async (clase, idx) => {
           try {
-            const res = await fetch(`${apiBase}/listaEspera/clase/${clase.id}/count`)
+            const res = await fetch(`${API_BASE}/listaEspera/clase/${clase.id}/count`)
             if (!res.ok) return null
             const data = (await res.json()) as CountResponse
             return data.count > 0
@@ -117,7 +66,7 @@ function RouteComponent() {
       )
       const filtered = results.filter(Boolean) as {
         claseId: number
-        tipo: string | null
+        tipo: string
         index: number
         count: number
       }[]
@@ -131,19 +80,11 @@ function RouteComponent() {
 
   return (
     <main
-      className={cn(
-        'mx-auto grid min-h-svh max-w-[760px] gap-4 px-6 pt-10 pb-16 font-dm-sans text-ks-gray-text antialiased',
-        'bg-[radial-gradient(ellipse_80%_50%_at_10%_0%,rgba(82,183,136,0.12)_0%,transparent_60%),radial-gradient(ellipse_60%_40%_at_90%_100%,rgba(183,224,85,0.1)_0%,transparent_55%),var(--ks-off-white)]',
-        'max-sm:px-4 max-sm:pt-5 max-sm:pb-12',
-      )}
+      className={"mx-auto grid min-h-svh max-w-[760px] gap-4 px-6 pt-10 pb-16 font-dm-sans text-ks-gray-text antialiased bg-[radial-gradient(ellipse_80%_50%_at_10%_0%,rgba(82,183,136,0.12)_0%,transparent_60%) radial-gradient(ellipse_60%_40%_at_90%_100%,rgba(183,224,85,0.1)_0%,transparent_55%) var(--ks-off-white)] max-sm:px-4 max-sm:pt-5 max-sm:pb-12"}
     >
       <BackPreviousRouteButton />
       <section
-        className={cn(
-          'ks-hero-card relative overflow-hidden rounded-ks-lg px-10 py-12 shadow-[0_20px_60px_rgba(26,58,42,0.18)] animate-ks-slide-up',
-          'bg-[linear-gradient(135deg,var(--ks-green-dark)_0%,var(--ks-green-mid)_60%,var(--ks-green-light)_100%)]',
-          'max-sm:px-6 max-sm:py-8',
-        )}
+        className="ks-hero-card relative overflow-hidden rounded-ks-lg px-10 py-12 shadow-[0_20px_60px_rgba(26,58,42,0.18)] animate-ks-slide-up bg-[linear-gradient(135deg,var(--ks-green-dark)_0%,var(--ks-green-mid)_60%,var(--ks-green-light)_100%)] max-sm:px-6 max-sm:py-8"
       >
         <h1 className="relative m-0 mb-2 font-outfit text-[38px] font-bold tracking-[-1px] text-white max-sm:text-[28px]">
           Lista de espera
@@ -154,13 +95,13 @@ function RouteComponent() {
       </section>
 
       {!loading && !error && clases.length > 0 && (
-        <section className={cn(formCardClass, 'flex flex-wrap items-center justify-between gap-3')}>
+        <section className={`${formCardClass} flex flex-wrap items-center justify-between gap-3`}>
           <p className="m-0 text-sm text-ks-gray-text">
             {clases.length} clase{clases.length !== 1 ? 's' : ''} encontrada
             {clases.length !== 1 ? 's' : ''}
           </p>
           <button
-            className={cn(btnBase, btnPrimary)}
+            className={`${btnBase} ${btnPrimary}`}
             type="button"
             onClick={handleViewAll}
             disabled={actionLoading}
@@ -172,10 +113,7 @@ function RouteComponent() {
 
       {loading && (
         <section
-          className={cn(
-            'animate-ks-slide-up rounded-ks-md border border-[rgba(82,183,136,0.25)] px-5 py-4',
-            'bg-[linear-gradient(135deg,rgba(82,183,136,0.08),rgba(183,224,85,0.08))]',
-          )}
+          className={`${formCardClass} animate-ks-slide-up rounded-ks-md border border-[rgba(82,183,136,0.25)] px-5 py-4 bg-[linear-gradient(135deg,rgba(82,183,136,0.08),rgba(183,224,85,0.08))]`}
         >
           <p className="text-sm leading-relaxed font-medium text-ks-green-dark">Cargando clases...</p>
         </section>
@@ -201,11 +139,11 @@ function RouteComponent() {
                     Clase {idx + 1} — {clase.tipo ?? 'Sin tipo'}
                   </p>
                   <p className="m-0 text-[13px] text-ks-gray-text">
-                    {formatFecha(clase.fecha)} · {formatHora(clase.hora)}
+                    {formatDate(clase.fecha)} · {formatTime(clase.hora)}
                   </p>
                 </div>
                 <button
-                  className={cn(btnBase, btnSecondary, 'whitespace-nowrap')}
+                  className={`${btnBase} ${btnSecondary} whitespace-nowrap`}
                   type="button"
                   onClick={() => handleViewWaitList(clase, idx)}
                   disabled={actionLoading}
@@ -220,7 +158,7 @@ function RouteComponent() {
 
       {modal && (
         <div
-          className="fixed inset-0 z-[1000] flex animate-ks-fade-in items-center justify-center bg-[rgba(15,36,25,0.45)] p-6"
+          className="fixed inset-0 z-1000 flex animate-ks-fade-in items-center justify-center bg-[rgba(15,36,25,0.45)] p-6"
           onClick={() => setModal(null)}
         >
           <div
@@ -235,7 +173,7 @@ function RouteComponent() {
                       Clase {modal.claseIndex} — {modal.clase.tipo ?? 'Sin tipo'}
                     </h2>
                     <p className="m-0 text-[13px] text-ks-gray-text">
-                      {formatFecha(modal.clase.fecha)} · {formatHora(modal.clase.hora)}
+                      {formatDate(modal.clase.fecha)} · {formatTime(modal.clase.hora)}
                     </p>
                   </div>
                   <button
@@ -262,7 +200,7 @@ function RouteComponent() {
                           {p.nombre} {p.apellido}
                         </p>
                         <p className="m-0 mt-0.5 text-[13px] text-ks-gray-text">DNI: {p.dni}</p>
-                        <p className="m-0 mt-0.5 text-[13px] text-ks-gray-text">{p.email}</p>
+                        <p className="m-0 mt-0.5 text-[13px] text-ks-gray-text">{p.mail}</p>
                       </div>
                     ))}
                   </div>
@@ -309,7 +247,7 @@ function RouteComponent() {
             )}
 
             <button
-              className={cn(btnBase, btnPrimary, 'mt-5 w-full')}
+              className={`${btnBase} ${btnPrimary} mt-5 w-full`}
               type="button"
               onClick={() => setModal(null)}
             >

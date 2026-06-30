@@ -1,13 +1,7 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { API_BASE } from '@/lib/constants';
-
-type ClaseInfo = {
-  id: number;
-  tipo: string;
-  fecha: string;
-  hora: string;
-};
+import type { KinesciusClass } from '@/lib/class-interface';
 
 export const Route = createFileRoute('/confirmar-turno')({
   component: ConfirmarTurnoPage,
@@ -20,7 +14,7 @@ function ConfirmarTurnoPage() {
     clienteId: string;
   };
 
-  const [clase, setClase] = useState<ClaseInfo | null>(null);
+  const [clase, setClase] = useState<KinesciusClass | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirmando, setConfirmando] = useState(false);
@@ -73,49 +67,49 @@ function ConfirmarTurnoPage() {
   };
 
   if (loading) return (
-    <div style={styles.container}>
-      <p style={styles.texto}>Validando tu enlace...</p>
+    <div className='min-h-svh flex items-center justify-center p-6 bg-ks-off-white'>
+      <p className='text-ks-gray-text text-sm'>Validando tu enlace...</p>
     </div>
   );
 
   if (exito) return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={{ color: '#1a6b4a' }}>✅ Turno solicitado</h2>
-        <p style={styles.texto}>Tu turno fue confirmado exitosamente.</p>
+    <div className='min-h-svh flex items-center justify-center p-6 bg-ks-off-white'>
+      <div className='bg-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]'>
+        <h2 className='text-ks-green-dark text-2xl font-bold'>✅ Turno solicitado</h2>
+        <p className='text-ks-gray-text text-sm'>Tu turno fue confirmado exitosamente.</p>
       </div>
     </div>
   );
 
   if (error) return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={{ color: '#c0392b' }}>❌ Error</h2>
-        <p style={styles.texto}>{error}</p>
+    <div className='min-h-svh flex items-center justify-center p-6 bg-ks-off-white'>
+      <div className='bg-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]'>
+        <h2 className='text-ks-red text-2xl font-bold'>❌ Error</h2>
+        <p className='text-ks-gray-text text-sm'>{error}</p>
       </div>
     </div>
   );
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
+    <div className='min-h-svh flex items-center justify-center p-6 bg-ks-off-white'>
+      <div className='bg-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]'>
         <h2 style={{ color: '#1a6b4a', marginBottom: 8 }}>Confirmar turno</h2>
-        <p style={styles.texto}>Estás por reservar tu lugar en:</p>
+        <p className='text-ks-gray-text text-sm'>Estás por reservar tu lugar en:</p>
 
-        <div style={styles.infoBox}>
+        <div className='bg-ks-gray-soft rounded-ks-md p-4'>
           <p><strong>Tipo:</strong> {clase?.tipo}</p>
           <p><strong>Fecha:</strong> {clase?.fecha}</p>
           <p><strong>Horario:</strong> {clase?.hora?.substring(0, 5)} hs</p>
         </div>
 
-        <p style={styles.texto}>
+        <p className='text-ks-gray-text text-sm'>
           Para confirmar debés abonar la seña correspondiente.
         </p>
 
         <button
           onClick={handleConfirmar}
           disabled={confirmando}
-          style={styles.boton}
+          className='bg-ks-green-dark text-white rounded-ks-full p-4'
         >
           {confirmando ? 'Procesando...' : 'Confirmar turno'}
         </button>
@@ -123,45 +117,3 @@ function ConfirmarTurnoPage() {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#f4f6f9',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  } as React.CSSProperties,
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: '40px',
-    maxWidth: 500,
-    width: '100%',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-  } as React.CSSProperties,
-  infoBox: {
-    backgroundColor: '#f0f7f4',
-    borderLeft: '4px solid #1a6b4a',
-    borderRadius: 6,
-    padding: '16px 20px',
-    marginBottom: 20,
-  } as React.CSSProperties,
-  texto: {
-    color: '#555555',
-    fontSize: 15,
-    lineHeight: 1.6,
-  } as React.CSSProperties,
-  boton: {
-    backgroundColor: '#1a6b4a',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 8,
-    padding: '14px 36px',
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: 'pointer',
-    width: '100%',
-  } as React.CSSProperties,
-};

@@ -15,6 +15,7 @@ import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
 import { PagosModule } from "./pagos/pagos.module";
 import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { AsistenciaModule } from "./asistencia/asistencia.module";
 
 @Module({
   imports: [
@@ -31,8 +32,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
     ListaEsperaModule,
     ShiftsModule,
     ConfirmarTurnoModule,
-    ShiftsModule,
-    ConfirmarTurnoModule,
+    AsistenciaModule,
     MpCheckoutProModule,
     PagosModule,
     NotificationsModule

@@ -1,15 +1,22 @@
-export interface Class {
-  id: number;
-  fecha: string;
-  hora: string;
-  tipo: string | null;
-  cupo: number | null;
-  QR: string | null;
-  id_listaEspera: number | null;
-  id_profesor: number | null;
-  id_administrador: number | null;
-  profesor: string | null; // ← NUEVO
+export interface KinesciusClass {
+  id: number
+  fecha: string
+  hora: string
+  tipo: string
+  profesor: string // Unificar nombre y apellido
+  cupo: number;
 };
+
+export interface ClassToken extends KinesciusClass {
+  QR: string;
+  id_listaEspera: number;
+  id_profesor: number;
+  id_administrador: number;
+}
+
+export interface ClientEnrollment {
+  id_clase: number;
+}
 
 export interface ClassSlot {
   key: string;
@@ -23,6 +30,6 @@ export interface ClassSlot {
   full: boolean;
   sinCupo: boolean;
   favorAmount: number;
-  source: Class;
+  source: KinesciusClass;
   profesor: string | null; // ← NUEVO
 };

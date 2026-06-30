@@ -3,19 +3,19 @@ import { useNavigate } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { btnBase, btnSecondary, formCardClass } from "@/lib/ks-page-styles";
 import { AuthPageLayout } from "@/modules/auth/components/AuthPageLayout";
-import { useAuthSession } from "@/modules/auth/hooks/useAuthSession";
+import { useAuthSession, useCurrentUserProfile } from "@/modules/auth/hooks/useAuthSession";
 import { getDashboardActions } from "../data/dashboardActions";
 import { ConfirmLogoutModal } from "./ConfirmLogoutModal";
 import { DashboardActionList } from "./DashboardActionList";
 
 export function UserDashboard() {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, isHydrated, clearSession } = useAuthSession();
+  const { isAuthenticated, role, isHydrated, clearSession } = useAuthSession();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-
+  const userProfile = useCurrentUserProfile();
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
-      navigate({ to: "/iniciarSesion", replace: true });
+      navigate({ to: "/iniciarSesion", search: { redirect: undefined }, replace: true });
     }
   }, [isHydrated, isAuthenticated, navigate]);
 
@@ -32,25 +32,25 @@ export function UserDashboard() {
   return (
     <>
       <AuthPageLayout
+        username={userProfile?.nombre || ""}
         showBackButton={true}
-        title={isAdmin ? "Panel de administración" : "Tu panel"}
+        title={
+          role === "admin"
+            ? "Panel de administración"
+            : role === "profesor"
+              ? "Panel del profesor"
+              : "Tu panel"
+        }
         subtitle={
-          isAdmin
+          role === "admin"
             ? "Gestioná las operaciones del centro"
-            : "Accedé a las funcionalidades de tu cuenta"
+            : role === "profesor"
+              ? "Generá códigos QR para registrar asistencia"
+              : "Accedé a las funcionalidades de tu cuenta"
         }
       >
-        <section className={formCardClass}>
-          <h2 className="m-0 mb-2 font-outfit text-[22px] font-bold tracking-[-0.5px] text-ks-text-dark">
-            Bienvenido a Kinescius
-          </h2>
-          <p className="m-0 text-[15px] leading-relaxed text-ks-gray-text">
-            Kinescius es un centro de rehabilitación. Desde acá podés acceder a las herramientas
-            disponibles para tu cuenta.
-          </p>
-        </section>
 
-        <DashboardActionList actions={getDashboardActions(isAdmin)} />
+        <DashboardActionList actions={getDashboardActions(role)} />
 
         <section className={formCardClass}>
           <button

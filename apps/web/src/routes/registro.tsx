@@ -17,6 +17,10 @@ type FormData = {
 
 const Registro = () => {
   const [estaLogueado, setEstaLogueado] = useState(false);
+  const navigate = useNavigate();
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("miToken");
@@ -33,16 +37,12 @@ const Registro = () => {
     telefono: ""
   });
 
-  const navigate = useNavigate();
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError("");
     setMessage("");
 
@@ -68,7 +68,7 @@ const Registro = () => {
 
         //TimeOut va a ser el tiempo en milisegundos que se espera para navegar al inicio de sesión
         setTimeout(() => {
-          navigate({ to: "/iniciarSesion" });
+          navigate({ to: "/iniciarSesion", search: { redirect: undefined } });
         }, 7000);
       } else {
         // Si el backend devuelve BadRequestException por algun error como un dato duplicado, seteamos de error el msje recibido
@@ -90,7 +90,7 @@ const Registro = () => {
     >
       {!estaLogueado ? (
         <section className={formCardClass}>
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={handleRegister}>
             <div className={fieldStackClass}>
               <AuthFormField
                 label="Nombre:"
@@ -134,8 +134,7 @@ const Registro = () => {
             </div>
             <div className="mt-4">
               <button
-                type="button"
-                onClick={handleRegister}
+                type="submit"
                 disabled={isProcessing}
                 className={cn(btnBase, btnPrimary)}
               >
