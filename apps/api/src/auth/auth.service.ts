@@ -111,6 +111,19 @@ export class AuthService {
         throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
       }
 
+      const { error: errorNoAbonado } = await this.supabaseService.client
+        .from('No abonado')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorNoAbonado) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorNoAbonado.message}`);
+      }
+
       console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
       try {
         await this.emailService.enviarCorreo(
@@ -142,6 +155,7 @@ export class AuthService {
     }
   }
 
+  //-------------------------------------Método/servicio para registrar abonados-------------------------------------
   async registrarUsuarioAbonado(datos: RegistroDto) {
     console.log("Datos recibidos del frontend:", datos);
 
@@ -172,7 +186,6 @@ export class AuthService {
       }
     }
 
-    // Estructura de control para intentar la inserción segura en la base de datos y capturar cualquier falla imprevista
     try {
       //Genero la contraseña base para el registro
       const passwordBase = this.generarPasswordAleatoria(8);
@@ -232,6 +245,19 @@ export class AuthService {
         // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
         await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
         throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
+      }
+
+      const { error: errorAbonado } = await this.supabaseService.client
+        .from('Abonado')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorAbonado) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorAbonado.message}`);
       }
 
       console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail

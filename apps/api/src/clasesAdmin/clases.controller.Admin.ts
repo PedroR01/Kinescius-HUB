@@ -83,8 +83,13 @@ export class ClasesAdminController {
     return this.clasesService.cambiarProfesor(id, profesorId);
   }
 
-  @Post('suspenderUsuario')
-  suspenderUsario(@Body() id: number) {
-    return this.clasesService.suspenderUsuario(id);
+  @Post('cambiarEstadoUsuario')
+  cambiarEstadoUsuario(@Body('id') id: number, @Body('activo') activo: boolean) {
+    return this.clasesService.cambiarEstadoUsuario(id, activo);
+  }
+
+  @Get("clientesSuspendidos")
+  async findClentesSuspendidos() {
+    return this.clasesService.getClientesSuspendidos();
   }
 }

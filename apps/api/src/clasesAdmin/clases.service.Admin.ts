@@ -637,10 +637,45 @@ export class ClasesAdminService {
     };
   }
 
-  async suspenderUsuario(id: number) {
+  async cambiarEstadoUsuario(id: number, activo: boolean) {
     const { data, error } = await this.supabaseService.client
       .from('Usuario')
-      .update({ activo: false })
+      .update({ activo })
       .eq('id', id);
+    return { success: true, mensaje: activo ? "Suspención revocada con éxito." : "Cliente suspendido con éxito." };
+  }
+
+
+  async getClientesSuspendidos() {
+    const { data, error } = await this.supabaseService.client
+      .from("Cliente")
+      .select("id, Usuario!inner(activo, Persona(nombre,apellido,dni,mail))")
+      .eq("Usuario.activo", false)
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Error al obtener clientes: ${error.message}`
+      );
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        message: "No hay clientes inscriptos",
+        clientes: [] as any[],
+      };
+    }
+
+    const clientes = data.map((entry: any) => ({
+      clienteId: entry.id,
+      nombre: entry?.Usuario?.Persona?.nombre ?? null,
+      apellido: entry?.Usuario?.Persona?.apellido ?? null,
+      dni: entry?.Usuario?.Persona?.dni ?? null,
+      mail: entry?.Usuario?.Persona?.mail ?? null,
+    }));
+
+    return {
+      message: `Se encontraron ${clientes.length} clientes`,
+      clientes,
+    };
   }
 }

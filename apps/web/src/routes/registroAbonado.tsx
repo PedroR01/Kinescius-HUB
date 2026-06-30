@@ -54,7 +54,7 @@ const RegistroAbonado = () => {
 		setIsProcessing(true); //Esto bloquea el botón para la carga y pone texto informando (al final del HTML)
 		try {
 			//Envio los datos al controlador en formato JSON
-			const response = await fetch(`${API_BASE}/auth/registro`, {
+			const response = await fetch(`${API_BASE}/auth/registrarUsuarioAbonado`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(formData)

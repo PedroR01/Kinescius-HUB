@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 
-export const Route = createFileRoute('/clientes')({
+export const Route = createFileRoute('/clientesSuspendidos')({
    component: RouteComponent,
 })
 
@@ -25,7 +25,7 @@ function RouteComponent() {
       setError(null)
 
       try {
-         const response = await fetch(`${API_BASE}/admin/clases/clientes`)
+         const response = await fetch(`${API_BASE}/admin/clases/clientesSuspendidos`)
 
          if (!response.ok) {
             throw new Error('Error al obtener clientes')
@@ -46,22 +46,23 @@ function RouteComponent() {
       }
    }
 
-   const suspencionHandler = async (id: number) => {
-      console.log("Se ejecuta el Handler de suspencion para el id " + id)
+   const revocarUsuario = async (id: number) => {
+      console.log("Se ejecuta el Handler para revocar la suspención del id " + id)
       try {
-         const response = await fetch(`${API_BASE}/admin/clases/suspender`, {
+         const response = await fetch(`${API_BASE}/admin/clases/cambiarEstadoUsuario`, {
             method: 'POST',
             headers: {
                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ id }),
+            body: JSON.stringify({ id, activo: true }),
          })
 
          if (!response.ok) {
-            throw new Error('Error al suspender el cliente')
+            throw new Error('Error al revocar la suspención del cliente')
          }
 
          const data = await response.json()
+         await loadClientes()
          return data
       } catch (err) {
          setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -82,7 +83,7 @@ function RouteComponent() {
                <div className="mx-auto mb-6 h-2 w-40 rounded-full bg-[#2DBE7F]" />
 
                <h1 className="text-6xl font-black tracking-tight text-[#0d1f18]">
-                  Clientes
+                  Clientes suspendidos en el sistema
                </h1>
 
                <p className="mt-5 text-xl text-[#0d1f18]/70">
@@ -107,7 +108,7 @@ function RouteComponent() {
             {!loading && (
                <div className="mb-12 flex justify-center">
                   <div className="rounded-full bg-[#f0faf5] px-8 py-4 text-sm font-bold text-[#2DBE7F] shadow-md">
-                     Total de clientes: {clientes.length}
+                     Total de clientes suspendidos: {clientes.length}
                   </div>
                </div>
             )}
@@ -160,6 +161,16 @@ function RouteComponent() {
                            </p>
                         </div>
 
+                        <button
+                           onClick={() => {
+                              if (window.confirm("¿Desea revocar la suspención del cliente?")) {
+                                 revocarUsuario(cliente.clienteId)
+                              }
+                           }}
+                           className="mt-2 w-full rounded-[16px] bg-red-300 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-md transition-all duration-300 hover:bg-red-600 hover:shadow-lg"
+                        >
+                           Revocar suspención
+                        </button>
 
                      </div>
 

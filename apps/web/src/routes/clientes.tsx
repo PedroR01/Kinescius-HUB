@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
@@ -19,6 +19,7 @@ function RouteComponent() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
 
   const loadClientes = async () => {
     setLoading(true)
@@ -49,12 +50,12 @@ function RouteComponent() {
   const suspencionHandler = async (id: number) => {
     console.log("Se ejecuta el Handler de suspencion para el id " + id)
     try {
-      const response = await fetch(`${API_BASE}/admin/clases/suspender`, {
+      const response = await fetch(`${API_BASE}/admin/clases/cambiarEstadoUsuario`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, activo: false }),
       })
 
       if (!response.ok) {
@@ -62,6 +63,7 @@ function RouteComponent() {
       }
 
       const data = await response.json()
+      await loadClientes()
       return data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -96,6 +98,13 @@ function RouteComponent() {
           >
             {loading ? 'Cargando...' : 'Actualizar lista'}
           </button>
+          <button
+            onClick={() => navigate({ to: '/clientesSuspendidos' })}
+            className="mt-10 rounded-full bg-[#2DBE7F] px-10 py-4 text-lg font-bold text-[#0d1f18] shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl disabled:opacity-50"
+          >
+            Ver clientes suspendidos
+          </button>
+
         </div>
 
         {error && (
