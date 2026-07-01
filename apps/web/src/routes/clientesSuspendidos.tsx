@@ -8,7 +8,7 @@ export const Route = createFileRoute('/clientesSuspendidos')({
 })
 
 type Cliente = {
-   clienteId: number
+   id: number
    nombre: string
    apellido: string
    dni: string
@@ -116,7 +116,7 @@ function RouteComponent() {
             <div className="grid grid-cols-1 gap-14 md:grid-cols-2 xl:grid-cols-3">
                {clientes.map((cliente) => (
                   <div
-                     key={cliente.clienteId}
+                     key={cliente.id}
                      className="group relative overflow-hidden rounded-[42px] bg-[#f0faf5] p-10 text-left shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
                   >
                      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#2DBE7F]/15 blur-3xl transition-all duration-500 group-hover:scale-150"></div>
@@ -164,7 +164,7 @@ function RouteComponent() {
                         <button
                            onClick={() => {
                               if (window.confirm("¿Desea revocar la suspención del cliente?")) {
-                                 revocarUsuario(cliente.clienteId)
+                                 revocarUsuario(cliente.id)
                               }
                            }}
                            className="mt-2 w-full rounded-[16px] bg-red-300 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-md transition-all duration-300 hover:bg-red-600 hover:shadow-lg"

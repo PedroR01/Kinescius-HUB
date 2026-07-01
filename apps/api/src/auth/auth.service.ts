@@ -30,7 +30,7 @@ export class AuthService {
 
     //Busco si el DNI o el Mail ya están en la base de datos
     const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
-      .from('Persona')
+      .from('Persona_')
       .select('dni, mail')
       .or(`dni.eq.${datos.dni},mail.eq.${datos.email}`);
     if (errorBusqueda) {
@@ -327,7 +327,7 @@ export class AuthService {
 
     //Uso el mail del usuario para buscar su id
     const { data: persona, error: errorPersona } = await this.supabaseService.client
-      .from('Persona')
+      .from('Persona_')
       .select('id')
       .eq('mail', datosIngresados.email)
       .single();
@@ -352,15 +352,10 @@ export class AuthService {
   async recuperarPasswd(email: string) {
 
     //Buscamos el UUID del usuario con su email
-    const { data: persona, error: errorPersona } = await this.supabaseService.client
-      .from('Persona')
-      .select('user_id')
-      .eq('mail', email)
-      .single();
-
-    if (errorPersona || !persona) {
-      // Por convención de seguridad, no se avisa si el mail no existe para evitar que extraños 
-      // averigüen quién es cliente, pero devolvemos un mensaje genérico de éxito.
+    const { data, error: authListError } = await this.supabaseService.client
+      .auth.admin.listUsers();
+    const authUser = data?.users?.find((u: any) => u.email === email);
+    if (!authUser) {
       return { success: true, mensaje: "El mail ingresado no está registrado en el sistema." };
     }
 
@@ -371,7 +366,7 @@ export class AuthService {
 
       //Forzamos el cambio de contraseña en Supabase
       const { error: updateError } = await this.supabaseService.client.auth.admin.updateUserById(
-        persona.user_id,
+        authUser.id,
         { password: nuevaPassword }
       );
 
@@ -498,28 +493,28 @@ export class AuthService {
     }
   }
 
-  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'usuario'> {
-    const { data: admin } = await this.supabaseService.client
-      .from('Administrador')
-      .select('id')
+  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'usuario' | 'usuario_abonado'> {
+    const { data: usuario, error: errorUsuario } = await this.supabaseService.client
+      .from('Persona_')
+      .select('rol')
       .eq('id', personaId)
       .maybeSingle();
-
-    if (admin) {
-      return 'admin';
+    if (errorUsuario || !usuario) {
+      throw new InternalServerErrorException('Error al buscar el rol del usuario.');
+    }
+    switch (usuario.rol) {
+      case 0:
+        return 'admin';
+      case 1:
+        return 'profesor';
+      case 2:
+        return 'usuario'
+      case 3:
+        return 'usuario_abonado';
+      default:
+        return 'usuario';
     }
 
-    const { data: profesor } = await this.supabaseService.client
-      .from('Profesor')
-      .select('id')
-      .eq('id', personaId)
-      .maybeSingle();
-
-    if (profesor) {
-      return 'profesor';
-    }
-
-    return 'usuario';
   }
 
   private async verificarEsAdmin(token: string): Promise<void> {

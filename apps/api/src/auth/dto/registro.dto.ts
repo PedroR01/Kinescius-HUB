@@ -2,7 +2,7 @@
 //-Tienen "!" los campos porque Typescript pide q los inicialice, pero es innecesario si siempre recibimos datos.
 // entonces el signo indica que la clase con estos datos no se va a querer instanciar
 //-Tiene "?" el campo que es opcional que se llene
-import { IsString, IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, IsOptional, isNumber, IsNumber } from 'class-validator';
 
 export class RegistroDto {
   @IsString({ message: 'El nombre debe ser un texto' })
@@ -25,6 +25,7 @@ export class RegistroDto {
   @IsOptional() // Le decimos que este campo no es obligatorio
   telefono?: string;
 
-  // Rol del usuario, siempre configurado por el frontend
+  @IsNumber({}, { message: 'El rol debe ser un número' })
+  @IsNotEmpty({ message: 'El rol no puede estar vacío' })
   rol!: number;
 }

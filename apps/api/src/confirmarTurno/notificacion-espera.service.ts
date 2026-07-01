@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { emailLugarDisponible } from './templates/email-lugar-disponible.template';
-import { Resend } from 'resend';
+import { EmailService } from 'src/email/email.service';
 import * as crypto from 'crypto';
 
 const PRECIO_CLASE = 5000;
@@ -15,11 +15,9 @@ const TOKEN_EXPIRY_HOURS = 24;
 @Injectable()
 export class NotificacionEsperaService {
   private readonly logger = new Logger(NotificacionEsperaService.name);
-  private readonly resend: Resend;
   private readonly baseUrl: string;
 
-  constructor(private readonly supabase: SupabaseService) {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+  constructor(private readonly supabase: SupabaseService, private readonly emailService: EmailService,) {
     this.baseUrl = (process.env.API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
   }
 
@@ -99,12 +97,11 @@ export class NotificacionEsperaService {
     });
 
     try {
-      await this.resend.emails.send({
-        from: 'Kinescius-HUB <onboarding@resend.dev>',
-        to: 'carlo.castro247390@alumnos.info.unlp.edu.ar',
-        subject: `¡Tu lugar está disponible! – ${clase.tipo ?? 'Clase'} del ${clase.fecha}`,
+      await this.emailService.enviarCorreo(
+        persona.mail,
+        `¡Tu lugar está disponible! – ${clase.tipo ?? 'Clase'} del ${clase.fecha}`,
         html,
-      });
+      );
       this.logger.log(
         `Email enviado a ${persona.mail} para clase ${claseId}`,
       );

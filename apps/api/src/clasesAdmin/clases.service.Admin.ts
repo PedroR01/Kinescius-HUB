@@ -419,10 +419,10 @@ export class ClasesAdminService {
 
   async getClientes() {
     const { data, error } = await this.supabaseService.client
-      .from("Cliente")
-      .select("id, Usuario!inner(activo, Persona(nombre,apellido,dni,mail))")
-      .eq("Usuario.activo", true)
-
+      .from('Persona_')
+      .select('id, nombre, apellido, dni, mail')
+      .in('rol', [2, 3])
+      .eq('activo', true);
 
     if (error) {
       throw new InternalServerErrorException(
@@ -438,12 +438,13 @@ export class ClasesAdminService {
     }
 
     const clientes = data.map((entry: any) => ({
-      clienteId: entry.id,
-      nombre: entry?.Usuario?.Persona?.nombre ?? null,
-      apellido: entry?.Usuario?.Persona?.apellido ?? null,
-      dni: entry?.Usuario?.Persona?.dni ?? null,
-      mail: entry?.Usuario?.Persona?.mail ?? null,
+      id: entry.id,
+      nombre: entry.nombre,
+      apellido: entry.apellido,
+      dni: entry.dni,
+      mail: entry.mail,
     }));
+
 
     return {
       message: `Se encontraron ${clientes.length} clientes`,
@@ -639,7 +640,7 @@ export class ClasesAdminService {
 
   async cambiarEstadoUsuario(id: number, activo: boolean) {
     const { data, error } = await this.supabaseService.client
-      .from('Usuario')
+      .from('Persona_')
       .update({ activo })
       .eq('id', id);
     return { success: true, mensaje: activo ? "Suspención revocada con éxito." : "Cliente suspendido con éxito." };
@@ -648,9 +649,10 @@ export class ClasesAdminService {
 
   async getClientesSuspendidos() {
     const { data, error } = await this.supabaseService.client
-      .from("Cliente")
-      .select("id, Usuario!inner(activo, Persona(nombre,apellido,dni,mail))")
-      .eq("Usuario.activo", false)
+      .from('Persona_')
+      .select('id, nombre, apellido, dni, mail')
+      .in('rol', [2, 3])
+      .eq('activo', false);
 
     if (error) {
       throw new InternalServerErrorException(
@@ -666,11 +668,11 @@ export class ClasesAdminService {
     }
 
     const clientes = data.map((entry: any) => ({
-      clienteId: entry.id,
-      nombre: entry?.Usuario?.Persona?.nombre ?? null,
-      apellido: entry?.Usuario?.Persona?.apellido ?? null,
-      dni: entry?.Usuario?.Persona?.dni ?? null,
-      mail: entry?.Usuario?.Persona?.mail ?? null,
+      id: entry.id,
+      nombre: entry.nombre,
+      apellido: entry.apellido,
+      dni: entry.dni,
+      mail: entry.mail,
     }));
 
     return {
