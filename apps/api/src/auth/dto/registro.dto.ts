@@ -24,4 +24,7 @@ export class RegistroDto {
   @IsString({ message: 'El teléfono debe ser un texto' })
   @IsOptional() // Le decimos que este campo no es obligatorio
   telefono?: string;
+
+  // Rol del usuario, siempre configurado por el frontend
+  rol!: number;
 }

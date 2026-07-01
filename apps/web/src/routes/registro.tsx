@@ -12,6 +12,7 @@ type FormData = {
   apellido: string;
   email: string;
   dni: string;
+  rol: number;
   telefono: string;
 };
 
@@ -34,6 +35,7 @@ const Registro = () => {
     apellido: "",
     email: "",
     dni: "",
+    rol: 2,
     telefono: ""
   });
 

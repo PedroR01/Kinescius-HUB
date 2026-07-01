@@ -50,7 +50,6 @@ export class AuthService {
       }
     }
 
-    // Estructura de control para intentar la inserción segura en la base de datos y capturar cualquier falla imprevista
     try {
       //Genero la contraseña base para el registro
       const passwordBase = this.generarPasswordAleatoria(8);
@@ -68,14 +67,15 @@ export class AuthService {
 
       //Recupero el ID generado para el nuevo usuario en Persona
       const { data: personaData, error } = await this.supabaseService.client
-        .from('Persona')
+        .from('Persona_')
         .insert([
           {
-            user_id: authData.user.id, //Acá se vincula la entrada de la tabla con el sistema de auth
             nombre: datos.nombre,
             apellido: datos.apellido,
             mail: datos.email,
             dni: datos.dni,
+            rol: datos.rol,
+            activo: true,
             telefono: datos.telefono || null //Si el teléfono viene vacío, se guarda como null
           }
         ])
@@ -86,6 +86,7 @@ export class AuthService {
         throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
       }
 
+      /*
       //Inserto el ID de la persona en la tabla Usuario    
       const { error: errorUsuario } = await this.supabaseService.client
         .from('Usuario')
@@ -124,6 +125,21 @@ export class AuthService {
         await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
         throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorNoAbonado.message}`);
       }
+        */
+      const { error: errorEstadoCliente } = await this.supabaseService.client
+        .from('Estado_Cliente')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorEstadoCliente) {
+        // Si falla la cración del estado del cliente, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorEstadoCliente.message}`);
+      }
+
+
 
       console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
       try {
@@ -156,6 +172,7 @@ export class AuthService {
     }
   }
 
+  /*
   //-------------------------------------Método/servicio para registrar abonados-------------------------------------
   async registrarUsuarioAbonado(datos: RegistroDto) {
     console.log("Datos recibidos del frontend:", datos);
@@ -291,6 +308,7 @@ export class AuthService {
       throw new InternalServerErrorException("Error interno al intentar comunicarse con la base de datos");
     }
   }
+    */
 
   //----------------------Método para iniciar sesión----------------------
   async iniciarSesion(datosIngresados: InicioDto) {
@@ -307,11 +325,11 @@ export class AuthService {
       throw new UnauthorizedException('El email o la contraseña son incorrectos.');
     }
 
-    //Uso el UUID del usuario para buscar su id
+    //Uso el mail del usuario para buscar su id
     const { data: persona, error: errorPersona } = await this.supabaseService.client
       .from('Persona')
       .select('id')
-      .eq('user_id', data.user.id)
+      .eq('mail', datosIngresados.email)
       .single();
 
     if (errorPersona || !persona) {

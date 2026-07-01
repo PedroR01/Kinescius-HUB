@@ -19,11 +19,13 @@ export class AuthController {
     return this.authService.registrarUsuario(datosRegistro);
   }
 
+  /*
   @Post('registroAbonado')
   registrarUsuarioAbonado(@Body() datosRegistro: RegistroDto) {
     // El controlador NO toma decisiones, solo recibe las peticiones y se las pasa al archivo con los servicios
     return this.authService.registrarUsuarioAbonado(datosRegistro);
   }
+    */
 
   @Post('login')
   iniciarSesion(@Body() datosIngresados: InicioDto) {
@@ -61,7 +63,7 @@ export class AuthController {
     // Le pasamos todo procesado al servicio de cambio de passwd
     return this.authService.cambiarPasswd(token, datos.passwdActual, datos.passwdNueva);
   }
-  
+
   @Get('me')
   getUserProfile(@Headers('authorization') authHeader: string) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
