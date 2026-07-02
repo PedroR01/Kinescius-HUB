@@ -30,6 +30,160 @@ export class AuthService {
 
     //Busco si el DNI o el Mail ya están en la base de datos
     const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
+      .from('Persona_')
+      .select('dni, mail')
+      .or(`dni.eq.${datos.dni},mail.eq.${datos.email}`);
+    if (errorBusqueda) {
+      throw new InternalServerErrorException("Error al verificar la disponibilidad de los datos en el sistema.");
+    }
+    // Si el array trajo algún resultado, significa que al menos uno de los dos datos ya existe
+    if (usuariosExistentes && usuariosExistentes.length > 0) {
+      const dniOcupado = usuariosExistentes.some(usuario => usuario.dni === datos.dni);
+      const mailOcupado = usuariosExistentes.some(usuario => usuario.mail === datos.email);
+
+      if (dniOcupado && mailOcupado) {
+        throw new BadRequestException("El DNI y el Email ingresados ya se encuentran registrados en otra cuenta.");
+      } else if (dniOcupado) {
+        throw new BadRequestException("El DNI ingresado ya se encuentra registrado. Por favor, verificá tus datos.");
+      } else if (mailOcupado) {
+        throw new BadRequestException("El Email ingresado ya pertenece a una cuenta existente.");
+      }
+    }
+
+    try {
+      //Genero la contraseña base para el registro
+      const passwordBase = this.generarPasswordAleatoria(8);
+
+      //Registro al usuario en supabase auth
+      const { data: authData, error: authError } = await this.supabaseService.client.auth.admin.createUser({
+        email: datos.email,
+        password: passwordBase,
+        email_confirm: true // Lo confirmamos automáticamente para evitar el paso del email de verificación por ahora
+      });
+
+      if (authError) { //Si supabase auth falla por algun error, informa
+        throw new BadRequestException(`Error en autenticación: ${authError.message}`);
+      }
+
+      //Recupero el ID generado para el nuevo usuario en Persona
+      const { data: personaData, error } = await this.supabaseService.client
+        .from('Persona_')
+        .insert([
+          {
+            nombre: datos.nombre,
+            apellido: datos.apellido,
+            mail: datos.email,
+            dni: datos.dni,
+            rol: datos.rol,
+            activo: true,
+            telefono: datos.telefono || null //Si el teléfono viene vacío, se guarda como null
+          }
+        ])
+        .select('id')
+        .single();
+      if (error || !personaData) {
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id); //Si no se pudo registrar el usuario en la DB, lo eliminamos del sistema Auth de supabase
+        throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
+      }
+
+      /*
+      //Inserto el ID de la persona en la tabla Usuario    
+      const { error: errorUsuario } = await this.supabaseService.client
+        .from('Usuario')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorUsuario) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como usuario en la base de datos: ${errorUsuario.message}`);
+      }
+      const { error: errorCliente } = await this.supabaseService.client
+        .from('Cliente')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorCliente) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
+      }
+
+      const { error: errorNoAbonado } = await this.supabaseService.client
+        .from('No abonado')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorNoAbonado) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorNoAbonado.message}`);
+      }
+        */
+      const { error: errorEstadoCliente } = await this.supabaseService.client
+        .from('Estado_Cliente')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorEstadoCliente) {
+        // Si falla la cración del estado del cliente, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorEstadoCliente.message}`);
+      }
+
+
+
+      console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
+      try {
+        await this.emailService.enviarCorreo(
+          datos.email, //Hay que usar el mail carlo.castro247390@alumnos.info.unlp.edu.ar para el testeo
+          '¡Bienvenido a Kinescius-HUB!',
+          `<h2>Gracias por registrarte</h2>
+         <p>Tu cuenta ha sido creada con éxito, y tu contraseña es: <strong>${passwordBase}</strong></p>
+         <p>Puedes cambiar tu contraseña cuando quieras luego de iniciar sesión en el sistema. Que tenga un buen día!</p>`
+        );
+      } catch (emailError) {
+        // Si el correo falla, lo anotamos en la consola, pero NO lanzamos el error
+        // para que el proceso de registro pueda terminar exitosamente.
+        console.error('El usuario se registró, pero falló el envío del correo de bienvenida:', emailError);
+      }
+
+      return {
+        //con success y mensaje, Typescript arma el mensaje HTTP para devolver
+        success: true,
+        mensaje: "Datos registrados correctamente :)"
+      };
+
+    } catch (err) {
+      // Si ya es un error de NestJS que lanzamos arriba, lo dejamos pasar
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      // Si es un error desconocido (se cayó el internet, etc), lanzamos un 500 (Internal Server Error)
+      throw new InternalServerErrorException("Error interno al intentar comunicarse con la base de datos");
+    }
+  }
+
+  /*
+  //-------------------------------------Método/servicio para registrar abonados-------------------------------------
+  async registrarUsuarioAbonado(datos: RegistroDto) {
+    console.log("Datos recibidos del frontend:", datos);
+
+    //Reviso si alguno de los campos está vacío o con un espacio
+    if (!datos.nombre?.trim() || !datos.apellido?.trim() || !datos.dni?.trim() || !datos.email?.trim()) {
+      throw new BadRequestException("No se pudieron registrar los datos porque hay campos obligatorios vacíos.");
+    }
+
+    //Busco si el DNI o el Mail ya están en la base de datos
+    const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
       .from('Persona')
       .select('dni, mail')
       .or(`dni.eq.${datos.dni},mail.eq.${datos.email}`);
@@ -50,7 +204,6 @@ export class AuthService {
       }
     }
 
-    // Estructura de control para intentar la inserción segura en la base de datos y capturar cualquier falla imprevista
     try {
       //Genero la contraseña base para el registro
       const passwordBase = this.generarPasswordAleatoria(8);
@@ -112,6 +265,19 @@ export class AuthService {
         throw new BadRequestException(`No se pudo asignar el id como cliente en la base de datos: ${errorCliente.message}`);
       }
 
+      const { error: errorAbonado } = await this.supabaseService.client
+        .from('Abonado')
+        .insert([
+          {
+            id: personaData.id
+          }
+        ]);
+      if (errorAbonado) {
+        // Si falla la asignación del rol, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorAbonado.message}`);
+      }
+
       console.log(`----------¡ATENCIÓN! La contraseña generada para ${datos.email} es: ${passwordBase}----------`); //Esto es lo que se debería enviar por mail
       try {
         await this.emailService.enviarCorreo(
@@ -142,6 +308,7 @@ export class AuthService {
       throw new InternalServerErrorException("Error interno al intentar comunicarse con la base de datos");
     }
   }
+    */
 
   //----------------------Método para iniciar sesión----------------------
   async iniciarSesion(datosIngresados: InicioDto) {
@@ -158,11 +325,11 @@ export class AuthService {
       throw new UnauthorizedException('El email o la contraseña son incorrectos.');
     }
 
-    //Uso el UUID del usuario para buscar su id
+    //Uso el mail del usuario para buscar su id
     const { data: persona, error: errorPersona } = await this.supabaseService.client
-      .from('Persona')
+      .from('Persona_')
       .select('id')
-      .eq('user_id', data.user.id)
+      .eq('mail', datosIngresados.email)
       .single();
 
     if (errorPersona || !persona) {
@@ -185,15 +352,10 @@ export class AuthService {
   async recuperarPasswd(email: string) {
 
     //Buscamos el UUID del usuario con su email
-    const { data: persona, error: errorPersona } = await this.supabaseService.client
-      .from('Persona')
-      .select('user_id')
-      .eq('mail', email)
-      .single();
-
-    if (errorPersona || !persona) {
-      // Por convención de seguridad, no se avisa si el mail no existe para evitar que extraños 
-      // averigüen quién es cliente, pero devolvemos un mensaje genérico de éxito.
+    const { data, error: authListError } = await this.supabaseService.client
+      .auth.admin.listUsers();
+    const authUser = data?.users?.find((u: any) => u.email === email);
+    if (!authUser) {
       return { success: true, mensaje: "El mail ingresado no está registrado en el sistema." };
     }
 
@@ -204,7 +366,7 @@ export class AuthService {
 
       //Forzamos el cambio de contraseña en Supabase
       const { error: updateError } = await this.supabaseService.client.auth.admin.updateUserById(
-        persona.user_id,
+        authUser.id,
         { password: nuevaPassword }
       );
 
@@ -331,28 +493,28 @@ export class AuthService {
     }
   }
 
-  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'usuario'> {
-    const { data: admin } = await this.supabaseService.client
-      .from('Administrador')
-      .select('id')
+  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'usuario' | 'usuario_abonado'> {
+    const { data: usuario, error: errorUsuario } = await this.supabaseService.client
+      .from('Persona_')
+      .select('rol')
       .eq('id', personaId)
       .maybeSingle();
-
-    if (admin) {
-      return 'admin';
+    if (errorUsuario || !usuario) {
+      throw new InternalServerErrorException('Error al buscar el rol del usuario.');
+    }
+    switch (usuario.rol) {
+      case 0:
+        return 'admin';
+      case 1:
+        return 'profesor';
+      case 2:
+        return 'usuario'
+      case 3:
+        return 'usuario_abonado';
+      default:
+        return 'usuario';
     }
 
-    const { data: profesor } = await this.supabaseService.client
-      .from('Profesor')
-      .select('id')
-      .eq('id', personaId)
-      .maybeSingle();
-
-    if (profesor) {
-      return 'profesor';
-    }
-
-    return 'usuario';
   }
 
   private async verificarEsAdmin(token: string): Promise<void> {

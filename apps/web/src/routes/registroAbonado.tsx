@@ -16,7 +16,7 @@ type FormData = {
   telefono: string;
 };
 
-const Registro = () => {
+const RegistroAbonado = () => {
   const [estaLogueado, setEstaLogueado] = useState(false);
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
@@ -35,7 +35,7 @@ const Registro = () => {
     apellido: "",
     email: "",
     dni: "",
-    rol: 2,
+    rol: 3,
     telefono: ""
   });
 
@@ -87,8 +87,8 @@ const Registro = () => {
 
   return (
     <AuthPageLayout
-      title="Registro de cliente"
-      subtitle='Por favor complete sus datos para registrarse. Al presionar "Registrarme" se le enviará su contraseña por mail'
+      title="Registro de cliente abonado"
+      subtitle='Por favor complete sus datos para registrarse. Al presionar "Registrarme" se le enviará su contraseña por mail y se le redirigirá al pago de su mensualidad'
     >
       {!estaLogueado ? (
         <section className={formCardClass}>
@@ -140,7 +140,7 @@ const Registro = () => {
                 disabled={isProcessing}
                 className={cn(btnBase, btnPrimary)}
               >
-                {isProcessing ? "Procesando..." : "Registrarme"}
+                {isProcessing ? "Procesando..." : "Registrarme como abonado"}
               </button>
             </div>
           </form>
@@ -161,6 +161,6 @@ const Registro = () => {
   );
 };
 
-export const Route = createFileRoute("/registro")({
-  component: Registro
+export const Route = createFileRoute("/registroAbonado")({
+  component: RegistroAbonado
 });

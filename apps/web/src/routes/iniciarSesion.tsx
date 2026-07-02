@@ -76,7 +76,6 @@ const IniciarSesion = () => {
         // Guardamos el token que nos devuelve Supabase/NestJS
         localStorage.setItem("miToken", data.token);
         localStorage.setItem("rol", data.rol); //Guardo el rol del usuario (admin o usuario)
-        // TODO: Verificar si es necesario guardar el userId. Esto no se suele hacer de esta forma porque es información sensible y vulnerabiliza la base de datos.
         localStorage.setItem("userId", data.usuarioId); //Guardo el rol del usuario (admin o usuario)
         console.log("El rol ingresado es ", data.rol);
 
@@ -196,6 +195,15 @@ const IniciarSesion = () => {
                   className={cn(btnBase, btnSecondary, "w-full")}
                 >
                   Registrate
+                </button>
+              </Link>
+              <Link to="/registroAbonado">
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  className={cn(btnBase, btnSecondary, "w-full")}
+                >
+                  Registrate como abonado
                 </button>
               </Link>
             </div>
