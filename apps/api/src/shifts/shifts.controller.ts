@@ -27,8 +27,8 @@ export class ShiftsController {
     if (!token) {
       throw new UnauthorizedException('Formato de token inválido');
     }
-    const id = await this.recordatoriosService.obtenerIdDeUsuario(token);
-    return { id_cliente: id };
+    const datos = await this.recordatoriosService.obtenerDatosDeUsuario(token);
+    return { id_cliente: datos.id, rol: datos.rol };
   }
 
   @Patch('cambiar')
@@ -64,6 +64,13 @@ export class ShiftsController {
     @Param('idCliente', ParseIntPipe) idCliente: number
   ): Promise<MisClasesResponseDto[]> {
     return await this.shiftsService.obtenerClasesPorCliente(idCliente);
+  }
+
+  @Get('historial/:idCliente')
+  async getHistorialClases(
+    @Param('idCliente', ParseIntPipe) idCliente: number
+  ) {
+    return await this.shiftsService.obtenerHistorialPorCliente(idCliente);
   }
 
 

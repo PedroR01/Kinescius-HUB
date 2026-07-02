@@ -15,6 +15,11 @@ export class RecordatoriosService {
 
 
   async obtenerIdDeUsuario(token: string) {
+    const datos = await this.obtenerDatosDeUsuario(token);
+    return datos.id;
+  }
+
+  async obtenerDatosDeUsuario(token: string): Promise<{ id: number; rol: number }> {
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser(token);
 
     if (userError || !userData.user) {
@@ -22,16 +27,16 @@ export class RecordatoriosService {
     }
 
     const { data: persona, error: errorPersona } = await this.supabase.client
-      .from('Persona')
-      .select('id')
-      .eq('user_id', userData.user.id)
+      .from('Persona_')
+      .select('id, rol')
+      .eq('mail', userData.user.email)
       .single();
 
     if (errorPersona || !persona) {
       throw new UnauthorizedException('No se encontró el ID del cliente.');
     }
 
-    return persona.id;
+    return { id: persona.id, rol: persona.rol };
   }
 
   @Cron('0 45 15 * * *', {
@@ -55,11 +60,6 @@ export class RecordatoriosService {
       .from('Se_inscribe')
       .select(`
       id_cliente,
-      Cliente (
-        Usuario (
-          Persona ( mail, nombre )
-        )
-      ),
       Clase!inner ( id, fecha, hora, tipo )
     `)
       .eq('Clase.fecha', fechaMananaStr);
@@ -74,11 +74,23 @@ export class RecordatoriosService {
       return;
     }
 
+    // Obtener datos de los clientes desde Persona_
+    const clienteIds = [...new Set(inscripciones.map((i: any) => i.id_cliente))];
+    const { data: personas, error: personaError } = await this.supabase.client
+      .from('Persona_')
+      .select('id, mail, nombre')
+      .in('id', clienteIds);
+
+    if (personaError) {
+      this.logger.error('Error al obtener datos de personas:', personaError);
+      return;
+    }
+
+    const personaMap = new Map((personas ?? []).map((p: any) => [p.id, p]));
+
     let enviados = 0;
     for (const inscripcion of inscripciones) {
-      const clienteData = inscripcion.Cliente as any;
-
-      const persona = clienteData?.Usuario?.Persona;
+      const persona = personaMap.get(inscripcion.id_cliente) as any;
       const clase = inscripcion.Clase as any;
 
       if (persona?.mail) {
