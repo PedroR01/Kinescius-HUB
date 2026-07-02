@@ -925,4 +925,64 @@ export class ClasesAdminService {
       noAbonados,
     };
   }
+
+  /**
+   * Envía una notificación manual (asunto + mensaje libre) por mail
+   * a un cliente puntual, elegido por el administrador.
+   */
+  async enviarNotificacionManual({
+    clienteId,
+    asunto,
+    mensaje,
+  }: {
+    clienteId: number;
+    asunto: string;
+    mensaje: string;
+  }) {
+    if (!Number.isInteger(clienteId) || clienteId <= 0) {
+      throw new BadRequestException("El id del cliente debe ser mayor a 0");
+    }
+
+    if (!asunto || !asunto.trim()) {
+      throw new BadRequestException("El asunto es obligatorio");
+    }
+
+    if (!mensaje || !mensaje.trim()) {
+      throw new BadRequestException("El mensaje es obligatorio");
+    }
+
+    const { data: persona, error: personaError } = await this.supabaseService.client
+      .from("Persona_")
+      .select("id, nombre, apellido, mail")
+      .eq("id", clienteId)
+      .maybeSingle();
+
+    if (personaError) {
+      throw new InternalServerErrorException(
+        `Error al buscar el cliente: ${personaError.message}`
+      );
+    }
+
+    if (!persona) {
+      throw new NotFoundException("No existe un cliente con ese id");
+    }
+
+    if (!persona.mail) {
+      throw new BadRequestException("El cliente no tiene un mail registrado");
+    }
+
+    const nombreCompleto =
+      [persona.nombre, persona.apellido].filter(Boolean).join(" ") || "Cliente";
+
+    await this.emailService.enviarNotificacionManual({
+      to: persona.mail,
+      nombre: nombreCompleto,
+      asunto: asunto.trim(),
+      mensaje: mensaje.trim(),
+    });
+
+    return {
+      message: `Notificación enviada correctamente a ${nombreCompleto}`,
+    };
+  }
 }
