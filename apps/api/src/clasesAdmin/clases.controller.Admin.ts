@@ -16,7 +16,7 @@ import { CrearProfesorDto } from "./dto/crear-profesor.dto";
 
 @Controller("admin/clases")
 export class ClasesAdminController {
-  constructor(private readonly clasesService: ClasesAdminService) {}
+  constructor(private readonly clasesService: ClasesAdminService) { }
 
   @Get()
   async findAll(
@@ -87,5 +87,15 @@ export class ClasesAdminController {
       throw new BadRequestException("El profesorId es obligatorio");
     }
     return this.clasesService.cambiarProfesor(id, profesorId);
+  }
+
+  @Post('cambiarEstadoUsuario')
+  cambiarEstadoUsuario(@Body('id') id: number, @Body('activo') activo: boolean) {
+    return this.clasesService.cambiarEstadoUsuario(id, activo);
+  }
+
+  @Get("clientesSuspendidos")
+  async findClentesSuspendidos() {
+    return this.clasesService.getClientesSuspendidos();
   }
 }
