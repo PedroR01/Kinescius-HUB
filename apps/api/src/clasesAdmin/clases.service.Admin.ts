@@ -480,6 +480,30 @@ export class ClasesAdminService {
     return { profesores: resultado };
   }
 
+  async getProfesoresActivos() {
+    const { data: profesores, error: profesorError } =
+      await this.supabaseService.client
+        .from("Persona_")
+        .select("id, nombre, apellido, dni")
+        .eq("rol", ROL_PROFESOR_ID)
+        .eq("activo", true);
+
+    if (profesorError) {
+      throw new InternalServerErrorException(
+        `Error al obtener profesores: ${profesorError.message}`
+      );
+    }
+
+    const resultado = (profesores ?? []).map((p: any) => ({
+      id: p.id,
+      nombre: p.nombre ?? null,
+      apellido: p.apellido ?? null,
+      dni: p.dni ?? null,
+    }));
+
+    return { profesores: resultado };
+  }
+
   async getProfesoresDisponibles(fecha: string, hora: string) {
     if (!fecha || !hora) {
       throw new BadRequestException("Fecha y hora son requeridos");
@@ -506,7 +530,8 @@ export class ClasesAdminService {
       await this.supabaseService.client
         .from("Persona_")
         .select("id, nombre, apellido, dni")
-        .eq("rol", ROL_PROFESOR_ID);
+        .eq("rol", ROL_PROFESOR_ID)
+        .eq("activo", true);
 
     if (profesorError) {
       throw new InternalServerErrorException(
@@ -665,6 +690,56 @@ export class ClasesAdminService {
     return {
       message: "Profesor creado correctamente",
       profesor: { id: persona.id, dni, mail, nombre, apellido },
+    };
+  }
+
+  /**
+   * Baja lógica de un profesor: no se borra el registro, se marca
+   * "activo" en false en la tabla Persona_.
+   */
+  async eliminarProfesor(id: number) {
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new BadRequestException("El id del profesor debe ser mayor a 0");
+    }
+
+    const { data: persona, error: personaError } = await this.supabaseService.client
+      .from("Persona_")
+      .select("id, rol, activo, nombre, apellido")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (personaError) {
+      throw new InternalServerErrorException(
+        `Error al buscar el profesor: ${personaError.message}`
+      );
+    }
+
+    if (!persona) {
+      throw new NotFoundException("No existe una persona con ese id");
+    }
+
+    if (persona.rol !== ROL_PROFESOR_ID) {
+      throw new BadRequestException("La persona existe pero no es profesor");
+    }
+
+    if (persona.activo === false) {
+      throw new BadRequestException("El profesor ya se encuentra dado de baja");
+    }
+
+    const { error: updateError } = await this.supabaseService.client
+      .from("Persona_")
+      .update({ activo: false })
+      .eq("id", id);
+
+    if (updateError) {
+      throw new InternalServerErrorException(
+        `Error al dar de baja al profesor: ${updateError.message}`
+      );
+    }
+
+    return {
+      message: "Profesor dado de baja correctamente",
+      id,
     };
   }
 
