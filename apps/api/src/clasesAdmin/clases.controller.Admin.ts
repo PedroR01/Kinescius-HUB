@@ -13,6 +13,7 @@ import {
 import { ClasesAdminService } from "./clases.service.Admin";
 import { CreateClaseDto } from "./dto/create-clase..Admin.dto";
 import { CrearProfesorDto } from "./dto/crear-profesor.dto";
+import { EnviarNotificacionDto } from "./dto/enviar-notificacion.dto";
 
 @Controller("admin/clases")
 export class ClasesAdminController {
@@ -110,7 +111,21 @@ export class ClasesAdminController {
   }
   //lo nuevooooooooooooooo
   @Get("estadoSuscripcion")
-async findEstadoSuscripcion() {
-  return this.clasesService.getEstadoSuscripcion();
-}
+  async findEstadoSuscripcion() {
+    return this.clasesService.getEstadoSuscripcion();
+  }
+
+  @Post("notificacion-manual")
+  async enviarNotificacionManual(@Body() dto: EnviarNotificacionDto) {
+    if (!dto?.clienteId) {
+      throw new BadRequestException("El clienteId es obligatorio");
+    }
+    if (!dto?.asunto) {
+      throw new BadRequestException("El asunto es obligatorio");
+    }
+    if (!dto?.mensaje) {
+      throw new BadRequestException("El mensaje es obligatorio");
+    }
+    return this.clasesService.enviarNotificacionManual(dto);
+  }
 }
