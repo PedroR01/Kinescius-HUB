@@ -12,6 +12,7 @@ import {
 
 import { ClasesAdminService } from "./clases.service.Admin";
 import { CreateClaseDto } from "./dto/create-clase..Admin.dto";
+import { CrearProfesorDto } from "./dto/crear-profesor.dto";
 
 @Controller("admin/clases")
 export class ClasesAdminController {
@@ -60,6 +61,11 @@ export class ClasesAdminController {
   @Get("profesores")
   async findProfesores() {
     return this.clasesService.getProfesores();
+  }
+
+  @Post("profesores")
+  async crearProfesor(@Body() dto: CrearProfesorDto) {
+    return this.clasesService.crearProfesor(dto);
   }
 
   @Post()
