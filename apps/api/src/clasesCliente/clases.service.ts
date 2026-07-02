@@ -21,7 +21,9 @@ export class ClasesService {
 
     const { data, error } = await this.supabaseService.client
       .from("Clase")
-      .select("*, Se_inscribe(count), Profesor(Usuario(Persona(nombre, apellido)))")
+      .select(
+        "*, Se_inscribe(count), Profesor:Persona_!Clase_id_profesor_fkey(nombre, apellido)"
+      )
       .gte("fecha", todayStr)
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
@@ -34,7 +36,7 @@ export class ClasesService {
 
     return data.map((clase) => {
       const inscriptos = Number(clase.Se_inscribe?.[0]?.count ?? 0);
-      const persona = (clase.Profesor as any)?.Usuario?.Persona;
+      const persona = clase.Profesor as any;
       return {
         ...clase,
         cupo: (clase.cupo ?? 0) - inscriptos,
@@ -47,8 +49,8 @@ export class ClasesService {
 
   async getMontoAFavor(clienteId: number) {
     const { data, error } = await this.supabaseService.client
-      .from("Cliente")
-      .select("monto_a_favor")
+      .from("Estado_Cliente")
+      .select("monto_favor")
       .eq("id", clienteId)
       .single();
 
@@ -58,7 +60,7 @@ export class ClasesService {
       );
     }
 
-    return data;
+    return { monto_a_favor: data.monto_favor };
   }
 
   private async verificarConflictoHorario(clienteId: number, claseId: number): Promise<void> {
@@ -157,8 +159,8 @@ export class ClasesService {
     }
 
     const { data: cliente, error: clienteError } = await this.supabaseService.client
-      .from("Cliente")
-      .select("monto_a_favor")
+      .from("Estado_Cliente")
+      .select("monto_favor")
       .eq("id", clienteId)
       .single();
 
@@ -168,7 +170,7 @@ export class ClasesService {
       );
     }
 
-    const saldoActual = Number(cliente.monto_a_favor) || 0;
+    const saldoActual = Number(cliente.monto_favor) || 0;
     if (saldoActual < montoAFavorAplicado) {
       throw new BadRequestException("Saldo a favor insuficiente.");
     }
@@ -249,8 +251,8 @@ export class ClasesService {
 
     const saldoRestante = saldoActual - montoAFavorAplicado;
     const { error: updateError } = await this.supabaseService.client
-      .from("Cliente")
-      .update({ monto_a_favor: saldoRestante })
+      .from("Estado_Cliente")
+      .update({ monto_favor: saldoRestante })
       .eq("id", clienteId);
 
     if (updateError) {

@@ -27,7 +27,7 @@ export class ShiftsController {
     if (!token) {
       throw new UnauthorizedException('Formato de token inválido');
     }
-    const datos = await this.recordatoriosService.obtenerDatosDeUsuario(token);
+    const datos = await this.recordatoriosService.obtenerIdDeUsuario(token);
     return { id_cliente: datos.id, rol: datos.rol };
   }
 
@@ -42,13 +42,13 @@ export class ShiftsController {
     @Headers('authorization') authHeader: string,
   ) {
     const clienteIdToken = await this.resolverClienteIdDesdeToken(authHeader);
-    if (clienteIdToken !== cancelarTurnoDto.clienteId) {
+    if (clienteIdToken.id !== cancelarTurnoDto.clienteId) {
       throw new ForbiddenException('No podés cancelar turnos de otro cliente.');
     }
     return this.shiftsService.cancelar(cancelarTurnoDto);
   }
 
-  private async resolverClienteIdDesdeToken(authHeader: string): Promise<number> {
+  private async resolverClienteIdDesdeToken(authHeader: string) {
     if (!authHeader) {
       throw new UnauthorizedException('Token no proporcionado');
     }

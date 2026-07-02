@@ -15,11 +15,6 @@ export class RecordatoriosService {
 
 
   async obtenerIdDeUsuario(token: string) {
-    const datos = await this.obtenerDatosDeUsuario(token);
-    return datos.id;
-  }
-
-  async obtenerDatosDeUsuario(token: string): Promise<{ id: number; rol: number }> {
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser(token);
 
     if (userError || !userData.user) {
