@@ -3,7 +3,6 @@ import { API_BASE } from '@/lib/constants';
 
 export function useClienteId() {
     const [clienteId, setClienteId] = useState<number | null>(null);
-    const [rol, setRol] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +21,6 @@ export function useClienteId() {
                 })
                 .then(data => {
                     setClienteId(data.id_cliente);
-                    setRol(data.rol ?? null);
                     setIsLoading(false);
                 })
                 .catch(err => {
@@ -36,6 +34,5 @@ export function useClienteId() {
         }
     }, []);
 
-    return { clienteId, rol, isLoading, error };
+    return { clienteId, isLoading, error };
 }
-

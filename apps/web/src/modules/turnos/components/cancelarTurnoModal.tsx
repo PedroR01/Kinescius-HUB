@@ -8,8 +8,6 @@ interface CancelarTurnoProps {
   horaClase: string;
   actividad: string;
   pagoConMontoAFavor: boolean;
-  esAbonado?: boolean;
-  esClaseFueraDeCuota?: boolean;
   onCancelSuccess: (message: string) => void;
   onClose: () => void;
 }
@@ -26,8 +24,6 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   horaClase,
   actividad,
   pagoConMontoAFavor,
-  esAbonado = false,
-  esClaseFueraDeCuota = false,
   onCancelSuccess,
   onClose,
 }) => {
@@ -40,10 +36,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   const fechaCompleta = new Date(`${fechaClase}T${horaClase}-03:00`);
   const ahora = new Date();
   const diferenciaHoras = (fechaCompleta.getTime() - ahora.getTime()) / (1000 * 60 * 60);
-
-  // Para abonados con clase dentro de cuota, no se muestra reembolso
-  const abonadoDentroDeCuota = esAbonado && !esClaseFueraDeCuota;
-  const permiteReembolso = abonadoDentroDeCuota ? false : diferenciaHoras >= 24;
+  const permiteReembolso = diferenciaHoras >= 24;
   const permiteReembolsoMercadoPago = !pagoConMontoAFavor;
 
   useEffect(() => {
@@ -65,11 +58,7 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
       const payload = {
         clienteId,
         claseId,
-        tipoReembolso: abonadoDentroDeCuota
-          ? 'NINGUNO' as TipoReembolso
-          : permiteReembolso
-            ? opcionSeleccionada!
-            : 'NINGUNO' as TipoReembolso,
+        tipoReembolso: permiteReembolso ? opcionSeleccionada! : 'NINGUNO',
       };
 
       const result = await cancelarTurnoRequest(payload);
@@ -94,19 +83,10 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
         <p><strong className="font-semibold text-dark-accent">Hora:</strong> {horaClase}</p>
       </div>
 
-      {abonadoDentroDeCuota ? (
-        <div className="mb-8 p-5 bg-main/5 text-slate-700 rounded-2xl">
-          <p className="font-bold mb-2 text-dark-accent">Clase dentro de tu cuota mensual</p>
-          <p className="text-sm font-medium">
-            Esta clase está cubierta por tu abono. Al cancelar, no se efectuará reembolso.
-          </p>
-        </div>
-      ) : permiteReembolso ? (
+      {permiteReembolso ? (
         <div className="mb-8">
           <p className="text-sm text-slate-600 mb-4 font-medium">
-            {esAbonado
-              ? 'Esta clase está fuera de tu cuota mensual. Por favor, seleccioná una opción:'
-              : 'Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:'}
+            Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:
           </p>
           <div className="flex flex-col gap-3">
             <div className="group relative">

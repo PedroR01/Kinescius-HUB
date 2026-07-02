@@ -14,7 +14,7 @@ export class RecordatoriosService {
   ) { }
 
 
-  async obtenerIdDeUsuario(token: string) {
+async obtenerIdDeUsuario(token: string) {
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser(token);
 
     if (userError || !userData.user) {
@@ -23,7 +23,7 @@ export class RecordatoriosService {
 
     const { data: persona, error: errorPersona } = await this.supabase.client
       .from('Persona_')
-      .select('id, rol')
+      .select('id')
       .eq('mail', userData.user.email)
       .single();
 
@@ -31,7 +31,7 @@ export class RecordatoriosService {
       throw new UnauthorizedException('No se encontró el ID del cliente.');
     }
 
-    return { id: persona.id, rol: persona.rol };
+    return persona.id;
   }
 
   @Cron('0 45 15 * * *', {
@@ -55,6 +55,11 @@ export class RecordatoriosService {
       .from('Se_inscribe')
       .select(`
       id_cliente,
+      Cliente (
+        Usuario (
+          Persona ( mail, nombre )
+        )
+      ),
       Clase!inner ( id, fecha, hora, tipo )
     `)
       .eq('Clase.fecha', fechaMananaStr);
@@ -69,23 +74,11 @@ export class RecordatoriosService {
       return;
     }
 
-    // Obtener datos de los clientes desde Persona_
-    const clienteIds = [...new Set(inscripciones.map((i: any) => i.id_cliente))];
-    const { data: personas, error: personaError } = await this.supabase.client
-      .from('Persona_')
-      .select('id, mail, nombre')
-      .in('id', clienteIds);
-
-    if (personaError) {
-      this.logger.error('Error al obtener datos de personas:', personaError);
-      return;
-    }
-
-    const personaMap = new Map((personas ?? []).map((p: any) => [p.id, p]));
-
     let enviados = 0;
     for (const inscripcion of inscripciones) {
-      const persona = personaMap.get(inscripcion.id_cliente) as any;
+      const clienteData = inscripcion.Cliente as any;
+
+      const persona = clienteData?.Usuario?.Persona;
       const clase = inscripcion.Clase as any;
 
       if (persona?.mail) {

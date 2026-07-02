@@ -12,7 +12,7 @@ import { inscripcionSoloSaldo } from "../pagos/inscripcion-desglose.util";
 
 @Injectable()
 export class ClasesService {
-  constructor(private readonly supabaseService: SupabaseService) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async findAll() {
     const today = new Date();
