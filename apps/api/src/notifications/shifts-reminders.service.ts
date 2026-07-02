@@ -22,9 +22,9 @@ export class RecordatoriosService {
     }
 
     const { data: persona, error: errorPersona } = await this.supabase.client
-      .from('Persona')
+      .from('Persona_')
       .select('id')
-      .eq('user_id', userData.user.id)
+      .eq('mail', userData.user.email)
       .single();
 
     if (errorPersona || !persona) {
