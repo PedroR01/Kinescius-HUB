@@ -98,4 +98,9 @@ export class ClasesAdminController {
   async findClentesSuspendidos() {
     return this.clasesService.getClientesSuspendidos();
   }
+  //lo nuevooooooooooooooo
+  @Get("estadoSuscripcion")
+async findEstadoSuscripcion() {
+  return this.clasesService.getEstadoSuscripcion();
+}
 }

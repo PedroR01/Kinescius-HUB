@@ -12,6 +12,8 @@ import { EmailService } from "../email/email.service";
 const ROL_ADMIN_ID = 0;
 const ROL_PROFESOR_ID = 1;
 const ROL_CLIENTE_ID = 2;
+const ROL_CLIENTE_ABONADO_ID = 3;//LO AGREGUEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+
 
 @Injectable()
 export class ClasesAdminService {
@@ -708,4 +710,48 @@ export class ClasesAdminService {
       clientes,
     };
   }
+  //esto es lo nueeeeeeeeeeeevooooooooo
+  async getEstadoSuscripcion() {
+  const { data, error } = await this.supabaseService.client
+    .from('Persona_')
+    .select('id, nombre, apellido, dni, mail, rol')
+    .in('rol', [ROL_CLIENTE_ID, ROL_CLIENTE_ABONADO_ID])
+    .eq('activo', true);
+
+  if (error) {
+    throw new InternalServerErrorException(
+      `Error al obtener el estado de suscripción: ${error.message}`
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      message: "No hay usuarios registrados",
+      abonados: [] as any[],
+      noAbonados: [] as any[],
+    };
+  }
+
+  const mapPersona = (entry: any) => ({
+    id: entry.id,
+    nombre: entry.nombre,
+    apellido: entry.apellido,
+    dni: entry.dni,
+    mail: entry.mail,
+  });
+
+  const abonados = data
+    .filter((p: any) => p.rol === ROL_CLIENTE_ABONADO_ID)
+    .map(mapPersona);
+
+  const noAbonados = data
+    .filter((p: any) => p.rol === ROL_CLIENTE_ID)
+    .map(mapPersona);
+
+  return {
+    message: `Se encontraron ${abonados.length} abonados y ${noAbonados.length} no abonados`,
+    abonados,
+    noAbonados,
+  };
+}
 }
