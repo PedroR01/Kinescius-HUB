@@ -58,6 +58,11 @@ export class ClasesAdminController {
     return this.clasesService.getProfesoresDisponibles(fecha, hora);
   }
 
+  @Get("profesores/activos")
+  async findProfesoresActivos() {
+    return this.clasesService.getProfesoresActivos();
+  }
+
   @Get("profesores")
   async findProfesores() {
     return this.clasesService.getProfesores();
@@ -66,6 +71,11 @@ export class ClasesAdminController {
   @Post("profesores")
   async crearProfesor(@Body() dto: CrearProfesorDto) {
     return this.clasesService.crearProfesor(dto);
+  }
+
+  @Patch("profesores/:id/eliminar")
+  async eliminarProfesor(@Param("id", ParseIntPipe) id: number) {
+    return this.clasesService.eliminarProfesor(id);
   }
 
   @Post()
@@ -98,4 +108,9 @@ export class ClasesAdminController {
   async findClentesSuspendidos() {
     return this.clasesService.getClientesSuspendidos();
   }
+  //lo nuevooooooooooooooo
+  @Get("estadoSuscripcion")
+async findEstadoSuscripcion() {
+  return this.clasesService.getEstadoSuscripcion();
+}
 }

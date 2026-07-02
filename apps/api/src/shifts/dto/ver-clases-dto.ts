@@ -12,6 +12,7 @@ export class MisClasesResponseDto {
     id_cliente: number;
     monto_a_favor?: boolean;
     estado?: string;
+    fuera_de_cuota?: boolean;
     Clase: ClaseDto;
 }
 
