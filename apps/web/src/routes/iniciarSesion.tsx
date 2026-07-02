@@ -20,6 +20,7 @@ type FormData = {
 
 const IniciarSesion = () => {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [estaLogueado, setEstaLogueado] = useState(false);
   useEffect(() => {
     const token = localStorage.getItem("miToken");
@@ -36,11 +37,13 @@ const IniciarSesion = () => {
     email: "",
     passwd: ""
   });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleInicio = async () => {
+  const handleInicio = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError("");
     setMessage("");
 
@@ -73,12 +76,21 @@ const IniciarSesion = () => {
         // Guardamos el token que nos devuelve Supabase/NestJS
         localStorage.setItem("miToken", data.token);
         localStorage.setItem("rol", data.rol); //Guardo el rol del usuario (admin o usuario)
-        // TODO: Verificar si es necesario guardar el userId. Esto no se suele hacer de esta forma porque es información sensible y vulnerabiliza la base de datos.
         localStorage.setItem("userId", data.usuarioId); //Guardo el rol del usuario (admin o usuario)
         console.log("El rol ingresado es ", data.rol);
 
         setMessage("Inicio de sesión exitoso!");
         setTimeout(() => {
+          if (redirect) {
+            window.location.href = redirect;
+            return;
+          }
+
+          if (data.rol === "profesor") {
+            navigate({ to: "/profesor" });
+            return;
+          }
+
           navigate({ to: "/home" });
         }, 1000);
       } else {
@@ -118,7 +130,7 @@ const IniciarSesion = () => {
         setMessage(data.mensaje || "Vas a recibir una nueva contraseña pronto en tu email.");
         setTimeout(() => {
           navigate({ to: "/" }); //espera un segundo para redirigir al inicio de Kinescius
-        }, 1000);
+        }, 3000);
       } else {
         //Y si el backend frena la petición seteo también mensaje
         setError(data.message || "Hubo un error al intentar recuperar la contraseña.");
@@ -138,7 +150,7 @@ const IniciarSesion = () => {
     >
       {!estaLogueado ? (
         <section className={formCardClass}>
-          <form onSubmit={(e) => e.preventDefault()}>
+          <form onSubmit={handleInicio}>
             <div className={fieldStackClass}>
               <AuthFormField
                 label="Email:"
@@ -159,8 +171,7 @@ const IniciarSesion = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
-                type="button"
-                onClick={handleInicio}
+                type="submit"
                 disabled={isProcessing}
                 className={cn(btnBase, btnPrimary)}
               >
@@ -186,6 +197,15 @@ const IniciarSesion = () => {
                   Registrate
                 </button>
               </Link>
+              <Link to="/registroAbonado">
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  className={cn(btnBase, btnSecondary, "w-full")}
+                >
+                  Registrate como abonado
+                </button>
+              </Link>
             </div>
           </form>
         </section>
@@ -207,5 +227,8 @@ const IniciarSesion = () => {
 };
 
 export const Route = createFileRoute("/iniciarSesion")({
-  component: IniciarSesion
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
+  component: IniciarSesion,
 });

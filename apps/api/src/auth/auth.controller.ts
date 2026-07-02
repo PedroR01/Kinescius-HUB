@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Headers, UnauthorizedException, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegistroDto } from './dto/registro.dto';
+import { RegistroProfesorDto } from './dto/registro-profesor.dto';
 import { InicioDto } from './dto/inicio.dto';
 import { RecuperarDto } from './dto/recuperar.dto';
 import { CambioPasswordDto } from './dto/cambio-passwd.dto';
@@ -9,7 +10,7 @@ import { CambioPasswordDto } from './dto/cambio-passwd.dto';
 @Controller('auth')
 export class AuthController {
   //agrego el archivo de servicios
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   // 2. Al agregar @Post('registro'), el endpoint final es: POST /api/auth/registro
   @Post('registro')
@@ -17,15 +18,35 @@ export class AuthController {
     // El controlador NO toma decisiones, solo recibe las peticiones y se las pasa al archivo con los servicios
     return this.authService.registrarUsuario(datosRegistro);
   }
-  
+
+  /*
+  @Post('registroAbonado')
+  registrarUsuarioAbonado(@Body() datosRegistro: RegistroDto) {
+    // El controlador NO toma decisiones, solo recibe las peticiones y se las pasa al archivo con los servicios
+    return this.authService.registrarUsuarioAbonado(datosRegistro);
+  }
+    */
+
   @Post('login')
-  iniciarSesion(@Body() datosIngresados: InicioDto) { 
+  iniciarSesion(@Body() datosIngresados: InicioDto) {
     return this.authService.iniciarSesion(datosIngresados);
   }
 
   @Post('recuperar')
-  recuperarPasswd(@Body() datos: RecuperarDto){ //Si bien es un string, uso dto para validar el email
+  recuperarPasswd(@Body() datos: RecuperarDto) { //Si bien es un string, uso dto para validar el email
     return this.authService.recuperarPasswd(datos.email);
+  }
+
+  @Post('profesor')
+  registrarProfesor(
+    @Headers('authorization') authHeader: string,
+    @Body() datos: RegistroProfesorDto,
+  ) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('No se proporcionó un token de autorización válido.');
+    }
+    const token = authHeader.split(' ')[1];
+    return this.authService.registrarProfesor(token, datos);
   }
 
   @Post('cambiar-password')
@@ -41,6 +62,15 @@ export class AuthController {
 
     // Le pasamos todo procesado al servicio de cambio de passwd
     return this.authService.cambiarPasswd(token, datos.passwdActual, datos.passwdNueva);
+  }
+
+  @Get('me')
+  getUserProfile(@Headers('authorization') authHeader: string) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('No se proporcionó un token de autorización válido.');
+    }
+    const token = authHeader.split(' ')[1];
+    return this.authService.getUserProfile(token);
   }
 
 }

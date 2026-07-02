@@ -1,13 +1,13 @@
-import type { Class } from "@/lib/class-interface";
+import type { KinesciusClass } from "@/lib/class-interface";
 import { formatDate, formatTime } from "@/lib/utils";
 
-export type ClasePayload = {
+export type ClassPayload = {
   id: number;
   fecha: string;
   hora: string;
 };
 
-export function buildClasePayload(clase: Class): ClasePayload {
+export function buildClassPayload(clase: KinesciusClass): ClassPayload {
   return {
     id: clase.id,
     fecha: formatDate(clase.fecha),

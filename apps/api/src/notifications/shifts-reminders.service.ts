@@ -85,7 +85,7 @@ export class RecordatoriosService {
         try {
           // TODO: Para producción, reemplazar 'correoDestino' por 'persona.mail'
           // Por el momento se usa el correo verificado en Resend para la demostración.
-          const correoDestino = 'carlo.castro247390@alumnos.info.unlp.edu.ar';
+          const correoDestino = persona.mail;
 
           await this.emailService.enviarCorreo(
             correoDestino, // <- En producción esto será: persona.mail

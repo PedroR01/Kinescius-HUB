@@ -1,24 +1,18 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
+import type { UserData } from '@/lib/user-interface'
 
 export const Route = createFileRoute('/clientes')({
   component: RouteComponent,
 })
 
-type Cliente = {
-  clienteId: number
-  nombre: string
-  apellido: string
-  dni: string
-  mail: string
-}
-
 function RouteComponent() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientes, setClientes] = useState<UserData[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
 
   const loadClientes = async () => {
     setLoading(true)
@@ -43,6 +37,30 @@ function RouteComponent() {
       setClientes([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const suspencionHandler = async (id: number) => {
+    console.log("Se ejecuta el Handler de suspencion para el id " + id)
+    try {
+      const response = await fetch(`${API_BASE}/admin/clases/cambiarEstadoUsuario`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id, activo: false }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al suspender el cliente')
+      }
+
+      const data = await response.json()
+      await loadClientes()
+      return data
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido')
+      return null
     }
   }
 
@@ -73,6 +91,13 @@ function RouteComponent() {
           >
             {loading ? 'Cargando...' : 'Actualizar lista'}
           </button>
+          <button
+            onClick={() => navigate({ to: '/clientesSuspendidos' })}
+            className="mt-10 rounded-full bg-[#2DBE7F] px-10 py-4 text-lg font-bold text-[#0d1f18] shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl disabled:opacity-50"
+          >
+            Ver clientes suspendidos
+          </button>
+
         </div>
 
         {error && (
@@ -91,8 +116,8 @@ function RouteComponent() {
 
         <div className="grid grid-cols-1 gap-14 md:grid-cols-2 xl:grid-cols-3">
           {clientes.map((cliente) => (
-            <button
-              key={cliente.clienteId}
+            <div
+              key={cliente.id}
               className="group relative overflow-hidden rounded-[42px] bg-[#f0faf5] p-10 text-left shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
             >
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#2DBE7F]/15 blur-3xl transition-all duration-500 group-hover:scale-150"></div>
@@ -136,12 +161,25 @@ function RouteComponent() {
                     {cliente.mail}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm("¿Desea suspender al cliente?")) {
+                      suspencionHandler(cliente.id)
+                    }
+                  }}
+                  className="mt-2 w-full rounded-[16px] bg-red-300 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-md transition-all duration-300 hover:bg-red-600 hover:shadow-lg"
+                >
+                  Suspender cliente
+                </button>
+
+
               </div>
 
               <div className="relative z-10 mt-8 flex justify-end">
                 <div className="h-4 w-4 rounded-full bg-[#2DBE7F] shadow-lg shadow-[#2DBE7F]"></div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </section>
