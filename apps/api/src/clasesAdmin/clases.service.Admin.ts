@@ -8,6 +8,11 @@ import {
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { EmailService } from "../email/email.service";
 
+// IDs de la tabla "rol" (confirmados en Supabase: 0=admin, 1=profesor, 2=cliente, 3=cliente abonado)
+const ROL_ADMIN_ID = 0;
+const ROL_PROFESOR_ID = 1;
+const ROL_CLIENTE_ID = 2;
+
 @Injectable()
 export class ClasesAdminService {
 
@@ -63,7 +68,7 @@ export class ClasesAdminService {
     if (profesorIds.length > 0) {
       const { data: personas, error: profesorError } =
         await this.supabaseService.client
-          .from("Persona")
+          .from("Persona_")
           .select("id,nombre,apellido")
           .in("id", profesorIds);
 
@@ -133,34 +138,32 @@ export class ClasesAdminService {
     let profesorId = null;
 
     if (profesorDni) {
-
       const { data: persona, error: personaError } =
         await this.supabaseService.client
-          .from("Persona")
-          .select("id")
+          .from("Persona_")
+          .select("id, rol")
           .eq("dni", profesorDni)
-          .single();
+          .maybeSingle();
 
-      if (personaError || !persona) {
+      if (personaError) {
+        throw new InternalServerErrorException(
+          `Error al buscar la persona: ${personaError.message}`
+        );
+      }
+
+      if (!persona) {
         throw new BadRequestException(
           "No existe una persona con ese DNI"
         );
       }
 
-      const { data: profesor, error: profesorError } =
-        await this.supabaseService.client
-          .from("Profesor")
-          .select("id")
-          .eq("id", persona.id)
-          .single();
-
-      if (profesorError || !profesor) {
+      if (persona.rol !== ROL_PROFESOR_ID) {
         throw new BadRequestException(
           "La persona existe pero no es profesor"
         );
       }
 
-      profesorId = profesor.id;
+      profesorId = persona.id;
 
       const { count: profesorClasesCount, error: profesorClaseError } =
         await this.supabaseService.client
@@ -245,13 +248,13 @@ export class ClasesAdminService {
 
     const clienteIds = (inscripciones ?? []).map((i: any) => i.id_cliente as number);
 
-    // 2. Obtener datos de contacto desde Persona
+    // 2. Obtener datos de contacto desde Persona_ (id_cliente ahora apunta ahí)
     let emailData: { mail: string | null; nombre: string }[] = [];
 
     if (clienteIds.length > 0) {
       const { data: personas, error: personasError } =
         await this.supabaseService.client
-          .from("Persona")
+          .from("Persona_")
           .select("id, nombre, mail")
           .in("id", clienteIds);
 
@@ -384,7 +387,7 @@ export class ClasesAdminService {
     const { data: enrollments, error: enrollmentError } = await this.supabaseService.client
       .from("Se_inscribe")
       .select(
-        `id_cliente, estado, Cliente!inner(Usuario!inner(Persona(nombre,apellido,dni,mail)))`
+        `id_cliente, estado, Persona_!inner(nombre,apellido,dni,mail)`
       )
       .eq("id_clase", clase.id);
 
@@ -404,10 +407,10 @@ export class ClasesAdminService {
     const mapped = enrollments.map((entry: any) => ({
       clienteId: entry.id_cliente,
       estado: entry.estado,
-      nombre: entry?.Cliente?.Usuario?.Persona?.nombre ?? null,
-      apellido: entry?.Cliente?.Usuario?.Persona?.apellido ?? null,
-      dni: entry?.Cliente?.Usuario?.Persona?.dni ?? null,
-      mail: entry?.Cliente?.Usuario?.Persona?.mail ?? null,
+      nombre: entry?.Persona_?.nombre ?? null,
+      apellido: entry?.Persona_?.apellido ?? null,
+      dni: entry?.Persona_?.dni ?? null,
+      mail: entry?.Persona_?.mail ?? null,
     }));
 
     return {
@@ -446,6 +449,7 @@ export class ClasesAdminService {
     }));
 
 
+
     return {
       message: `Se encontraron ${clientes.length} clientes`,
       clientes,
@@ -453,9 +457,11 @@ export class ClasesAdminService {
   }
 
   async getProfesores() {
-    const { data: profesores, error: profesorError } = await this.supabaseService.client
-      .from("Profesor")
-      .select("id");
+    const { data: profesores, error: profesorError } =
+      await this.supabaseService.client
+        .from("Persona_")
+        .select("id, nombre, apellido, dni")
+        .eq("rol", ROL_PROFESOR_ID);
 
     if (profesorError) {
       throw new InternalServerErrorException(
@@ -463,33 +469,12 @@ export class ClasesAdminService {
       );
     }
 
-    if (!profesores || profesores.length === 0) {
-      return { profesores: [] };
-    }
-
-    const ids = profesores.map((p: any) => p.id);
-
-    const { data: usuarios, error: usuarioError } = await this.supabaseService.client
-      .from("Usuario")
-      .select("id, Persona(id, nombre, apellido, dni)")
-      .in("id", ids);
-
-    if (usuarioError) {
-      throw new InternalServerErrorException(
-        `Error al obtener datos de profesores: ${usuarioError.message}`
-      );
-    }
-
-    const resultado = profesores.map((p: any) => {
-      const usuario = (usuarios ?? []).find((u: any) => u.id === p.id);
-      const persona = (usuario as any)?.Persona;
-      return {
-        id: p.id,
-        nombre: persona?.nombre ?? null,
-        apellido: persona?.apellido ?? null,
-        dni: persona?.dni ?? null,
-      };
-    });
+    const resultado = (profesores ?? []).map((p: any) => ({
+      id: p.id,
+      nombre: p.nombre ?? null,
+      apellido: p.apellido ?? null,
+      dni: p.dni ?? null,
+    }));
 
     return { profesores: resultado };
   }
@@ -516,9 +501,11 @@ export class ClasesAdminService {
       .map((c: any) => c.id_profesor)
       .filter(Boolean);
 
-    const { data: todosProfesores, error: profesorError } = await this.supabaseService.client
-      .from("Profesor")
-      .select("id");
+    const { data: todosProfesores, error: profesorError } =
+      await this.supabaseService.client
+        .from("Persona_")
+        .select("id, nombre, apellido, dni")
+        .eq("rol", ROL_PROFESOR_ID);
 
     if (profesorError) {
       throw new InternalServerErrorException(
@@ -526,35 +513,14 @@ export class ClasesAdminService {
       );
     }
 
-    const idsDisponibles = (todosProfesores ?? [])
-      .map((p: any) => p.id)
-      .filter((id: number) => !idsOcupados.includes(id));
-
-    if (idsDisponibles.length === 0) {
-      return { profesores: [] };
-    }
-
-    const { data: usuarios, error: usuarioError } = await this.supabaseService.client
-      .from("Usuario")
-      .select("id, Persona(id, nombre, apellido, dni)")
-      .in("id", idsDisponibles);
-
-    if (usuarioError) {
-      throw new InternalServerErrorException(
-        `Error al obtener datos de profesores: ${usuarioError.message}`
-      );
-    }
-
-    const resultado = idsDisponibles.map((id: number) => {
-      const usuario = (usuarios ?? []).find((u: any) => u.id === id);
-      const persona = (usuario as any)?.Persona;
-      return {
-        id,
-        nombre: persona?.nombre ?? null,
-        apellido: persona?.apellido ?? null,
-        dni: persona?.dni ?? null,
-      };
-    });
+    const resultado = (todosProfesores ?? [])
+      .filter((p: any) => !idsOcupados.includes(p.id))
+      .map((p: any) => ({
+        id: p.id,
+        nombre: p.nombre ?? null,
+        apellido: p.apellido ?? null,
+        dni: p.dni ?? null,
+      }));
 
     return { profesores: resultado };
   }
@@ -585,8 +551,8 @@ export class ClasesAdminService {
     }
 
     const { data: profesor, error: profesorError } = await this.supabaseService.client
-      .from("Profesor")
-      .select("id")
+      .from("Persona_")
+      .select("id, rol")
       .eq("id", idProfesor)
       .maybeSingle();
 
@@ -596,7 +562,7 @@ export class ClasesAdminService {
       );
     }
 
-    if (!profesor) {
+    if (!profesor || profesor.rol !== ROL_PROFESOR_ID) {
       throw new NotFoundException("No existe un profesor con ese id");
     }
 
@@ -638,6 +604,69 @@ export class ClasesAdminService {
     };
   }
 
+  async crearProfesor({
+    dni,
+    mail,
+    nombre,
+    apellido,
+  }: {
+    dni: string;
+    mail: string;
+    nombre: string;
+    apellido: string;
+  }) {
+    if (!dni || !mail || !nombre || !apellido) {
+      throw new BadRequestException(
+        "El DNI, el mail, el nombre y el apellido son obligatorios"
+      );
+    }
+
+    const { data: personaExistente, error: personaBusquedaError } =
+      await this.supabaseService.client
+        .from("Persona_")
+        .select("id, dni, mail")
+        .or(`dni.eq.${dni},mail.eq.${mail}`)
+        .maybeSingle();
+
+    if (personaBusquedaError) {
+      throw new InternalServerErrorException(
+        `Error al verificar persona existente: ${personaBusquedaError.message}`
+      );
+    }
+
+    if (personaExistente) {
+      const campo = personaExistente.dni === dni ? "DNI" : "mail";
+      throw new BadRequestException(
+        `Ya existe una persona registrada con ese ${campo}`
+      );
+    }
+
+    const { data: persona, error: personaError } =
+      await this.supabaseService.client
+        .from("Persona_")
+        .insert({
+          dni,
+          mail,
+          nombre,
+          apellido,
+          rol: ROL_PROFESOR_ID,
+          activo: true,
+        })
+        .select("id")
+        .single();
+
+    if (personaError || !persona) {
+      throw new InternalServerErrorException(
+        `Error al crear el profesor: ${personaError?.message}`
+      );
+    }
+
+    return {
+      message: "Profesor creado correctamente",
+      profesor: { id: persona.id, dni, mail, nombre, apellido },
+    };
+  }
+
   async cambiarEstadoUsuario(id: number, activo: boolean) {
     const { data, error } = await this.supabaseService.client
       .from('Persona_')
@@ -645,7 +674,6 @@ export class ClasesAdminService {
       .eq('id', id);
     return { success: true, mensaje: activo ? "Suspención revocada con éxito." : "Cliente suspendido con éxito." };
   }
-
 
   async getClientesSuspendidos() {
     const { data, error } = await this.supabaseService.client
@@ -680,4 +708,5 @@ export class ClasesAdminService {
       clientes,
     };
   }
+
 }

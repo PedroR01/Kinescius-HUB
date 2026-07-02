@@ -14,7 +14,7 @@ export class RecordatoriosService {
   ) { }
 
 
-  async obtenerIdDeUsuario(token: string) {
+async obtenerIdDeUsuario(token: string) {
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser(token);
 
     if (userError || !userData.user) {
