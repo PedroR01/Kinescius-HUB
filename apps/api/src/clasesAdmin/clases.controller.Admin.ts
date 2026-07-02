@@ -113,4 +113,8 @@ export class ClasesAdminController {
 async findEstadoSuscripcion() {
   return this.clasesService.getEstadoSuscripcion();
 }
+@Get(":id/estadisticas")
+async findEstadisticas(@Param("id", ParseIntPipe) id: number) {
+  return this.clasesService.getEstadisticas(id);
+}
 }

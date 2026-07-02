@@ -13,7 +13,8 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Cambiar profesor", to: "/cambiarProfesor" },
   { label: "Ver inscriptos", to: "/verInscriptos" },
   { label: "Cargar profesor", to: "/cargarProfesor" },
-  { label: "Ver estado de suscripción", to: "/estadoSuscripcion" }
+  { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
+  { label: "Ver estadísticas", to: "/verEstadisticas" }
 
 ];
 
@@ -32,6 +33,11 @@ const USER_ACTIONS: DashboardAction[] = [
     label: "Escanear asistencia",
     to: "/escanear-asistencia",
     description: "Registrá tu presencia con la cámara"
+  },
+    {
+    label: "Libro de quejas",
+    to: "/libro-quejas",
+    description: "Calificá y comentá tus clases pasadas"
   }
 ];
 
