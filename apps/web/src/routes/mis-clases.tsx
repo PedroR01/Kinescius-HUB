@@ -92,9 +92,11 @@ export default function GestionClases() {
         switch (estado) {
             case 'Completada':
                 return <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Completada</span>;
-            case 'Turno cancelado':
-            case 'Clase cancelada':
+            case 'Cancelada por cliente':
+            case 'Cancelada por admin':
                 return <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">{estado}</span>;
+            case 'Cambiada':
+                return <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Cambiada</span>;
             default:
                 return <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">{estado || 'Activa'}</span>;
         }

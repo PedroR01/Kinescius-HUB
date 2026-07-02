@@ -30,7 +30,7 @@ export class ShiftsService {
       .select('*, clase:Clase (fecha, hora)')
       .eq('id_cliente', clienteId)
       .eq('id_clase', claseId)
-      .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
+      .eq('cancelado', false)
       .single();
 
     if (errorInscripcion || !inscripcion) {
@@ -75,7 +75,7 @@ export class ShiftsService {
         .from('Se_inscribe')
         .select('*, Clase!inner(fecha)', { count: 'exact', head: true })
         .eq('id_cliente', clienteId)
-        .eq('historial_estado', 'turno cancelado')
+        .eq('cancelada', true)
         .gte('Clase.fecha', `${mesClase}-01`)
         .lte('Clase.fecha', `${mesClase}-31`);
 
@@ -84,7 +84,7 @@ export class ShiftsService {
         .from('Se_inscribe')
         .select('*, Clase!inner(fecha)', { count: 'exact', head: true })
         .eq('id_cliente', clienteId)
-        .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
+        .eq('cancelado', false)
         .gte('Clase.fecha', `${mesClase}-01`)
         .lte('Clase.fecha', `${mesClase}-31`);
 
@@ -114,7 +114,8 @@ export class ShiftsService {
       const { error: errorUpdate } = await this.supabase.client
         .from('Se_inscribe')
         .update({ 
-          historial_estado: 'turno cancelado' 
+          cancelado: true,
+          historial_estado: 'Cancelada por cliente' 
         })
         .eq('id_cliente', clienteId)
         .eq('id_clase', claseId);
@@ -185,7 +186,7 @@ export class ShiftsService {
       .select('*')
       .eq('id_cliente', clienteId)
       .eq('id_clase', claseActualId)
-      .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
+      .eq('cancelado', false)
       .single();
 
     if (errorInsOrig || !inscripcionOriginal) {
@@ -243,10 +244,10 @@ export class ShiftsService {
     // Marcar la original como Cambiada (soft-delete)
     const { error: errorUpdateOriginal } = await this.supabase.client
       .from('Se_inscribe')
-      .update({ historial_estado: 'Cambiada' })
+      .update({ cancelado: true, historial_estado: 'Cambiada' })
       .eq('id_cliente', clienteId)
       .eq('id_clase', claseActualId)
-      .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada');
+      .eq('cancelado', false);
 
     if (errorUpdateOriginal) {
       throw new BadRequestException('No se pudo procesar la reasignación del turno original.');
@@ -265,6 +266,7 @@ export class ShiftsService {
       });
 
     if (errorInsertNueva) {
+      // Revert in case of failure? (Ideally yes, but doing basic throw for now)
       throw new BadRequestException('No se pudo procesar la inscripción en la nueva clase.');
     }
 
@@ -295,7 +297,7 @@ export class ShiftsService {
         )
       `)
       .eq('id_cliente', idCliente)
-      .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
+      .eq('cancelado', false)
       .gte('Clase.fecha', new Date().toISOString().split('T')[0]);
 
     if (error) {
@@ -325,7 +327,7 @@ export class ShiftsService {
         .from('Se_inscribe')
         .select('id_clase, Clase!inner(fecha)')
         .eq('id_cliente', idCliente)
-        .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
+        .eq('cancelado', false)
         .gte('Clase.fecha', fechaInicio);
 
       if (todasInscripciones) {
@@ -398,6 +400,7 @@ export class ShiftsService {
       .select(`
         id_cliente,
         id_clase,
+        cancelado,
         historial_estado,
         Clase!inner (
           id,
@@ -408,29 +411,22 @@ export class ShiftsService {
           id_profesor
         )
       `)
-      .eq('id_cliente', idCliente);
+      .eq('id_cliente', idCliente)
+      .or(`cancelado.eq.true,Clase.fecha.lt.${new Date().toISOString().split('T')[0]}`);
 
     if (error) {
       throw new InternalServerErrorException('Error al recuperar el historial: ' + error.message);
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const inscripciones = ((data ?? []) as any[]).filter((item) => {
-       const isPast = item.Clase.fecha < today;
-       const isCancelled = item.historial_estado === 'Cancelada' || item.historial_estado === 'turno cancelado';
-       return isPast || isCancelled;
-    });
+    const inscripciones = (data ?? []) as any[];
 
     // Map the status
-    const historialMapeado = inscripciones.map((item) => {
+    return inscripciones.map((item) => {
       let estadoMostrar = item.historial_estado || 'Activa';
 
-      if (estadoMostrar === 'Activa' || estadoMostrar === 'null') {
+      // Si no fue cancelada ni cambiada, y ya pasó la fecha, es Completada
+      if (!item.cancelado && estadoMostrar === 'Activa') {
         estadoMostrar = 'Completada';
-      } else if (estadoMostrar === 'Cancelada') {
-        estadoMostrar = 'Clase cancelada';
-      } else if (estadoMostrar === 'turno cancelado') {
-        estadoMostrar = 'Turno cancelado';
       }
 
       return {
@@ -444,17 +440,11 @@ export class ShiftsService {
           tipo: item.Clase.tipo,
         },
       };
+    }).sort((a, b) => {
+      const dateA = new Date(`${a.Clase.fecha}T${a.Clase.hora}`);
+      const dateB = new Date(`${b.Clase.fecha}T${b.Clase.hora}`);
+      return dateB.getTime() - dateA.getTime(); // Descending order
     });
-
-    const permitidos = ['Turno cancelado', 'Clase cancelada', 'Completada'];
-    
-    return historialMapeado
-      .filter((item) => permitidos.includes(item.estado_historial))
-      .sort((a, b) => {
-        const dateA = new Date(`${a.Clase.fecha}T${a.Clase.hora}`);
-        const dateB = new Date(`${b.Clase.fecha}T${b.Clase.hora}`);
-        return dateB.getTime() - dateA.getTime(); // Descending order
-      });
   }
 
 }

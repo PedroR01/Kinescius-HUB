@@ -12,7 +12,9 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Ver clases creadas", to: "/verClases" },
   { label: "Cambiar profesor", to: "/cambiarProfesor" },
   { label: "Ver inscriptos", to: "/verInscriptos" },
-  { label: "Cargar profesor", to: "/cargarProfesor" }
+  { label: "Cargar profesor", to: "/cargarProfesor" },
+  { label: "Ver estado de suscripción", to: "/estadoSuscripcion" }
+
 ];
 
 const USER_ACTIONS: DashboardAction[] = [
