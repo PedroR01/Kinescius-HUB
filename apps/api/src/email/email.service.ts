@@ -1,43 +1,45 @@
+//es lo mismo de carlo, hice copy paste
 import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-  private resend: Resend;
   private readonly logger = new Logger(EmailService.name);
 
   constructor() {
-    // Inicializamos Resend con la variable de entorno
-    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
+
+  private transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
 
   async enviarCorreo(to: string, subject: string, html: string) {
     try {
-      const { data, error } = await this.resend.emails.send({
-        from: 'Kinescius HUB <onboarding@resend.dev>', // Recuerda que este es el mail por defecto para pruebas
-        to: [to],
+      const info = await this.transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: to,
         subject: subject,
         html: html,
       });
 
-      if (error) {
-        this.logger.error(`Error al enviar correo a ${to}`, error);
-        throw new Error('No se pudo enviar el correo');
-      }
+      this.logger.log(`Correo enviado exitosamente con ID: ${info.messageId}`);
+      return info;
 
-      this.logger.log(`Correo enviado exitosamente con ID: ${data.id}`);
-      return data;
-      
     } catch (error) {
       this.logger.error('Error interno del servicio de correos', error);
       throw error;
     }
   }
 
+
   async enviarNuevaPassword(emailDestino: string, nuevaPassword: string) {
     try {
-      const { error } = await this.resend.emails.send({
-        from: 'Kinescius-HUB <onboarding@resend.dev>', // Usamos el correo de prueba de Resend
+      const info = await this.transporter.sendMail({
+        from: process.env.GMAIL_USER,
         to: emailDestino,
         subject: 'Recuperación de contraseña de Kinescius-HUB',
         html: `
@@ -52,41 +54,39 @@ export class EmailService {
         `,
       });
 
-      if (error) {
-        console.error('Error de Resend:', error);
-        throw new InternalServerErrorException('Fallo al enviar el correo con Resend');
-      }
-    } catch (err) {
-      throw new InternalServerErrorException('No se pudo enviar el correo de recuperación.');
+      this.logger.log(`Correo de recuperación de contraseña enviado exitosamente con ID: ${info.messageId}`);
+      return info;
+
+    } catch (error) {
+      this.logger.error('Error interno del servicio de correos', error);
+      throw error;
     }
   }
 
-
-
   async enviarClaseCancelada(params: {
-  to: string;
-  nombre: string;
-  fecha: string;
-  hora: string;
-  tipo: string | null;
-}) {
-  const { to, nombre, fecha, hora, tipo } = params;
+    to: string;
+    nombre: string;
+    fecha: string;
+    hora: string;
+    tipo: string | null;
+  }) {
+    const { to, nombre, fecha, hora, tipo } = params;
 
-  const fechaFormateada = new Date(fecha).toLocaleDateString('es-AR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+    const fechaFormateada = new Date(fecha).toLocaleDateString('es-AR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
 
-  const horaFormateada = hora.replace(/:00$/, 'hs');
-  const actividad = tipo ?? 'clase';
+    const horaFormateada = hora.replace(/:00$/, 'hs');
+    const actividad = tipo ?? 'clase';
 
-  try {
-    await this.enviarCorreo(
-      to,
-      `Cancelación de clase — ${actividad} del ${fechaFormateada}`,
-      `
+    try {
+      await this.enviarCorreo(
+        to,
+        `Cancelación de clase — ${actividad} del ${fechaFormateada}`,
+        `
         <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; color: #0d1f18;">
           <h2 style="color: #2DBE7F;">Clase cancelada</h2>
           <p>Hola <strong>${nombre}</strong>,</p>
@@ -109,9 +109,9 @@ export class EmailService {
           <p style="color: #888; font-size: 12px; margin-top: 32px;">Este es un mensaje automático, por favor no respondas este email.</p>
         </div>
       `
-    );
-  } catch (error) {
-    this.logger.error(`Error al enviar email de cancelación a ${to}: ${String(error)}`);
+      );
+    } catch (error) {
+      this.logger.error(`Error al enviar email de cancelación a ${to}: ${String(error)}`);
+    }
   }
-}
 }
