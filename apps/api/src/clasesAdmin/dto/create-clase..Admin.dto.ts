@@ -1,28 +1,39 @@
-import { IsOptional, IsString, IsNumber, Min, IsEnum } from "class-validator";
-
-enum TipoClase {
-  ZONA_MEDIA = "zona media",
-  ZONA_SUPERIOR = "zona superior",
-  ZONA_INFERIOR = "zona inferior",
-}
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  Matches,
+} from "class-validator";
 
 export class CreateClaseDto {
   @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "La fecha debe tener el formato YYYY-MM-DD",
+  })
   fecha!: string;
 
   @IsString()
+  @Matches(/^\d{2}:\d{2}(:\d{2})?$/, {
+    message: "La hora debe tener el formato HH:mm",
+  })
   hora!: string;
 
   @IsOptional()
-  @IsEnum(TipoClase, { message: "El tipo debe ser: zona media, zona superior o zona inferior" })
-  tipo?: TipoClase | null;
+  @IsString()
+  tipo?: string;
 
   @IsOptional()
   @IsString()
-  profesorDni?: string | null;
+  @Matches(/^\d{7,8}$/, {
+    message: "El DNI del profesor debe tener entre 7 y 8 dígitos",
+  })
+  profesorDni?: string;
 
   @IsOptional()
-  @IsNumber()
-  @Min(1, { message: "El cupo debe ser mayor a 0" })
+  @IsInt()
+  @Min(1)
+  @Max(50)
   cupo?: number;
 }

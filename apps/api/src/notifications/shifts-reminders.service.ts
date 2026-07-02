@@ -14,7 +14,7 @@ export class RecordatoriosService {
   ) { }
 
 
-  async obtenerIdDeUsuario(token: string) {
+async obtenerIdDeUsuario(token: string) {
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser(token);
 
     if (userError || !userData.user) {
@@ -22,9 +22,9 @@ export class RecordatoriosService {
     }
 
     const { data: persona, error: errorPersona } = await this.supabase.client
-      .from('Persona')
+      .from('Persona_')
       .select('id')
-      .eq('user_id', userData.user.id)
+      .eq('mail', userData.user.email)
       .single();
 
     if (errorPersona || !persona) {
