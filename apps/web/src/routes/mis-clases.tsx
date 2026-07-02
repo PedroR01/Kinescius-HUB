@@ -45,8 +45,8 @@ export default function GestionClases() {
             fetch(`${API_BASE}/shifts/historial/${idCliente}`).then((res) => res.json())
         ])
         .then(([dataProximas, dataHistorial]) => {
-            setMisClases(dataProximas);
-            setHistorialClases(dataHistorial);
+            setMisClases(Array.isArray(dataProximas) ? dataProximas : []);
+            setHistorialClases(Array.isArray(dataHistorial) ? dataHistorial : []);
             setIsLoading(false);
         })
         .catch((err) => {
