@@ -114,4 +114,43 @@ export class EmailService {
       this.logger.error(`Error al enviar email de cancelación a ${to}: ${String(error)}`);
     }
   }
+
+  /**
+   * Notificación manual: un administrador elige un cliente y le
+   * escribe un asunto y un mensaje libre, que se envía por Gmail.
+   * A diferencia de enviarClaseCancelada, acá SI se propaga el error
+   * hacia arriba, porque el admin necesita saber si el envío falló.
+   */
+  async enviarNotificacionManual(params: {
+    to: string;
+    nombre: string;
+    asunto: string;
+    mensaje: string;
+  }) {
+    const { to, nombre, asunto, mensaje } = params;
+
+    try {
+      const info = await this.enviarCorreo(
+        to,
+        asunto,
+        `
+        <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; color: #0d1f18;">
+          <h2 style="color: #2DBE7F;">${asunto}</h2>
+          <p>Hola <strong>${nombre}</strong>,</p>
+          <div style="white-space: pre-line; margin: 16px 0; line-height: 1.5;">${mensaje}</div>
+          <p style="color: #888; font-size: 12px; margin-top: 32px;">Este mensaje fue enviado por el equipo de Kinescius-HUB.</p>
+        </div>
+        `
+      );
+
+      this.logger.log(`Notificación manual enviada exitosamente a ${to}`);
+      return info;
+
+    } catch (error) {
+      this.logger.error(`Error al enviar notificación manual a ${to}: ${String(error)}`);
+      throw new InternalServerErrorException(
+        'Error al enviar la notificación por correo'
+      );
+    }
+  }
 }

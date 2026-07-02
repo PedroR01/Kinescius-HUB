@@ -206,7 +206,8 @@ export class ShiftsService {
     const { count: inscritosClaseNueva, error: errorCount } = await this.supabase.client
       .from('Se_inscribe')
       .select('*', { count: 'exact', head: true })
-      .eq('id_clase', claseNuevaId);
+      .eq('id_clase', claseNuevaId)
+      .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada');
 
     if (errorCount) {
       throw new BadRequestException('No se pudo verificar la disponibilidad de la clase destino.');

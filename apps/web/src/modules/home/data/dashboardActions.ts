@@ -15,6 +15,11 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Cargar profesor", to: "/cargarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
   { label: "Ver estadísticas", to: "/verEstadisticas" }
+  {
+    label: "Enviar notificación",
+    to: "/notificacionManual",
+    description: "Mandale un mail puntual a un cliente"
+  }
 
 ];
 

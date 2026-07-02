@@ -12,8 +12,16 @@ import { EmailService } from "../email/email.service";
 const ROL_ADMIN_ID = 0;
 const ROL_PROFESOR_ID = 1;
 const ROL_CLIENTE_ID = 2;
-const ROL_CLIENTE_ABONADO_ID = 3;//LO AGREGUEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+const ROL_CLIENTE_ABONADO_ID = 3;
 
+// IDs de la tabla "estado_clase"
+const ESTADO_CLASE_CANCELADA = 2;
+
+// Valores de la columna "historial_estado" en "Se_inscribe"
+const HISTORIAL_ESTADO_CANCELADA = "Cancelada";
+
+// Monto a favor que se acredita a cada cliente inscripto cuando se cancela su clase
+const MONTO_A_FAVOR_CANCELACION = 5000;
 
 @Injectable()
 export class ClasesAdminService {
@@ -23,7 +31,7 @@ export class ClasesAdminService {
     private readonly emailService: EmailService,
   ) { }
 
-  async findAll(startDate?: string, endDate?: string) {
+  async findAll(startDate?: string, endDate?: string, incluirCanceladas = false) {
 
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       throw new BadRequestException(
@@ -43,6 +51,10 @@ export class ClasesAdminService {
 
     if (endDate) {
       query = query.lte("fecha", endDate);
+    }
+
+    if (!incluirCanceladas) {
+      query = query.neq("estado", ESTADO_CLASE_CANCELADA);
     }
 
     const { data, error } = await query;
@@ -121,7 +133,8 @@ export class ClasesAdminService {
       .from("Clase")
       .select("id", { count: "exact", head: true })
       .eq("fecha", fecha)
-      .eq("hora", hora);
+      .eq("hora", hora)
+      .neq("estado", ESTADO_CLASE_CANCELADA);
 
     const { count, error: countError } = await countQuery;
 
@@ -173,7 +186,8 @@ export class ClasesAdminService {
           .select("id", { count: "exact", head: true })
           .eq("id_profesor", profesorId)
           .eq("fecha", fecha)
-          .eq("hora", hora);
+          .eq("hora", hora)
+          .neq("estado", ESTADO_CLASE_CANCELADA);
 
       if (profesorClaseError) {
         throw new InternalServerErrorException(
@@ -214,6 +228,14 @@ export class ClasesAdminService {
     };
   }
 
+  /**
+   * Baja lógica de una clase: no se borra el registro, se marca
+   * "estado" en 2 (Cancelada) en la tabla Clase. Las inscripciones
+   * asociadas NO se eliminan: se conservan para historial, marcando
+   * su columna "historial_estado" en "Cancelada". Los tokens de
+   * confirmación sí se eliminan, para evitar confirmaciones sobre
+   * una clase que ya no dicta.
+   */
   async cancel(id: number) {
     if (!Number.isInteger(id) || id <= 0) {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");
@@ -221,7 +243,7 @@ export class ClasesAdminService {
 
     const { data: clase, error: claseError } = await this.supabaseService.client
       .from("Clase")
-      .select("id, fecha, hora, tipo")
+      .select("id, fecha, hora, tipo, estado")
       .eq("id", id)
       .maybeSingle();
 
@@ -233,6 +255,10 @@ export class ClasesAdminService {
 
     if (!clase) {
       throw new NotFoundException("No existe una clase con ese id");
+    }
+
+    if (clase.estado === ESTADO_CLASE_CANCELADA) {
+      throw new BadRequestException("La clase ya se encuentra cancelada");
     }
 
     // 1. Obtener IDs de clientes inscriptos
@@ -250,7 +276,7 @@ export class ClasesAdminService {
 
     const clienteIds = (inscripciones ?? []).map((i: any) => i.id_cliente as number);
 
-    // 2. Obtener datos de contacto desde Persona_ (id_cliente ahora apunta ahí)
+    // 2. Obtener datos de contacto desde Persona_
     let emailData: { mail: string | null; nombre: string }[] = [];
 
     if (clienteIds.length > 0) {
@@ -273,15 +299,82 @@ export class ClasesAdminService {
     console.log(`[cancel] Clase ${id} - inscriptos encontrados: ${clienteIds.length}`);
     console.log(`[cancel] Emails a notificar:`, emailData);
 
-    // 3. Eliminar inscripciones
+    // 3. Marcar las inscripciones como "Cancelada" en su historial (no se borran)
     const { error: inscripcionesError } = await this.supabaseService.client
       .from("Se_inscribe")
-      .delete()
+      .update({ historial_estado: HISTORIAL_ESTADO_CANCELADA })
       .eq("id_clase", id);
 
     if (inscripcionesError) {
       throw new InternalServerErrorException(
-        `Error al cancelar inscripciones: ${inscripcionesError.message}`
+        `Error al actualizar el historial de inscripciones: ${inscripcionesError.message}`
+      );
+    }
+
+    // 3.1. Acreditar monto a favor a cada cliente inscripto
+    if (clienteIds.length > 0) {
+      const { data: estadosExistentes, error: estadosError } =
+        await this.supabaseService.client
+          .from("Estado_Cliente")
+          .select("id, monto_favor")
+          .in("id", clienteIds);
+
+      if (estadosError) {
+        throw new InternalServerErrorException(
+          `Error al obtener el estado de los clientes: ${estadosError.message}`
+        );
+      }
+
+      const montoFavorPorCliente = new Map<number, number>();
+      (estadosExistentes ?? []).forEach((estado: any) => {
+        montoFavorPorCliente.set(estado.id, Number(estado.monto_favor) ?? 0);
+      });
+
+      const clientesAActualizar = clienteIds.filter((clienteId) =>
+        montoFavorPorCliente.has(clienteId)
+      );
+      const clientesAInsertar = clienteIds.filter(
+        (clienteId) => !montoFavorPorCliente.has(clienteId)
+      );
+
+      const updatePromises = clientesAActualizar.map((clienteId) => {
+        const nuevoMonto =
+          (montoFavorPorCliente.get(clienteId) ?? 0) + MONTO_A_FAVOR_CANCELACION;
+
+        return this.supabaseService.client
+          .from("Estado_Cliente")
+          .update({ monto_favor: nuevoMonto })
+          .eq("id", clienteId);
+      });
+
+      const updateResults = await Promise.all(updatePromises);
+      const updateError = updateResults.find((result) => result.error)?.error;
+
+      if (updateError) {
+        throw new InternalServerErrorException(
+          `Error al acreditar el monto a favor: ${updateError.message}`
+        );
+      }
+
+      if (clientesAInsertar.length > 0) {
+        const { error: insertError } = await this.supabaseService.client
+          .from("Estado_Cliente")
+          .insert(
+            clientesAInsertar.map((clienteId) => ({
+              id: clienteId,
+              monto_favor: MONTO_A_FAVOR_CANCELACION,
+            }))
+          );
+
+        if (insertError) {
+          throw new InternalServerErrorException(
+            `Error al acreditar el monto a favor: ${insertError.message}`
+          );
+        }
+      }
+
+      console.log(
+        `[cancel] Clase ${id} - monto a favor de $${MONTO_A_FAVOR_CANCELACION} acreditado a ${clienteIds.length} cliente/s`
       );
     }
 
@@ -297,15 +390,15 @@ export class ClasesAdminService {
       );
     }
 
-    // 4. Eliminar la clase
-    const { error: deleteError } = await this.supabaseService.client
+    // 4. Baja lógica de la clase: se marca como cancelada, no se borra
+    const { error: updateError } = await this.supabaseService.client
       .from("Clase")
-      .delete()
+      .update({ estado: ESTADO_CLASE_CANCELADA })
       .eq("id", id);
 
-    if (deleteError) {
+    if (updateError) {
       throw new InternalServerErrorException(
-        `Error al cancelar la clase: ${deleteError.message}`
+        `Error al cancelar la clase: ${updateError.message}`
       );
     }
 
@@ -335,7 +428,7 @@ export class ClasesAdminService {
     const enviados = results.filter((r) => r.status === "fulfilled").length;
 
     return {
-      message: `Clase cancelada correctamente. Se notificó a ${enviados} inscripto/s.`,
+      message: `Clase cancelada correctamente. Se notificó a ${enviados} inscripto/s y se acreditó $${MONTO_A_FAVOR_CANCELACION} a favor de ${clienteIds.length} cliente/s.`,
       id,
     };
   }
@@ -368,6 +461,7 @@ export class ClasesAdminService {
       .select("id, fecha, hora, tipo")
       .eq("fecha", fecha)
       .eq("tipo", tipo)
+      .neq("estado", ESTADO_CLASE_CANCELADA)
       .order("hora", { ascending: true })
       .limit(1);
 
@@ -514,6 +608,7 @@ export class ClasesAdminService {
       .select("id_profesor")
       .eq("fecha", fecha)
       .eq("hora", hora)
+      .neq("estado", ESTADO_CLASE_CANCELADA)
       .not("id_profesor", "is", null);
 
     if (clasesError) {
@@ -598,6 +693,7 @@ export class ClasesAdminService {
       .eq("id_profesor", idProfesor)
       .eq("fecha", clase.fecha)
       .eq("hora", clase.hora)
+      .neq("estado", ESTADO_CLASE_CANCELADA)
       .neq("id", idClase);
 
     if (countError) {
@@ -785,157 +881,214 @@ export class ClasesAdminService {
       clientes,
     };
   }
-  //esto es lo nueeeeeeeeeeeevooooooooo
+
   async getEstadoSuscripcion() {
-  const { data, error } = await this.supabaseService.client
-    .from('Persona_')
-    .select('id, nombre, apellido, dni, mail, rol')
-    .in('rol', [ROL_CLIENTE_ID, ROL_CLIENTE_ABONADO_ID])
-    .eq('activo', true);
+    const { data, error } = await this.supabaseService.client
+      .from('Persona_')
+      .select('id, nombre, apellido, dni, mail, rol')
+      .in('rol', [ROL_CLIENTE_ID, ROL_CLIENTE_ABONADO_ID])
+      .eq('activo', true);
 
-  if (error) {
-    throw new InternalServerErrorException(
-      `Error al obtener el estado de suscripción: ${error.message}`
-    );
-  }
+    if (error) {
+      throw new InternalServerErrorException(
+        `Error al obtener el estado de suscripción: ${error.message}`
+      );
+    }
 
-  if (!data || data.length === 0) {
+    if (!data || data.length === 0) {
+      return {
+        message: "No hay usuarios registrados",
+        abonados: [] as any[],
+        noAbonados: [] as any[],
+      };
+    }
+
+    const mapPersona = (entry: any) => ({
+      id: entry.id,
+      nombre: entry.nombre,
+      apellido: entry.apellido,
+      dni: entry.dni,
+      mail: entry.mail,
+    });
+
+    const abonados = data
+      .filter((p: any) => p.rol === ROL_CLIENTE_ABONADO_ID)
+      .map(mapPersona);
+
+    const noAbonados = data
+      .filter((p: any) => p.rol === ROL_CLIENTE_ID)
+      .map(mapPersona);
+
     return {
-      message: "No hay usuarios registrados",
-      abonados: [] as any[],
-      noAbonados: [] as any[],
+      message: `Se encontraron ${abonados.length} abonados y ${noAbonados.length} no abonados`,
+      abonados,
+      noAbonados,
     };
   }
-
-  const mapPersona = (entry: any) => ({
-    id: entry.id,
-    nombre: entry.nombre,
-    apellido: entry.apellido,
-    dni: entry.dni,
-    mail: entry.mail,
-  });
-
-  const abonados = data
-    .filter((p: any) => p.rol === ROL_CLIENTE_ABONADO_ID)
-    .map(mapPersona);
-
-  const noAbonados = data
-    .filter((p: any) => p.rol === ROL_CLIENTE_ID)
-    .map(mapPersona);
-
-  return {
-    message: `Se encontraron ${abonados.length} abonados y ${noAbonados.length} no abonados`,
-    abonados,
-    noAbonados,
-  };
-}
 async getEstadisticas(claseId: number) {
-  if (!Number.isInteger(claseId) || claseId <= 0) {
-    throw new BadRequestException("El id de la clase debe ser mayor a 0");
-  }
+    if (!Number.isInteger(claseId) || claseId <= 0) {
+      throw new BadRequestException("El id de la clase debe ser mayor a 0");
+    }
 
-  const { data: clase, error: claseError } = await this.supabaseService.client
-    .from("Clase")
-    .select("id, fecha, hora, tipo, cupo")
-    .eq("id", claseId)
-    .maybeSingle();
+    const { data: clase, error: claseError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id, fecha, hora, tipo, cupo")
+      .eq("id", claseId)
+      .maybeSingle();
 
-  if (claseError) {
-    throw new InternalServerErrorException(
-      `Error al buscar la clase: ${claseError.message}`
-    );
-  }
+    if (claseError) {
+      throw new InternalServerErrorException(
+        `Error al buscar la clase: ${claseError.message}`
+      );
+    }
 
-  if (!clase) {
-    throw new NotFoundException("No existe una clase con ese id");
-  }
+    if (!clase) {
+      throw new NotFoundException("No existe una clase con ese id");
+    }
 
-  if (!clase.tipo) {
+    if (!clase.tipo) {
+      return {
+        message: "No hay estadísticas de clases previas para esta clase",
+        hayEstadisticas: false,
+      };
+    }
+
+    const hoy = new Date().toISOString().split("T")[0];
+
+    // Clases previas del mismo tipo (excluyendo la actual)
+    const { data: clasesPrevias, error: previasError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id, fecha, hora, cupo")
+      .eq("tipo", clase.tipo)
+      .lt("fecha", hoy)
+      .neq("id", claseId);
+
+    if (previasError) {
+      throw new InternalServerErrorException(
+        `Error al obtener clases previas: ${previasError.message}`
+      );
+    }
+
+    if (!clasesPrevias || clasesPrevias.length === 0) {
+      return {
+        message: "No hay estadísticas de clases previas para esta clase",
+        hayEstadisticas: false,
+      };
+    }
+
+    const claseIds = clasesPrevias.map((c: any) => c.id);
+
+    const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .select("id_clase")
+      .in("id_clase", claseIds);
+
+    if (inscripcionesError) {
+      throw new InternalServerErrorException(
+        `Error al obtener inscripciones: ${inscripcionesError.message}`
+      );
+    }
+
+    const conteoPorClase = new Map<number, number>();
+    claseIds.forEach((id: number) => conteoPorClase.set(id, 0));
+    (inscripciones ?? []).forEach((i: any) => {
+      conteoPorClase.set(i.id_clase, (conteoPorClase.get(i.id_clase) ?? 0) + 1);
+    });
+
+    const detalle = clasesPrevias.map((c: any) => {
+      const inscriptos = conteoPorClase.get(c.id) ?? 0;
+      const cupo = c.cupo ?? null;
+      const ocupacion = cupo ? Math.round((inscriptos / cupo) * 100) : null;
+      return { id: c.id, fecha: c.fecha, hora: c.hora, cupo, inscriptos, ocupacion };
+    });
+
+    const totalClasesPrevias = detalle.length;
+    const promedioInscriptos =
+      detalle.reduce((sum, d) => sum + d.inscriptos, 0) / totalClasesPrevias;
+
+    const ocupacionesValidas = detalle
+      .filter((d) => d.ocupacion !== null)
+      .map((d) => d.ocupacion as number);
+    const promedioOcupacion =
+      ocupacionesValidas.length > 0
+        ? Math.round(
+            ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
+          )
+        : null;
+
+    const claseMasConcurrida = [...detalle].sort((a, b) => b.inscriptos - a.inscriptos)[0];
+    const claseMenosConcurrida = [...detalle].sort((a, b) => a.inscriptos - b.inscriptos)[0];
+
     return {
-      message: "No hay estadísticas de clases previas para esta clase",
-      hayEstadisticas: false,
+      message: `Se encontraron estadísticas de ${totalClasesPrevias} clases previas`,
+      hayEstadisticas: true,
+      tipo: clase.tipo,
+      totalClasesPrevias,
+      promedioInscriptos: Math.round(promedioInscriptos * 10) / 10,
+      promedioOcupacion,
+      claseMasConcurrida,
+      claseMenosConcurrida,
+      detalle: [...detalle].sort((a, b) => a.fecha.localeCompare(b.fecha)), // ordenado por fecha
     };
   }
 
-  const hoy = new Date().toISOString().split("T")[0];
+  /**
+   * Envía una notificación manual (asunto + mensaje libre) por mail
+   * a un cliente puntual, elegido por el administrador.
+   */
+  async enviarNotificacionManual({
+    clienteId,
+    asunto,
+    mensaje,
+  }: {
+    clienteId: number;
+    asunto: string;
+    mensaje: string;
+  }) {
+    if (!Number.isInteger(clienteId) || clienteId <= 0) {
+      throw new BadRequestException("El id del cliente debe ser mayor a 0");
+    }
 
-  // Clases previas del mismo tipo (excluyendo la actual)
-  const { data: clasesPrevias, error: previasError } = await this.supabaseService.client
-    .from("Clase")
-    .select("id, fecha, hora, cupo")
-    .eq("tipo", clase.tipo)
-    .lt("fecha", hoy)
-    .neq("id", claseId);
+    if (!asunto || !asunto.trim()) {
+      throw new BadRequestException("El asunto es obligatorio");
+    }
 
-  if (previasError) {
-    throw new InternalServerErrorException(
-      `Error al obtener clases previas: ${previasError.message}`
-    );
-  }
+    if (!mensaje || !mensaje.trim()) {
+      throw new BadRequestException("El mensaje es obligatorio");
+    }
 
-  if (!clasesPrevias || clasesPrevias.length === 0) {
+    const { data: persona, error: personaError } = await this.supabaseService.client
+      .from("Persona_")
+      .select("id, nombre, apellido, mail")
+      .eq("id", clienteId)
+      .maybeSingle();
+
+    if (personaError) {
+      throw new InternalServerErrorException(
+        `Error al buscar el cliente: ${personaError.message}`
+      );
+    }
+
+    if (!persona) {
+      throw new NotFoundException("No existe un cliente con ese id");
+    }
+
+    if (!persona.mail) {
+      throw new BadRequestException("El cliente no tiene un mail registrado");
+    }
+
+    const nombreCompleto =
+      [persona.nombre, persona.apellido].filter(Boolean).join(" ") || "Cliente";
+
+    await this.emailService.enviarNotificacionManual({
+      to: persona.mail,
+      nombre: nombreCompleto,
+      asunto: asunto.trim(),
+      mensaje: mensaje.trim(),
+    });
+
     return {
-      message: "No hay estadísticas de clases previas para esta clase",
-      hayEstadisticas: false,
+      message: `Notificación enviada correctamente a ${nombreCompleto}`,
     };
   }
 
-  const claseIds = clasesPrevias.map((c: any) => c.id);
-
-  const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
-    .from("Se_inscribe")
-    .select("id_clase")
-    .in("id_clase", claseIds)
-
-    
-
-  if (inscripcionesError) {
-    throw new InternalServerErrorException(
-      `Error al obtener inscripciones: ${inscripcionesError.message}`
-    );
-  }
-
-  const conteoPorClase = new Map<number, number>();
-  claseIds.forEach((id: number) => conteoPorClase.set(id, 0));
-  (inscripciones ?? []).forEach((i: any) => {
-    conteoPorClase.set(i.id_clase, (conteoPorClase.get(i.id_clase) ?? 0) + 1);
-  });
-
-  const detalle = clasesPrevias.map((c: any) => {
-    const inscriptos = conteoPorClase.get(c.id) ?? 0;
-    const cupo = c.cupo ?? null;
-    const ocupacion = cupo ? Math.round((inscriptos / cupo) * 100) : null;
-    return { id: c.id, fecha: c.fecha, hora: c.hora, cupo, inscriptos, ocupacion };
-  });
-
-  const totalClasesPrevias = detalle.length;
-  const promedioInscriptos =
-    detalle.reduce((sum, d) => sum + d.inscriptos, 0) / totalClasesPrevias;
-
-  const ocupacionesValidas = detalle
-    .filter((d) => d.ocupacion !== null)
-    .map((d) => d.ocupacion as number);
-  const promedioOcupacion =
-    ocupacionesValidas.length > 0
-      ? Math.round(
-          ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
-        )
-      : null;
-
-  const claseMasConcurrida = [...detalle].sort((a, b) => b.inscriptos - a.inscriptos)[0];
-  const claseMenosConcurrida = [...detalle].sort((a, b) => a.inscriptos - b.inscriptos)[0];
-
-  return {
-    message: `Se encontraron estadísticas de ${totalClasesPrevias} clases previas`,
-    hayEstadisticas: true,
-    tipo: clase.tipo,
-    totalClasesPrevias,
-    promedioInscriptos: Math.round(promedioInscriptos * 10) / 10,
-    promedioOcupacion,
-    claseMasConcurrida,
-    claseMenosConcurrida,
-   detalle: [...detalle].sort((a, b) => a.fecha.localeCompare(b.fecha)), // <- nuevo, ordenado por fecha
-
-  };
-}
-}
