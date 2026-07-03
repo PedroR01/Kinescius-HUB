@@ -15,6 +15,7 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Cargar profesor", to: "/cargarProfesor" },
   { label: "Eliminar profesor", to: "/eliminarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
+  { label: "Ver estadísticas", to: "/verEstadisticas" },
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
@@ -24,8 +25,7 @@ const ADMIN_ACTIONS: DashboardAction[] = [
     label: "Recordatorios",
     to: "/recordatorios",
     description: "Configurá el horario de envío automático"
-  },
-  { label: "Ver estadísticas", to: "/verEstadisticas" }
+  }
 
 ];
 
@@ -54,9 +54,9 @@ const USER_ACTIONS: DashboardAction[] = [
 
 const PROFESOR_ACTIONS: DashboardAction[] = [
   {
-    label: "Generar QR de asistencia",
+    label: "Mis clases",
     to: "/profesor",
-    description: "Mostrá el código QR para que los clientes pasen asistencia"
+    description: "Agenda de clases"
   }
 ];
 

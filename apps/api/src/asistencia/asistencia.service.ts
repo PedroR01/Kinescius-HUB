@@ -48,15 +48,15 @@ export class AsistenciaService {
     }
 
     const { data: tokenRow, error: tokenError } = await this.supabase.client
-      .from('tokens_asistencia')
+      .from('tokens_confirmacion')
       .insert({
-        id_clase: dto.claseId,
+        clase_id: dto.claseId,
         valid_from: validFrom.toISOString(),
         expires_at: expiresAt.toISOString(),
       })
       .select('token, expires_at')
       .single();
-
+    console.log(tokenError);
     if (tokenError || !tokenRow) {
       throw new InternalServerErrorException(
         'No se pudo generar el código QR de asistencia.',
@@ -196,8 +196,9 @@ export class AsistenciaService {
   }
 
   async obtenerClasesProfesor(bearerToken: string) {
+    const personaMail = await this.obtenerPersonaMail(bearerToken);
     const personaId = await this.obtenerPersonaId(bearerToken);
-    await this.verificarEsProfesor(personaId);
+    await this.verificarEsProfesorMail(personaMail);
 
     const hoy = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Argentina/Buenos_Aires',
@@ -235,6 +236,30 @@ export class AsistenciaService {
     });
   }
 
+  private async obtenerPersonaMail(bearerToken: string): Promise<string> {
+    const token = this.extraerBearerToken(bearerToken);
+
+    const { data: userData, error: userError } =
+      await this.supabase.client.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      throw new UnauthorizedException(
+        'Sesión inválida o expirada. Por favor, iniciá sesión nuevamente.',
+      );
+    }
+
+    const { data: persona, error: personaError } = await this.supabase.client
+      .from('Persona_')
+      .select('mail')
+      .eq('mail', userData.user.email)
+      .single();
+
+    if (personaError || !persona) {
+      throw new UnauthorizedException('No se encontró el perfil del usuario.');
+    }
+    return persona.mail;
+  }
+
   private async obtenerPersonaId(bearerToken: string): Promise<number> {
     const token = this.extraerBearerToken(bearerToken);
 
@@ -248,17 +273,17 @@ export class AsistenciaService {
     }
 
     const { data: persona, error: personaError } = await this.supabase.client
-      .from('Persona')
+      .from('Persona_')
       .select('id')
-      .eq('user_id', userData.user.id)
+      .eq('mail', userData.user.email)
       .single();
 
     if (personaError || !persona) {
       throw new UnauthorizedException('No se encontró el perfil del usuario.');
     }
-
     return persona.id;
   }
+
 
   private extraerBearerToken(authHeader: string): string {
     if (!authHeader?.startsWith('Bearer ')) {
@@ -275,11 +300,25 @@ export class AsistenciaService {
     return token;
   }
 
+  private async verificarEsProfesorMail(personaMail: string): Promise<void> {
+    const { data: profesor } = await this.supabase.client
+      .from('Persona_')
+      .select('id')
+      .eq('mail', personaMail)
+      .eq('rol', 1)
+      .maybeSingle();
+
+    if (!profesor) {
+      throw new ForbiddenException('Solo los profesores pueden acceder a este recurso.');
+    }
+  }
+
   private async verificarEsProfesor(personaId: number): Promise<void> {
     const { data: profesor } = await this.supabase.client
-      .from('Profesor')
+      .from('Persona_')
       .select('id')
       .eq('id', personaId)
+      .eq('rol', 1)
       .maybeSingle();
 
     if (!profesor) {
