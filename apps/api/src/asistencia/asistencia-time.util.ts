@@ -8,7 +8,7 @@ export function parseClaseStartDate(fecha: string, hora: string): Date {
 export function buildAttendanceWindow(fecha: string, hora: string) {
   const claseStart = parseClaseStartDate(fecha, hora);
   const validFrom = new Date(claseStart.getTime() - 5 * 60 * 1000);
-  const expiresAt = new Date(claseStart.getTime() + 15 * 60 * 1000);
+  const expiresAt = new Date(claseStart.getTime() + 40 * 60 * 1000);
 
   return { claseStart, validFrom, expiresAt };
 }

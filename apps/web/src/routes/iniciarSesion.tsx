@@ -86,11 +86,6 @@ const IniciarSesion = () => {
             return;
           }
 
-          if (data.rol === "profesor") {
-            navigate({ to: "/profesor" });
-            return;
-          }
-
           navigate({ to: "/home" });
         }, 1000);
       } else {

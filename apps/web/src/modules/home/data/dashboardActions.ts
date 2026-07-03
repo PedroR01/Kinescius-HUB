@@ -14,7 +14,7 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Ver inscriptos", to: "/verInscriptos" },
   { label: "Cargar profesor", to: "/cargarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
-  { label: "Ver estadísticas", to: "/verEstadisticas" }
+  { label: "Ver estadísticas", to: "/verEstadisticas" },
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
@@ -48,9 +48,9 @@ const USER_ACTIONS: DashboardAction[] = [
 
 const PROFESOR_ACTIONS: DashboardAction[] = [
   {
-    label: "Generar QR de asistencia",
+    label: "Mis clases",
     to: "/profesor",
-    description: "Mostrá el código QR para que los clientes pasen asistencia"
+    description: "Agenda de clases"
   }
 ];
 
