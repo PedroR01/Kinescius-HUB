@@ -545,6 +545,7 @@ export class ClasesAdminService {
     }));
 
 
+
     return {
       message: `Se encontraron ${clientes.length} clientes`,
       clientes,
@@ -847,7 +848,6 @@ export class ClasesAdminService {
     return { success: true, mensaje: activo ? "Suspención revocada con éxito." : "Cliente suspendido con éxito." };
   }
 
-
   async getClientesSuspendidos() {
     const { data, error } = await this.supabaseService.client
       .from('Persona_')
@@ -925,7 +925,7 @@ export class ClasesAdminService {
       noAbonados,
     };
   }
-async getEstadisticas(claseId: number) {
+  async getEstadisticas(claseId: number) {
     if (!Number.isInteger(claseId) || claseId <= 0) {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");
     }
@@ -1012,8 +1012,8 @@ async getEstadisticas(claseId: number) {
     const promedioOcupacion =
       ocupacionesValidas.length > 0
         ? Math.round(
-            ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
-          )
+          ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
+        )
         : null;
 
     const claseMasConcurrida = [...detalle].sort((a, b) => b.inscriptos - a.inscriptos)[0];
@@ -1092,3 +1092,4 @@ async getEstadisticas(claseId: number) {
     };
   }
 
+}
