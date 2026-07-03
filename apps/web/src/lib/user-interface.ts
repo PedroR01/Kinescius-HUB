@@ -3,6 +3,7 @@ export interface UserProfile{
     apellido: string
     nombre: string
     dni: string
+    esAbonado?: boolean;
 }
 
 export interface UserData extends UserProfile{

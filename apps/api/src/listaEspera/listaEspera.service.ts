@@ -6,6 +6,9 @@ import {
 
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 
+// Rol de cliente abonado (confirmado en Supabase: 3 = cliente abonado)
+const ROL_CLIENTE_ABONADO_ID = 3;
+
 @Injectable()
 export class ListaEsperaService {
   constructor(
@@ -61,11 +64,18 @@ export class ListaEsperaService {
     return count ?? 0;
   }
 
+  /**
+   * Devuelve la lista de espera de una clase, ordenada con los
+   * clientes abonados primero (prioridad de reserva) y, dentro de
+   * cada grupo, por orden de llegada (fecha de inscripción a la
+   * lista de espera, y luego por id como criterio de desempate).
+   */
   async findByClase(claseId: number) {
+    // traigo también el id para poder desempatar por orden de inserción
     const { data, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("id_cliente, fecha")
+        .select("id, id_cliente, fecha")
         .eq("id_clase", claseId);
 
     if (error) {
@@ -78,10 +88,11 @@ export class ListaEsperaService {
 
     const clienteIds = data.map(d => d.id_cliente).filter(Boolean);
 
+    // fix: la tabla es "Persona_", no "Persona"
     const { data: personas, error: personasError } =
       await this.supabaseService.client
-        .from("Persona")
-        .select("id, nombre, apellido, dni, mail")
+        .from("Persona_")
+        .select("id, nombre, apellido, dni, mail, rol")
         .in("id", clienteIds);
 
     if (personasError) {
@@ -90,12 +101,40 @@ export class ListaEsperaService {
       );
     }
 
-    return personas.map(p => ({
-      nombre: p.nombre,
-      apellido: p.apellido,
-      dni: p.dni,
-      email: p.mail,
-    }));
+    // armo mapa de persona por id para poder cruzar con la fecha/orden
+    // de la fila de "Lista de espera"
+    const personaPorId = new Map(
+      (personas ?? []).map((p: any) => [p.id, p]),
+    );
+
+    const listaCompleta = data
+      .map((fila: any) => {
+        const persona = personaPorId.get(fila.id_cliente);
+        if (!persona) return null;
+
+        return {
+          idListaEspera: fila.id,
+          fecha: fila.fecha,
+          nombre: persona.nombre,
+          apellido: persona.apellido,
+          dni: persona.dni,
+          mail: persona.mail,
+          esAbonado: persona.rol === ROL_CLIENTE_ABONADO_ID,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    // ordeno: abonados primero, después por fecha de inscripción,
+    // y como desempate final por id (orden de llegada real)
+    return listaCompleta.sort((a, b) => {
+      if (a.esAbonado !== b.esAbonado) {
+        return a.esAbonado ? -1 : 1;
+      }
+      if (a.fecha !== b.fecha) {
+        return a.fecha.localeCompare(b.fecha);
+      }
+      return a.idListaEspera - b.idListaEspera;
+    });
   }
 
   async joinListaEspera(claseId: number, clienteId: number) {
