@@ -14,7 +14,7 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Ver inscriptos", to: "/verInscriptos" },
   { label: "Cargar profesor", to: "/cargarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
-  { label: "Ver estadísticas", to: "/verEstadisticas" }
+  { label: "Ver estadísticas", to: "/verEstadisticas" },
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
@@ -39,7 +39,7 @@ const USER_ACTIONS: DashboardAction[] = [
     to: "/escanear-asistencia",
     description: "Registrá tu presencia con la cámara"
   },
-    {
+  {
     label: "Libro de quejas",
     to: "/libro-quejas",
     description: "Calificá y comentá tus clases pasadas"
