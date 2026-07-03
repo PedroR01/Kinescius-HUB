@@ -19,7 +19,7 @@ type PagoInsert = {
     id_cliente: number;
     fecha: string;
     hora: string;
-    id_pago: string;
+    id_pago: number;
 };
 
 type SeInscribeInsert = {
@@ -137,7 +137,7 @@ export class PagosService implements OnModuleInit {
             id_cliente: idCliente,
             fecha: now.toISOString().split('T')[0],
             hora: now.toTimeString().split(' ')[0],
-            id_pago: paymentId,
+            id_pago: Number(paymentId),
         };
 
         const { error: pagoError } = await this.supabaseService.client
@@ -171,8 +171,8 @@ export class PagosService implements OnModuleInit {
         if (amount <= 0) return;
 
         const { data: cliente, error: fetchError } = await this.supabaseService.client
-            .from('Cliente')
-            .select('monto_a_favor')
+            .from('Estado_Cliente')
+            .select('monto_favor')
             .eq('id', clienteId)
             .single();
 
@@ -180,12 +180,12 @@ export class PagosService implements OnModuleInit {
             throw new Error(`Error al obtener saldo del cliente: ${fetchError?.message}`);
         }
 
-        const saldoActual = Number(cliente.monto_a_favor) || 0;
+        const saldoActual = Number(cliente.monto_favor) || 0;
         const nuevoSaldo = saldoActual + amount;
 
         const { error: updateError } = await this.supabaseService.client
-            .from('Cliente')
-            .update({ monto_a_favor: nuevoSaldo })
+            .from('Estado_Cliente')
+            .update({ monto_favor: nuevoSaldo })
             .eq('id', clienteId);
 
         if (updateError) {
@@ -195,8 +195,8 @@ export class PagosService implements OnModuleInit {
 
     private async deductMontoAFavor(clienteId: number, amount: number) {
         const { data: cliente, error: fetchError } = await this.supabaseService.client
-            .from('Cliente')
-            .select('monto_a_favor')
+            .from('Estado_Cliente')
+            .select('monto_favor')
             .eq('id', clienteId)
             .single();
 
@@ -204,12 +204,12 @@ export class PagosService implements OnModuleInit {
             throw new Error(`Error al obtener saldo del cliente: ${fetchError?.message}`);
         }
 
-        const saldoActual = Number(cliente.monto_a_favor) || 0;
+        const saldoActual = Number(cliente.monto_favor) || 0;
         const nuevoSaldo = Math.max(0, saldoActual - amount);
 
         const { error: updateError } = await this.supabaseService.client
-            .from('Cliente')
-            .update({ monto_a_favor: nuevoSaldo })
+            .from('Estado_Cliente')
+            .update({ monto_favor: nuevoSaldo })
             .eq('id', clienteId);
 
         if (updateError) {
