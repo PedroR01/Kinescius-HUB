@@ -15,6 +15,13 @@ import { CreateQuejaDto } from './dto/crear-queja.dto';
 // DTO de salida del historial
 import { HistorialClaseDto } from './dto/historial-clase.dto';
 
+// Estados de Se_inscribe que significan que la inscripción NO cuenta como asistida
+const ESTADOS_NO_VALIDOS = [
+  'Cancelada por cliente',
+  'Cancelada por admin',
+  'Cambiada',
+];
+
 // Marco la clase como Injectable para poder inyectarla en NestJS
 @Injectable()
 export class LibroQuejasService {
@@ -81,12 +88,13 @@ export class LibroQuejasService {
     const ahoraFecha = new Date().toISOString().slice(0, 10);
     const ahoraHora = new Date().toISOString().slice(11, 19);
 
-    // Traigo clases donde el cliente estuvo inscripto
+    // Traigo clases donde el cliente estuvo inscripto y no canceló/cambió
     const { data, error } = await this.db
       .from('Se_inscribe')
       .select(
         `
         id_clase,
+        historial_estado,
         Clase!inner (
           id,
           fecha,
@@ -97,6 +105,12 @@ export class LibroQuejasService {
       `,
       )
       .eq('id_cliente', idCliente)
+      // excluyo inscripciones canceladas o cambiadas
+      .not(
+        'historial_estado',
+        'in',
+        `(${ESTADOS_NO_VALIDOS.map((e) => `"${e}"`).join(',')})`,
+      )
       // filtro solo clases que ya finalizaron
       .or(
         `fecha.lt.${ahoraFecha},and(fecha.eq.${ahoraFecha},hora.lt.${ahoraHora})`,
@@ -141,7 +155,7 @@ export class LibroQuejasService {
           idClase: clase.id,
           fecha: clase.fecha,
           hora: clase.hora,
-          tipo: clase.tipo, // cambio importante: antes era zona, ahora tipo
+          tipo: clase.tipo,
           profesorNombre: profesor?.nombre ?? '',
           profesorApellido: profesor?.apellido ?? '',
           calificacion: queja?.calificacion ?? null,
@@ -156,6 +170,7 @@ export class LibroQuejasService {
    * Verifica que:
    * - el cliente esté inscripto en la clase
    * - la clase ya haya finalizado
+   * - la inscripción no haya sido cancelada o cambiada
    */
   private async verificarClaseAsistidaYPasada(
     idCliente: number,
@@ -163,7 +178,7 @@ export class LibroQuejasService {
   ) {
     const { data, error } = await this.db
       .from('Se_inscribe')
-      .select('id_clase, Clase!inner(fecha, hora)')
+      .select('id_clase, historial_estado, Clase!inner(fecha, hora)')
       .eq('id_cliente', idCliente)
       .eq('id_clase', idClase)
       .maybeSingle();
@@ -174,12 +189,17 @@ export class LibroQuejasService {
       );
     }
 
-    const clase = (data as any).Clase;
+    // si canceló o cambió de turno, esa inscripción ya no cuenta como asistida
+    if (ESTADOS_NO_VALIDOS.includes((data as any).historial_estado)) {
+      throw new ForbiddenException(
+        'No podés comentar una clase que cancelaste o cambiaste',
+      );
+    }
 
+    const clase = (data as any).Clase;
     const ahora = new Date();
     const fechaHoraClase = new Date(`${clase.fecha}T${clase.hora}`);
 
-    // si la clase no terminó todavía, no se puede comentar
     if (fechaHoraClase >= ahora) {
       throw new BadRequestException(
         'Solo podés comentar clases que ya finalizaron',
