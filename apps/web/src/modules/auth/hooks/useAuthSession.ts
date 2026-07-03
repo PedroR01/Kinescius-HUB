@@ -8,7 +8,7 @@ const TOKEN_KEY = "miToken";
 const ROLE_KEY = "rol";
 
 function isUserRole(role: string | null): role is UserRole {
-  return role === "admin" || role === "usuario" || role === "profesor";
+  return role === "admin" || role === "cliente" || role === "cliente abonado" || role === "profesor";
 }
 
 function readSession() {
@@ -71,6 +71,6 @@ export function useCurrentUserProfile() {
     };
     fetchUserProfile();
   }, []);
-  
+
   return userProfile;
 }

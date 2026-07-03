@@ -11,7 +11,7 @@ import { API_BASE } from '@/lib/constants';
 import { useClienteId } from '@/hooks/useClienteId';
 import type { KinesciusClass } from '@/lib/class-interface';
 
-export const Route = createFileRoute('/mis-clases')({
+export const Route = createFileRoute('/verMisClases')({
   component: () => <GestionClases />,
 });
 
