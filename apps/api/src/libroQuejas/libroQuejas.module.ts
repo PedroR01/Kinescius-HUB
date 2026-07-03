@@ -1,33 +1,23 @@
 // Importo Module de NestJS para poder definir un módulo
-// Un módulo en NestJS sirve para organizar controller + service + dependencias
 import { Module } from '@nestjs/common';
 
-// Importo el controller que maneja las rutas HTTP del libro de quejas
+// Controller y service propios del feature
 import { LibroQuejasController } from './libroQuejas.controller';
-
-// Importo el service donde está toda la lógica de negocio
 import { LibroQuejasService } from './libroQuejas.service';
 
-// Si ya tenés un módulo compartido (por ejemplo IntegrationsModule)
-// que exporta SupabaseService, lo ideal es importarlo acá en vez de redeclararlo
-//
-// import { IntegrationsModule } from '../integrations/integrations.module';
+// Necesario para que LibroQuejasService pueda inyectar SupabaseService
+import { SupabaseModule } from '../integrations/supabase/supabase.module';
 
-// Defino el módulo de Libro de Quejas
+// Necesario para que LibroQuejasController pueda inyectar RecordatoriosService
+// (mismo patrón que usa ShiftsModule para el chequeo de auth)
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
-  // imports: acá irían otros módulos que este necesita
-  // por ejemplo un módulo de integraciones o config si usás Supabase centralizado
-  // imports: [IntegrationsModule],
-
-  // controllers: define qué controllers pertenecen a este módulo
-  // son los que exponen las rutas HTTP
+  imports: [
+    SupabaseModule,
+    NotificationsModule,
+  ],
   controllers: [LibroQuejasController],
-
-  // providers: acá van los services o providers que usa este módulo
-  // Nest los inyecta automáticamente donde haga falta
   providers: [LibroQuejasService],
 })
-
-// Clase del módulo
-// No tiene lógica propia, solo organiza la estructura del feature
 export class LibroQuejasModule {}
