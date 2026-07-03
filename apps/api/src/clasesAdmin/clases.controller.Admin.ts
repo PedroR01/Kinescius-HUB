@@ -111,10 +111,14 @@ export class ClasesAdminController {
   }
   //lo nuevooooooooooooooo
   @Get("estadoSuscripcion")
-  async findEstadoSuscripcion() {
-    return this.clasesService.getEstadoSuscripcion();
-  }
-
+async findEstadoSuscripcion() {
+  return this.clasesService.getEstadoSuscripcion();
+}
+@Get(":id/estadisticas")
+async findEstadisticas(@Param("id", ParseIntPipe) id: number) {
+  return this.clasesService.getEstadisticas(id);
+}
+ 
   @Post("notificacion-manual")
   async enviarNotificacionManual(@Body() dto: EnviarNotificacionDto) {
     if (!dto?.clienteId) {

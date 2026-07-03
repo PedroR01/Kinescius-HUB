@@ -16,6 +16,8 @@ import { PagosModule } from "./pagos/pagos.module";
 import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { AsistenciaModule } from "./asistencia/asistencia.module";
+import { LibroQuejasModule } from "./libroQuejas/libroQuejas.module"; //  nuevo
+
 
 @Module({
   imports: [
@@ -35,7 +37,9 @@ import { AsistenciaModule } from "./asistencia/asistencia.module";
     AsistenciaModule,
     MpCheckoutProModule,
     PagosModule,
-    NotificationsModule
+    NotificationsModule,
+    LibroQuejasModule //  nuevo
+
   ],
   controllers: [AppController],
   providers: [AppService]
