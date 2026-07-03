@@ -13,13 +13,20 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Cambiar profesor", to: "/cambiarProfesor" },
   { label: "Ver inscriptos", to: "/verInscriptos" },
   { label: "Cargar profesor", to: "/cargarProfesor" },
+  { label: "Eliminar profesor", to: "/eliminarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
   { label: "Ver estadísticas", to: "/verEstadisticas" },
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
     description: "Mandale un mail puntual a un cliente"
+  },
+  {
+    label: "Recordatorios",
+    to: "/recordatorios",
+    description: "Configurá el horario de envío automático"
   }
+
 ];
 
 const USER_ACTIONS: DashboardAction[] = [
