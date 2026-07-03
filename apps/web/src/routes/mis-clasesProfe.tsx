@@ -47,7 +47,7 @@ export default function GestionClases() {
       .then((res) => res.json())
       .then((data) => {
         const todas = Array.isArray(data) ? data : [];
-        // estado 0 = clase activa/programada (próxima)
+        //estado 0 = clase activa/programada (próxima)
         const proximas = todas
           .filter((c: any) => c.estado === 0)
           .map((c: any) => ({
@@ -55,7 +55,7 @@ export default function GestionClases() {
             id_cliente: idCliente,
             Clase: { id: c.id, fecha: c.fecha, hora: c.hora, tipo: c.tipo, profesor: '', cupo: c.cupo },
           }));
-        // estado 1 = dictada, estado 2 = cancelada
+        //estado 1 = dictada y estado 2 = cancelada
         const historial = todas
           .filter((c: any) => c.estado === 1 || c.estado === 2)
           .map((c: any) => ({
