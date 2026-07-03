@@ -45,7 +45,7 @@ const USER_ACTIONS: DashboardAction[] = [
     to: "/escanear-asistencia",
     description: "Registrá tu presencia con la cámara"
   },
-    {
+  {
     label: "Libro de quejas",
     to: "/libro-quejas",
     description: "Calificá y comentá tus clases pasadas"
