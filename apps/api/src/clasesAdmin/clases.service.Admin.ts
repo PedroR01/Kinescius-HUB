@@ -102,9 +102,12 @@ export class ClasesAdminService {
       });
     }
 
+    // OJO: el frontend (verClases.tsx, cambiarProfesor.tsx, etc.) lee "clase.profesor",
+    // no "clase.profesor_nombre". Por eso siempre aparecía "Sin profesor" aunque la
+    // clase sí tuviera un id_profesor asignado.
     return clases.map((clase) => ({
       ...clase,
-      profesor_nombre: clase.id_profesor
+      profesor: clase.id_profesor
         ? profesorNombres.get(clase.id_profesor) ?? null
         : null,
     }));
