@@ -493,7 +493,7 @@ export class AuthService {
     }
   }
 
-  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'usuario' | 'usuario_abonado'> {
+  private async resolverRolUsuario(personaId: number): Promise<'admin' | 'profesor' | 'cliente' | 'cliente abonado'> {
     const { data: usuario, error: errorUsuario } = await this.supabaseService.client
       .from('Persona_')
       .select('rol')
@@ -508,11 +508,11 @@ export class AuthService {
       case 1:
         return 'profesor';
       case 2:
-        return 'usuario'
+        return 'cliente'
       case 3:
-        return 'usuario_abonado';
+        return 'cliente abonado';
       default:
-        return 'usuario';
+        return 'cliente';
     }
 
   }
@@ -587,9 +587,9 @@ export class AuthService {
     }
 
     const { data: persona, error: personaError } = await this.supabaseService.client
-      .from('Persona')
+      .from('Persona_')
       .select('nombre, apellido, mail')
-      .eq('user_id', userData.user.id)
+      .eq('mail', userData.user.email)
       .single();
 
     if (personaError || !persona) {
