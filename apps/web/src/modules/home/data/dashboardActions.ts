@@ -19,6 +19,11 @@ const ADMIN_ACTIONS: DashboardAction[] = [
     label: "Enviar notificación",
     to: "/notificacionManual",
     description: "Mandale un mail puntual a un cliente"
+  },
+  {
+    label: "Recordatorios",
+    to: "/recordatorios",
+    description: "Configurá el horario de envío automático"
   }
 
 ];
