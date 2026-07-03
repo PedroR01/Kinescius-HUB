@@ -13,8 +13,8 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Cambiar profesor", to: "/cambiarProfesor" },
   { label: "Ver inscriptos", to: "/verInscriptos" },
   { label: "Cargar profesor", to: "/cargarProfesor" },
+  { label: "Eliminar profesor", to: "/eliminarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
-  { label: "Ver estadísticas", to: "/verEstadisticas" },
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
@@ -24,7 +24,8 @@ const ADMIN_ACTIONS: DashboardAction[] = [
     label: "Recordatorios",
     to: "/recordatorios",
     description: "Configurá el horario de envío automático"
-  }
+  },
+  { label: "Ver estadísticas", to: "/verEstadisticas" }
 
 ];
 
@@ -44,7 +45,7 @@ const USER_ACTIONS: DashboardAction[] = [
     to: "/escanear-asistencia",
     description: "Registrá tu presencia con la cámara"
   },
-    {
+  {
     label: "Libro de quejas",
     to: "/libro-quejas",
     description: "Calificá y comentá tus clases pasadas"
