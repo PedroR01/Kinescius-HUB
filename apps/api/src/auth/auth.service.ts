@@ -328,12 +328,16 @@ export class AuthService {
     //Uso el mail del usuario para buscar su id
     const { data: persona, error: errorPersona } = await this.supabaseService.client
       .from('Persona_')
-      .select('id')
+      .select('id, activo')
       .eq('mail', datosIngresados.email)
       .single();
 
     if (errorPersona || !persona) {
       throw new InternalServerErrorException('Error al recuperar los datos internos del usuario.');
+    }
+
+    if (!persona.activo) { //si el cliente está suspendido, se le informa
+      throw new UnauthorizedException('No puedes iniciar sesión, tu cuenta está suspendida. Para revocar la suspención debes ir presencialmente a Kinescius.');
     }
 
     const rolUsuario = await this.resolverRolUsuario(persona.id);

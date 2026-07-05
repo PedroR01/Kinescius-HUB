@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, OnModuleInit, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
 import { Payment, PaymentRefund, Preference } from 'mercadopago';
 import { PreferenceResponse } from "mercadopago/dist/clients/preference/commonTypes";
 import { getFrontendUrl } from "../config/frontend-url";
@@ -9,9 +9,11 @@ import {
 } from "../integrations/mercado-pago/mp-errors.util";
 import { MpCheckoutProService } from "../integrations/mercado-pago/mp-checkoutPro.service";
 import { SupabaseService } from "../integrations/supabase/supabase.service";
-import { ClasePayload, CreatePreferenceBody } from "./pagos.controller";
+import { ClasePayload, CreateMensualidadPreferenceBody, CreatePreferenceBody } from "./pagos.controller";
 import { CLASS_UNIT_PRICE } from "./class-price.constant";
 import { inscripcionPorClaseEnCarrito } from "./inscripcion-desglose.util";
+import { AuthService } from "src/auth/auth.service";
+import { string } from "zod";
 
 export { CLASS_UNIT_PRICE } from "./class-price.constant";
 
@@ -50,6 +52,7 @@ export class PagosService implements OnModuleInit {
         private readonly mpCheckoutProService: MpCheckoutProService,
         private readonly mpAccountService: MpAccountService,
         private readonly supabaseService: SupabaseService,
+        private readonly authService: AuthService
     ) { }
 
     async onModuleInit(): Promise<void> {
@@ -259,5 +262,106 @@ export class PagosService implements OnModuleInit {
             const refundClient = new PaymentRefund(this.mpCheckoutProService.client);
             return refundClient.list({ payment_id: idPago });
         });
+    }
+
+    async createMensualidadPreference(body: CreateMensualidadPreferenceBody) {
+        //Reviso si alguno de los campos está vacío o con un espacio
+        if (!body.nombre?.trim() || !body.apellido?.trim() || !body.dni?.trim() || !body.email?.trim()) {
+            throw new BadRequestException("No se pudieron registrar los datos porque hay campos obligatorios vacíos.");
+        }
+
+        //Busco si el DNI o el Mail ya están en la base de datos
+        const { data: usuariosExistentes, error: errorBusqueda } = await this.supabaseService.client
+            .from('Persona_')
+            .select('dni, mail')
+            .or(`dni.eq.${body.dni},mail.eq.${body.email}`);
+        if (errorBusqueda) {
+            throw new InternalServerErrorException("Error al verificar la disponibilidad de los datos en el sistema.");
+        }
+        // Si el array trajo algún resultado, significa que al menos uno de los dos datos ya existe
+        if (usuariosExistentes && usuariosExistentes.length > 0) {
+            const dniOcupado = usuariosExistentes.some(usuario => usuario.dni === body.dni);
+            const mailOcupado = usuariosExistentes.some(usuario => usuario.mail === body.email);
+            if (dniOcupado && mailOcupado) {
+                throw new BadRequestException("El DNI y el Email ingresados ya se encuentran registrados en otra cuenta.");
+            } else if (dniOcupado) {
+                throw new BadRequestException("El DNI ingresado ya se encuentra registrado. Por favor, verificá tus datos.");
+            } else if (mailOcupado) {
+                throw new BadRequestException("El Email ingresado ya pertenece a una cuenta existente.");
+            }
+        }
+
+        const datosRegistro = body;
+        const MENSUALIDAD_PRICE = 24
+        const frontendUrl = getFrontendUrl();
+        const preference = new Preference(this.mpCheckoutProService.client);
+        return preference.create({
+            body: {
+                items: [{
+                    id: "inscripcion-kinescius",
+                    title: `Mensualidad Abonado - Kinescius`,
+                    quantity: 1,
+                    unit_price: MENSUALIDAD_PRICE,
+                }],
+                metadata: {
+                    nombre: datosRegistro.nombre,
+                    apellido: datosRegistro.apellido,
+                    email: datosRegistro.email,
+                    dni: datosRegistro.dni,
+                    telefono: datosRegistro.telefono || null,
+                    rol: datosRegistro.rol
+                },
+                back_urls: {
+                    success: `${frontendUrl}/success-abonado`, // Forwarding de ngrok
+                    failure: `${frontendUrl}/failure`,
+                    pending: `${frontendUrl}/pending`,
+                },
+                auto_return: "approved",
+            },
+        }).then((res: PreferenceResponse) => ({ initPoint: res.init_point! }))
+            .catch((error: Error) => { throw new Error(error.message); });
+    }
+
+    async mensualidadNotification(paymentId: string) {
+        const paymentClient = new Payment(this.mpCheckoutProService.client);
+        const payment = await paymentClient.get({ id: paymentId });
+        if (payment.status !== 'approved') {
+            return { received: true, status: payment.status };
+        }
+
+        const metadata = payment.metadata as Record<string, unknown>;
+        const datosRegistro = {
+            nombre: String(metadata.nombre),
+            apellido: String(metadata.apellido),
+            email: String(metadata.email),
+            dni: String(metadata.dni),
+            telefono: metadata.telefono ? String(metadata.telefono) : undefined, //puede no ingresarsee
+            rol: Number(metadata.rol),
+        };
+
+        await this.authService.registrarUsuario(datosRegistro);
+        console.log("Se registró al cliente abonado exitosamente, ahora se registrara el pago");
+        const { data: persona, error: errorPersona } = await this.supabaseService.client
+            .from('Persona_')
+            .select('id')
+            .eq('mail', metadata.email)
+            .single();
+        if (errorPersona || !persona) {
+            throw new UnauthorizedException('No se encontró el ID del cliente.');
+        }
+
+        const now = new Date();
+        const pago: PagoInsert = {
+            id_cliente: persona.id,
+            fecha: now.toISOString().split('T')[0],
+            hora: now.toTimeString().split(' ')[0],
+            id_pago: Number(paymentId),
+        };
+        const { error: pagoError } = await this.supabaseService.client
+            .from('Pago')
+            .insert(pago);
+        if (pagoError) throw new Error(pagoError.message);
+
+        return { received: true };
     }
 }
