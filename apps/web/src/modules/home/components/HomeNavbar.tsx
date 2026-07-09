@@ -107,9 +107,29 @@ export function HomeNavbar() {
                   onNavigate={closeMenu}
                   className="mb-4"
                 />
-                <ButtonLink to="/solicitarTurno" size="sm" className="w-full justify-center">
-                  Agenda tu cita
+                {estaLogueado ? (
+              <div className="flex flex-row gap-2">
+              <ButtonLink to="/home" size="sm" className="text-sm font-medium  transition-colors hover:text-main sm:text-[0.95rem]">
+                  Home
                 </ButtonLink>
+              <button
+                type="button"
+                onClick={() => setIsLogoutModalOpen(true)}
+                className={cn(btnBase, btnSecondary)}
+              >
+                Cerrar sesión
+              </button>
+              </div>
+            ) : (
+              <>
+                <ButtonLink to="/iniciarSesion" size="sm">
+                  Iniciar sesión
+                </ButtonLink>
+                <ButtonLink variant="secondary" to="/registro" size="sm">
+                  Registrarse
+                </ButtonLink>
+              </>
+            )}
               </motion.div>
             </motion.div>
           )}

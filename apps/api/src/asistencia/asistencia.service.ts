@@ -34,7 +34,7 @@ export class AsistenciaService {
 
     const now = new Date();
     const { validFrom, expiresAt } = buildAttendanceWindow(clase.fecha, clase.hora);
-
+/*
     if (now < validFrom) {
       throw new BadRequestException(
         'El código QR solo puede generarse 5 minutos antes del inicio de la clase.',
@@ -46,17 +46,17 @@ export class AsistenciaService {
         'El tiempo para registrar asistencia de esta clase ya expiró.',
       );
     }
+      */
 
     const { data: tokenRow, error: tokenError } = await this.supabase.client
-      .from('tokens_confirmacion')
+      .from('Token_Qr')
       .insert({
         clase_id: dto.claseId,
-        valid_from: validFrom.toISOString(),
         expires_at: expiresAt.toISOString(),
       })
       .select('token, expires_at')
       .single();
-    console.log(tokenError);
+
     if (tokenError || !tokenRow) {
       throw new InternalServerErrorException(
         'No se pudo generar el código QR de asistencia.',
@@ -82,13 +82,13 @@ export class AsistenciaService {
     await this.verificarEsCliente(clienteId);
 
     const { data: tokenRow, error: tokenError } = await this.supabase.client
-      .from('tokens_asistencia')
-      .select('token, id_clase, expires_at')
+      .from('Token_Qr')
+      .select('token, clase_id, expires_at')
       .eq('token', dto.token)
       .single();
 
     if (tokenError || !tokenRow) {
-      throw new NotFoundException('El código QR no es válido.');
+      throw new NotFoundException('El código QR no es válido.' + dto.token);
     }
 
     const now = new Date();
@@ -98,9 +98,9 @@ export class AsistenciaService {
 
     const { data: inscripcion, error: inscripcionError } = await this.supabase.client
       .from('Se_inscribe')
-      .select('id_cliente, id_clase, asistio, estado')
+      .select('id_cliente, id_clase, estado')
       .eq('id_cliente', clienteId)
-      .eq('id_clase', tokenRow.id_clase)
+      .eq('id_clase', tokenRow.clase_id)
       .maybeSingle();
 
     if (inscripcionError) {
@@ -113,20 +113,30 @@ export class AsistenciaService {
       throw new ForbiddenException('No estás inscripto en esta clase.');
     }
 
-    if (inscripcion.asistio) {
-      throw new ConflictException('Ya registraste tu asistencia para esta clase.');
-    }
-
-    const { error: updateError } = await this.supabase.client
-      .from('Se_inscribe')
-      .update({
-        asistio: true,
-        asistio_at: now.toISOString(),
-      })
-      .eq('id_cliente', clienteId)
-      .eq('id_clase', tokenRow.id_clase);
-
-    if (updateError) {
+ // 2. Verificar asistencia existente en Asistencia_Clase
+ const { data: asistenciaExistente, error: asistenciaError } = await this.supabase.client
+ .from('Asistencia_Clase')
+ .select('id_cliente')
+ .eq('id_cliente', clienteId)
+ .eq('id_clase', tokenRow.clase_id)
+ .maybeSingle();
+ 
+ if (asistenciaError) {
+ throw new InternalServerErrorException('No se pudo verificar la asistencia.');
+ }
+ 
+ if (asistenciaExistente) {
+ throw new ConflictException('Ya registraste tu asistencia para esta clase.');
+ }
+ 
+ // 3. Registrar asistencia
+ const { error: insertError } = await this.supabase.client
+ .from('Asistencia_Clase')
+ .insert({
+   id_clase: tokenRow.clase_id,
+   id_cliente: clienteId,
+ });
+    if (insertError) {
       throw new InternalServerErrorException(
         'No se pudo registrar la asistencia.',
       );
@@ -135,7 +145,7 @@ export class AsistenciaService {
     const { data: clase } = await this.supabase.client
       .from('Clase')
       .select('fecha, hora, tipo')
-      .eq('id', tokenRow.id_clase)
+      .eq('id', tokenRow.clase_id)
       .single();
 
     return {
@@ -328,7 +338,7 @@ export class AsistenciaService {
 
   private async verificarEsCliente(personaId: number): Promise<void> {
     const { data: cliente } = await this.supabase.client
-      .from('Cliente')
+      .from('Persona_')
       .select('id')
       .eq('id', personaId)
       .maybeSingle();
