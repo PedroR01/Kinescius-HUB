@@ -19,7 +19,7 @@ function SuccessPage() {
             <div className="flex flex-col gap-2">
                 <h1 className="text-2xl font-semibold">¡Pago de mensualidad exitoso!</h1>
                 <p className="text-muted-foreground">
-                    Tu pago fue exitoso, así que ya puedes iniciar sesión con la contraseña que se envió a tu mail.
+                    Tu pago fue exitoso, así que ya estás registrado en el sistema y puedes iniciar sesión con la contraseña que se envió a tu mail.
                 </p>
             </div>
             <Link

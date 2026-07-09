@@ -19,14 +19,6 @@ export class AuthController {
     return this.authService.registrarUsuario(datosRegistro);
   }
 
-  /*
-  @Post('registroAbonado')
-  registrarUsuarioAbonado(@Body() datosRegistro: RegistroDto) {
-    // El controlador NO toma decisiones, solo recibe las peticiones y se las pasa al archivo con los servicios
-    return this.authService.registrarUsuarioAbonado(datosRegistro);
-  }
-    */
-
   @Post('login')
   iniciarSesion(@Body() datosIngresados: InicioDto) {
     return this.authService.iniciarSesion(datosIngresados);
