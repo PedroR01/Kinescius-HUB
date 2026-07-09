@@ -97,7 +97,7 @@ function RouteComponent() {
           <td>{formatDate(clase.fecha)}</td>
           <td>{formatTime(clase.hora)}</td>
           <td>{clase.tipo ?? 'Sin tipo'}</td>
-          <td>{clase.profesor_nombre ?? 'Sin profesor'}</td>
+          <td>{clase.profesor ?? 'Sin profesor'}</td>
           <td>{clase.cupo ?? 'N/A'}</td>
           <td>
             <button
