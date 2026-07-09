@@ -977,6 +977,113 @@ export class ClasesAdminService {
     };
   }
 
+  async getEstadisticas(claseId: number) {
+    if (!Number.isInteger(claseId) || claseId <= 0) {
+      throw new BadRequestException("El id de la clase debe ser mayor a 0");
+    }
+
+    const { data: clase, error: claseError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id, fecha, hora, tipo, cupo")
+      .eq("id", claseId)
+      .maybeSingle();
+
+    if (claseError) {
+      throw new InternalServerErrorException(
+        `Error al buscar la clase: ${claseError.message}`
+      );
+    }
+
+    if (!clase) {
+      throw new NotFoundException("No existe una clase con ese id");
+    }
+
+    if (!clase.tipo) {
+      return {
+        message: "No hay estadísticas de clases previas para esta clase",
+        hayEstadisticas: false,
+      };
+    }
+
+    const hoy = new Date().toISOString().split("T")[0];
+
+    // Clases previas del mismo tipo (excluyendo la actual)
+    const { data: clasesPrevias, error: previasError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id, fecha, hora, cupo")
+      .eq("tipo", clase.tipo)
+      .lt("fecha", hoy)
+      .neq("id", claseId);
+
+    if (previasError) {
+      throw new InternalServerErrorException(
+        `Error al obtener clases previas: ${previasError.message}`
+      );
+    }
+
+    if (!clasesPrevias || clasesPrevias.length === 0) {
+      return {
+        message: "No hay estadísticas de clases previas para esta clase",
+        hayEstadisticas: false,
+      };
+    }
+
+    const claseIds = clasesPrevias.map((c: any) => c.id);
+
+    const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .select("id_clase")
+      .in("id_clase", claseIds);
+
+    if (inscripcionesError) {
+      throw new InternalServerErrorException(
+        `Error al obtener inscripciones: ${inscripcionesError.message}`
+      );
+    }
+
+    const conteoPorClase = new Map<number, number>();
+    claseIds.forEach((id: number) => conteoPorClase.set(id, 0));
+    (inscripciones ?? []).forEach((i: any) => {
+      conteoPorClase.set(i.id_clase, (conteoPorClase.get(i.id_clase) ?? 0) + 1);
+    });
+
+    const detalle = clasesPrevias.map((c: any) => {
+      const inscriptos = conteoPorClase.get(c.id) ?? 0;
+      const cupo = c.cupo ?? null;
+      const ocupacion = cupo ? Math.round((inscriptos / cupo) * 100) : null;
+      return { id: c.id, fecha: c.fecha, hora: c.hora, cupo, inscriptos, ocupacion };
+    });
+
+    const totalClasesPrevias = detalle.length;
+    const promedioInscriptos =
+      detalle.reduce((sum, d) => sum + d.inscriptos, 0) / totalClasesPrevias;
+
+    const ocupacionesValidas = detalle
+      .filter((d) => d.ocupacion !== null)
+      .map((d) => d.ocupacion as number);
+    const promedioOcupacion =
+      ocupacionesValidas.length > 0
+        ? Math.round(
+            ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
+          )
+        : null;
+
+    const claseMasConcurrida = [...detalle].sort((a, b) => b.inscriptos - a.inscriptos)[0];
+    const claseMenosConcurrida = [...detalle].sort((a, b) => a.inscriptos - b.inscriptos)[0];
+
+    return {
+      message: `Se encontraron estadísticas de ${totalClasesPrevias} clases previas`,
+      hayEstadisticas: true,
+      tipo: clase.tipo,
+      totalClasesPrevias,
+      promedioInscriptos: Math.round(promedioInscriptos * 10) / 10,
+      promedioOcupacion,
+      claseMasConcurrida,
+      claseMenosConcurrida,
+      detalle: [...detalle].sort((a, b) => a.fecha.localeCompare(b.fecha)), // ordenado por fecha
+    };
+  }
+
 
   /**
    * Envía una notificación manual (asunto + mensaje libre) por mail
@@ -1037,114 +1144,4 @@ export class ClasesAdminService {
       message: `Notificación enviada correctamente a ${nombreCompleto}`,
     };
   }
-
-async getEstadisticas(claseId: number) {
-  if (!Number.isInteger(claseId) || claseId <= 0) {
-    throw new BadRequestException("El id de la clase debe ser mayor a 0");
-  }
-
-  const { data: clase, error: claseError } = await this.supabaseService.client
-    .from("Clase")
-    .select("id, fecha, hora, tipo, cupo")
-    .eq("id", claseId)
-    .maybeSingle();
-
-  if (claseError) {
-    throw new InternalServerErrorException(
-      `Error al buscar la clase: ${claseError.message}`
-    );
-  }
-
-  if (!clase) {
-    throw new NotFoundException("No existe una clase con ese id");
-  }
-
-  if (!clase.tipo) {
-    return {
-      message: "No hay estadísticas de clases previas para esta clase",
-      hayEstadisticas: false,
-    };
-  }
-
-  const hoy = new Date().toISOString().split("T")[0];
-
-  // Clases previas del mismo tipo (excluyendo la actual)
-  const { data: clasesPrevias, error: previasError } = await this.supabaseService.client
-    .from("Clase")
-    .select("id, fecha, hora, cupo")
-    .eq("tipo", clase.tipo)
-    .lt("fecha", hoy)
-    .neq("id", claseId);
-
-  if (previasError) {
-    throw new InternalServerErrorException(
-      `Error al obtener clases previas: ${previasError.message}`
-    );
-  }
-
-  if (!clasesPrevias || clasesPrevias.length === 0) {
-    return {
-      message: "No hay estadísticas de clases previas para esta clase",
-      hayEstadisticas: false,
-    };
-  }
-
-  const claseIds = clasesPrevias.map((c: any) => c.id);
-
-  const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
-    .from("Se_inscribe")
-    .select("id_clase")
-    .in("id_clase", claseIds)
-
-    
-
-  if (inscripcionesError) {
-    throw new InternalServerErrorException(
-      `Error al obtener inscripciones: ${inscripcionesError.message}`
-    );
-  }
-
-  const conteoPorClase = new Map<number, number>();
-  claseIds.forEach((id: number) => conteoPorClase.set(id, 0));
-  (inscripciones ?? []).forEach((i: any) => {
-    conteoPorClase.set(i.id_clase, (conteoPorClase.get(i.id_clase) ?? 0) + 1);
-  });
-
-  const detalle = clasesPrevias.map((c: any) => {
-    const inscriptos = conteoPorClase.get(c.id) ?? 0;
-    const cupo = c.cupo ?? null;
-    const ocupacion = cupo ? Math.round((inscriptos / cupo) * 100) : null;
-    return { id: c.id, fecha: c.fecha, hora: c.hora, cupo, inscriptos, ocupacion };
-  });
-
-  const totalClasesPrevias = detalle.length;
-  const promedioInscriptos =
-    detalle.reduce((sum, d) => sum + d.inscriptos, 0) / totalClasesPrevias;
-
-  const ocupacionesValidas = detalle
-    .filter((d) => d.ocupacion !== null)
-    .map((d) => d.ocupacion as number);
-  const promedioOcupacion =
-    ocupacionesValidas.length > 0
-      ? Math.round(
-          ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
-        )
-      : null;
-
-  const claseMasConcurrida = [...detalle].sort((a, b) => b.inscriptos - a.inscriptos)[0];
-  const claseMenosConcurrida = [...detalle].sort((a, b) => a.inscriptos - b.inscriptos)[0];
-
-  return {
-    message: `Se encontraron estadísticas de ${totalClasesPrevias} clases previas`,
-    hayEstadisticas: true,
-    tipo: clase.tipo,
-    totalClasesPrevias,
-    promedioInscriptos: Math.round(promedioInscriptos * 10) / 10,
-    promedioOcupacion,
-    claseMasConcurrida,
-    claseMenosConcurrida,
-   detalle: [...detalle].sort((a, b) => a.fecha.localeCompare(b.fecha)), // <- nuevo, ordenado por fecha
-
-  };
-}
 }
