@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from "@nestjs/common";
+import * as crypto from "crypto";
 
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { EmailService } from "../email/email.service";
@@ -734,6 +735,13 @@ export class ClasesAdminService {
     };
   }
 
+  /**
+   * Genera una contraseña temporal aleatoria (mismo patrón que auth.service.ts).
+   */
+  private generarPasswordAleatoria(longitud: number = 8): string {
+    return crypto.randomBytes(longitud).toString('hex').slice(0, longitud);
+  }
+
   async crearProfesor({
     dni,
     mail,
@@ -771,6 +779,23 @@ export class ClasesAdminService {
       );
     }
 
+    // Generamos una contraseña temporal, igual que en el registro de clientes
+    const passwordBase = this.generarPasswordAleatoria(8);
+
+    // Creamos el usuario en Supabase Auth
+    const { data: authData, error: authError } =
+      await this.supabaseService.client.auth.admin.createUser({
+        email: mail,
+        password: passwordBase,
+        email_confirm: true,
+      });
+
+    if (authError) {
+      throw new InternalServerErrorException(
+        `Error en autenticación: ${authError.message}`
+      );
+    }
+
     const { data: persona, error: personaError } =
       await this.supabaseService.client
         .from("Persona_")
@@ -786,9 +811,28 @@ export class ClasesAdminService {
         .single();
 
     if (personaError || !persona) {
+      // Rollback: si falla la inserción en Persona_, borramos el usuario de Auth
+      await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
       throw new InternalServerErrorException(
         `Error al crear el profesor: ${personaError?.message}`
       );
+    }
+
+    console.log(
+      `----------¡ATENCIÓN! La contraseña generada para ${mail} es: ${passwordBase}----------`
+    );
+
+    try {
+      await this.emailService.enviarCorreo(
+        mail,
+        "Cuenta de profesor en Kinescius-HUB",
+        `<h2>Tu cuenta de profesor fue creada</h2>
+         <p>Tu contraseña temporal es: <strong>${passwordBase}</strong></p>
+         <p>Podés cambiarla luego de iniciar sesión.</p>`
+      );
+    } catch (emailError) {
+      // Si falla el mail, no rompemos el flujo: el profesor ya quedó creado
+      console.error("El profesor se creó, pero falló el envío del correo:", emailError);
     }
 
     return {

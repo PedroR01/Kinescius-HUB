@@ -85,9 +85,20 @@ function ProfesorPage() {
         onError: (mutationError) => {
           setQrActivo(null);
           setError(mutationError.message);
+          console.log(mutationError);
         },
       },
     );
+  };
+
+  const horarioHabilitadoQR = (hora: string): boolean => {
+    const ahora = new Date();
+    const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+    const [horaClase, minutosClase] = hora.split(':').map(Number);
+    const minutosClaseTotal = horaClase * 60 + minutosClase;
+    const diferencia = minutosClaseTotal - minutosActuales;
+    // Habilitado desde 15 min antes hasta 15 min después del inicio
+    return diferencia >= -15 && diferencia <= 40;
   };
 
   return (
@@ -96,13 +107,12 @@ function ProfesorPage() {
       subtitle="Generá el código QR de asistencia para tus clases"
       showBackButton
     >
-      {error && (
+      {error? (
         <section className="rounded-ks-md border border-[rgba(192,57,43,0.3)] bg-ks-red-soft px-5 py-4 text-sm text-red-700">
           {error}
         </section>
-      )}
-
-      <section className={formCardClass}>
+      ): (
+        <section className={formCardClass}>
         <h2 className="m-0 mb-4 font-outfit text-[22px] font-bold tracking-[-0.5px] text-ks-text-dark">
           Mis próximas clases
         </h2>
@@ -134,7 +144,7 @@ function ProfesorPage() {
 
                 <button
                   type="button"
-                  disabled={!clase.puedeGenerarQr || generarTokenMutation.isPending}
+                  disabled={!horarioHabilitadoQR(clase.hora) || generarTokenMutation.isPending}
                   onClick={() => handleGenerarQr(clase)}
                   className={cn(btnBase, btnPrimary)}
                 >
@@ -156,6 +166,7 @@ function ProfesorPage() {
           </div>
         )}
       </section>
+      )}
 
       {qrActivo && claseSeleccionada && (
         <section className={formCardClass}>

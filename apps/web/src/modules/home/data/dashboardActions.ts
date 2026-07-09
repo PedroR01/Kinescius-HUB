@@ -54,9 +54,9 @@ const USER_ACTIONS: DashboardAction[] = [
 
 const PROFESOR_ACTIONS: DashboardAction[] = [
   {
-    label: "Generar QR de asistencia",
+    label: "Mis clases",
     to: "/profesor",
-    description: "Mostrá el código QR para que los clientes pasen asistencia"
+    description: "Agenda de clases"
   }
 ];
 
