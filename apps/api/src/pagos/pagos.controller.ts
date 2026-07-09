@@ -27,6 +27,15 @@ export type WebhookNotification = {
     };
 };
 
+export type CreateMensualidadPreferenceBody = {
+    nombre: string;
+    apellido: string;
+    email: string;
+    dni: string;
+    telefono?: string;
+    rol: number;
+}
+
 @Controller("api/mercadopago")
 export class PagosController {
     constructor(private readonly pagosService: PagosService) { }
@@ -51,5 +60,14 @@ export class PagosController {
         return this.pagosService.getAllRefunds(idPago);
     }
 
+    @Post("mensualidad")
+    async CreateMensualidadPreference(@Body() body: CreateMensualidadPreferenceBody) {
+        return this.pagosService.createMensualidadPreference(body);
+    }
+
+    @Post("notificacion_abonado")
+    async mensualidadNotification(@Body() body: WebhookNotification) {
+        return this.pagosService.mensualidadNotification(body.data.id);
+    }
 
 }

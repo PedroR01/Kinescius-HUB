@@ -18,6 +18,15 @@ export type InscribirConSaldoResponse = {
   saldoRestante: number;
 };
 
+export type CreateMensualidadPayload = {
+  nombre: string;
+  apellido: string;
+  email: string;
+  dni: string;
+  telefono?: string;
+  rol: number;
+}
+
 export async function createMercadoPagoPreference(
   payload: CreatePreferencePayload
 ): Promise<{ initPoint: string }> {
@@ -32,7 +41,7 @@ export async function createMercadoPagoPreference(
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
       (errorData as { message?: string }).message ||
-        `Error al crear la preferencia de pago: ${response.status}`
+      `Error al crear la preferencia de pago: ${response.status}`
     );
   }
 
@@ -57,7 +66,7 @@ export async function inscribirConSaldoAFavor(
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
       (errorData as { message?: string }).message ||
-        `Error al inscribir con saldo a favor: ${response.status}`
+      `Error al inscribir con saldo a favor: ${response.status}`
     );
   }
 
@@ -69,4 +78,26 @@ export async function fetchMontoAFavor(clienteId: number): Promise<number> {
   if (!response.ok) return 0;
   const data = (await response.json()) as { monto_a_favor?: number };
   return Number(data.monto_a_favor) ?? 0;
+}
+
+export async function createMensualidadPreference(payload: CreateMensualidadPayload) {
+
+  const response = await fetch(`${API_BASE}/api/mercadopago/mensualidad`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as { message?: string }).message ||
+      `Error al crear la preferencia para el pago de mensualidad: ${response.status}`
+    );
+  }
+  const data = (await response.json()) as { initPoint: string };
+  if (!data.initPoint?.startsWith("https://")) {
+    throw new Error("La API no devolvió una URL de pago válida.")
+  }
+  return data;
 }
