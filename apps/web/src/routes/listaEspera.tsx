@@ -196,9 +196,16 @@ function RouteComponent() {
                         key={i}
                         className="rounded-ks-md border-[1.5px] border-ks-gray-soft bg-ks-off-white px-4 py-3.5"
                       >
-                        <p className="m-0 mb-1 font-outfit text-[15px] font-semibold text-ks-text-dark">
-                          {p.nombre} {p.apellido}
-                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="m-0 font-outfit text-[15px] font-semibold text-ks-text-dark">
+                            {p.nombre} {p.apellido}
+                          </p>
+                          {p.esAbonado && (
+                            <span className="inline-flex items-center rounded-ks-full bg-[rgba(255,180,0,0.15)] px-2 py-0.5 font-outfit text-[10px] font-bold text-[#a67c00]">
+                              Abonado
+                            </span>
+                          )}
+                        </div>
                         <p className="m-0 mt-0.5 text-[13px] text-ks-gray-text">DNI: {p.dni}</p>
                         <p className="m-0 mt-0.5 text-[13px] text-ks-gray-text">{p.mail}</p>
                       </div>
