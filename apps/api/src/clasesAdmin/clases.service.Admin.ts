@@ -23,6 +23,9 @@ const HISTORIAL_ESTADO_CANCELADA = "Cancelada";
 
 // Monto a favor que se acredita a cada cliente inscripto cuando se cancela su clase
 const MONTO_A_FAVOR_CANCELACION = 5000;
+//PARA ESTADISTICAS WACHIN
+const REGEX_MES = /^\d{4}-\d{2}$/;
+
 
 @Injectable()
 export class ClasesAdminService {
@@ -977,6 +980,124 @@ export class ClasesAdminService {
     };
   }
 
+// ...
+
+/**
+ * Estadísticas generales del mes: cuántos abonados pagaron (según lo que
+ * ya carga el webhook de Mercado Pago en "Pago"), cuáles faltan, y qué
+ * actividad tuvo más inscriptos reales. No modifica ninguna tabla, solo lee.
+ */
+async getEstadisticasGenerales(mes?: string) {
+  const mesTarget = mes ?? new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+
+  if (!REGEX_MES.test(mesTarget)) {
+    throw new BadRequestException("El mes debe tener el formato YYYY-MM");
+  }
+
+  const [anio, mesNumero] = mesTarget.split("-").map(Number);
+  const primerDia = `${mesTarget}-01`;
+  const ultimoDiaNum = new Date(anio, mesNumero, 0).getDate();
+  const ultimoDia = `${mesTarget}-${String(ultimoDiaNum).padStart(2, "0")}`;
+
+  // 1. Abonados activos
+  const { data: abonados, error: abonadosError } = await this.supabaseService.client
+    .from("Persona_")
+    .select("id, nombre, apellido, mail")
+    .eq("rol", ROL_CLIENTE_ABONADO_ID)
+    .eq("activo", true);
+
+  if (abonadosError) {
+    throw new InternalServerErrorException(
+      `Error al obtener abonados: ${abonadosError.message}`
+    );
+  }
+
+  const abonadosIds = (abonados ?? []).map((a: any) => a.id);
+
+  // 2. Pagos ya existentes en el mes para esos abonados (solo lectura)
+  let idsPagaron = new Set<number>();
+
+  if (abonadosIds.length > 0) {
+    const { data: pagos, error: pagosError } = await this.supabaseService.client
+      .from("Pago")
+      .select("id_cliente, fecha")
+      .in("id_cliente", abonadosIds)
+      .gte("fecha", primerDia)
+      .lte("fecha", ultimoDia);
+
+    if (pagosError) {
+      throw new InternalServerErrorException(
+        `Error al obtener pagos: ${pagosError.message}`
+      );
+    }
+
+    idsPagaron = new Set((pagos ?? []).map((p: any) => p.id_cliente));
+  }
+
+  const pagaron = (abonados ?? []).filter((a: any) => idsPagaron.has(a.id));
+  const faltantes = (abonados ?? []).filter((a: any) => !idsPagaron.has(a.id));
+
+  // 3. Actividad más concurrida del mes (Se_inscribe + Clase)
+  const { data: clasesDelMes, error: clasesError } = await this.supabaseService.client
+    .from("Clase")
+    .select("id, tipo")
+    .gte("fecha", primerDia)
+    .lte("fecha", ultimoDia)
+    .neq("estado", ESTADO_CLASE_CANCELADA);
+
+  if (clasesError) {
+    throw new InternalServerErrorException(
+      `Error al obtener clases del mes: ${clasesError.message}`
+    );
+  }
+
+  const tipoPorClaseId = new Map<number, string>();
+  (clasesDelMes ?? []).forEach((c: any) => {
+    tipoPorClaseId.set(c.id, c.tipo ?? "Sin tipo");
+  });
+
+  const claseIdsDelMes = [...tipoPorClaseId.keys()];
+  const conteoPorTipo = new Map<string, number>();
+  [...new Set(tipoPorClaseId.values())].forEach((tipo) => {
+  conteoPorTipo.set(tipo, 0);
+});
+
+  if (claseIdsDelMes.length > 0) {
+    const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .select("id_clase")
+      .in("id_clase", claseIdsDelMes);
+
+    if (inscripcionesError) {
+      throw new InternalServerErrorException(
+        `Error al obtener inscripciones del mes: ${inscripcionesError.message}`
+      );
+    }
+
+    (inscripciones ?? []).forEach((i: any) => {
+      const tipo = tipoPorClaseId.get(i.id_clase) ?? "Sin tipo";
+      conteoPorTipo.set(tipo, (conteoPorTipo.get(tipo) ?? 0) + 1);
+    });
+  }
+
+  const actividadPorConcurrencia = [...conteoPorTipo.entries()]
+    .map(([tipo, inscriptos]) => ({ tipo, inscriptos }))
+    .sort((a, b) => b.inscriptos - a.inscriptos);
+
+  return {
+    mes: mesTarget,
+    pagos: {
+      totalAbonados: abonados?.length ?? 0,
+      pagaron: pagaron.map((p: any) => ({
+        id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
+      })),
+      faltantes: faltantes.map((p: any) => ({
+        id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
+      })),
+    },
+    actividadPorConcurrencia,
+  };
+}
   async getEstadisticas(claseId: number) {
     if (!Number.isInteger(claseId) || claseId <= 0) {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");

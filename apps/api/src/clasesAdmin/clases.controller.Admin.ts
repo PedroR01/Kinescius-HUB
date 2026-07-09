@@ -118,6 +118,10 @@ async findEstadoSuscripcion() {
 async findEstadisticas(@Param("id", ParseIntPipe) id: number) {
   return this.clasesService.getEstadisticas(id);
 }
+@Get('estadisticas-generales')
+getEstadisticasGenerales(@Query('mes') mes?: string) {
+  return this.clasesService.getEstadisticasGenerales(mes);
+}
  
   @Post("notificacion-manual")
   async enviarNotificacionManual(@Body() dto: EnviarNotificacionDto) {
