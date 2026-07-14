@@ -17,6 +17,18 @@ export const Route = createFileRoute("/profesor")({
   component: ProfesorPage,
 });
 
+function getClaseQrExistente(clase: ClaseProfesor): GenerarTokenResponse | null {
+  if (!clase.QR) {
+    return null;
+  }
+  const token = ""; // Este campo no se usa en el front, TODO: Remover la url inicial de la cadena y dejar el token.
+  return {
+    qrUrl: clase.QR,
+    token,
+    expiresAt: clase.ventanaHasta,
+  };
+}
+
 function ProfesorPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isProfesor, isHydrated } = useAuthSession();
@@ -51,6 +63,11 @@ function ProfesorPage() {
       .then((data) => {
         if (!cancelled) {
           setClases(data);
+          const claseConQr = data.find((clase) => getClaseQrExistente(clase) !== null && horarioHabilitadoQR(clase.hora));
+          if (claseConQr) {
+            setClaseSeleccionada(claseConQr);
+            setQrActivo(getClaseQrExistente(claseConQr));
+          }
         }
       })
       .catch((fetchError: Error) => {
@@ -78,6 +95,16 @@ function ProfesorPage() {
     setError(null);
     setClaseSeleccionada(clase);
 
+    // Evita el POST si ya existe un QR para la clase.
+    const qrExistente = getClaseQrExistente(clase);
+    console.log(qrExistente);
+    if (qrExistente) {
+      setQrActivo(qrExistente);
+      console.log("QR existente");
+      return;
+    }  
+
+    console.log("Generando nuevo QR");
     generarTokenMutation.mutate(
       { claseId: clase.id, authToken },
       {
@@ -97,8 +124,12 @@ function ProfesorPage() {
     const [horaClase, minutosClase] = hora.split(':').map(Number);
     const minutosClaseTotal = horaClase * 60 + minutosClase;
     const diferencia = minutosClaseTotal - minutosActuales;
+    // Si es una clase que ya pasó su tiempo de asistencia no se muestra (para el testeo)
+    if (diferencia < -15)
+      return false;
+
     // Habilitado desde 15 min antes hasta 15 min después del inicio
-    return diferencia >= -15 && diferencia <= 40;
+    return diferencia >= -100 && diferencia <= 100;
   };
 
   return (
@@ -141,40 +172,46 @@ function ProfesorPage() {
                   </span>
                   <span>{clase.tipo ?? "Clase"}</span>
                 </div>
-
+<div className="flex flex-row gap-2">
                 <button
                   type="button"
-                  disabled={!horarioHabilitadoQR(clase.hora) || generarTokenMutation.isPending}
+                  disabled={!horarioHabilitadoQR(clase.hora) || generarTokenMutation.isPending || qrActivo !== null}
                   onClick={() => handleGenerarQr(clase)}
                   className={cn(btnBase, btnPrimary)}
                 >
                   <span className="inline-flex items-center gap-2">
                     <QrCode className="size-4" />
-                    {generarTokenMutation.isPending && claseSeleccionada?.id === clase.id
+                    {clase.QR ? "Ver QR" : 
+                    generarTokenMutation.isPending && claseSeleccionada?.id === clase.id
                       ? "Generando..."
                       : "Generar QR"}
                   </span>
                 </button>
-
+                <button type="button" disabled={!horarioHabilitadoQR(clase.hora)} className={cn(btnBase, btnPrimary)}>Asistencia manual</button>
+                </div>
                 {!clase.puedeGenerarQr && (
                   <p className="m-0 mt-2 text-xs text-ks-gray-text">
                     Disponible desde 5 minutos antes del inicio hasta 15 minutos después.
                   </p>
                 )}
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-      )}
 
-      {qrActivo && claseSeleccionada && (
+{!horarioHabilitadoQR(clase.hora) ? <div>
+  <h3 className="m-0 mb-4 font-outfit text-lg font-semibold">
+            QR expirado
+          </h3>
+</div>:qrActivo && claseSeleccionada && (
         <section className={formCardClass}>
           <h3 className="m-0 mb-4 font-outfit text-lg font-semibold text-ks-text-dark">
             QR de asistencia — {claseSeleccionada.tipo ?? "Clase"}
           </h3>
           <QRDisplay qrUrl={qrActivo.qrUrl} expiresAt={qrActivo.expiresAt} />
         </section>
+      )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
       )}
     </AuthPageLayout>
   );

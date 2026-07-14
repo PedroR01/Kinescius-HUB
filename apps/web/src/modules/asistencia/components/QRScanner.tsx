@@ -13,6 +13,7 @@ function extractAttendanceToken(value: string): string | null {
       return null;
     }
     const token = url.searchParams.get("token");
+    console.log(token);
     return token || null;
   } catch {
     return null;
@@ -34,8 +35,6 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
 
     const startScanner = async () => {
       try {
-        QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
-
         const scanner = new QrScanner(
           video,
           (result) => {
