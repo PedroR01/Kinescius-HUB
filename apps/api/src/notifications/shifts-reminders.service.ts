@@ -96,6 +96,7 @@ export class RecordatoriosService implements OnModuleInit {
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser(token);
 
     if (userError || !userData.user) {
+
       throw new UnauthorizedException('Sesión inválida o expirada. Por favor, iniciá sesión nuevamente.');
     }
 
@@ -185,4 +186,4 @@ export class RecordatoriosService implements OnModuleInit {
       }
     }
   }
-}
+}
