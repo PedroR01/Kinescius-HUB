@@ -5,6 +5,7 @@ export interface ResultadoEvaluacion {
   mensaje: string;
   reembolsoAplicado: TipoReembolso;
   pierdeBeneficioAbonado?: boolean;
+  sinAntelacion?: boolean;
 }
 
 export interface EstrategiaCancelacion {
