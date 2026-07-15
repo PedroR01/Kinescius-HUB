@@ -40,8 +40,11 @@ function leerMetadataPago(metadata: Record<string, unknown> | undefined) {
     const montoAFavorAplicado = Number(
         metadata?.montoAFavorAplicado ?? metadata?.monto_a_favor_aplicado,
     ) || 0;
+    const clasesFavorAplicadas = Number(
+        metadata?.clasesFavorAplicadas ?? metadata?.clases_favor_aplicadas,
+    ) || 0;
 
-    return { clases, idCliente, montoAFavorAplicado };
+    return { clases, idCliente, montoAFavorAplicado, clasesFavorAplicadas };
 }
 
 @Injectable()
@@ -68,7 +71,7 @@ export class PagosService implements OnModuleInit {
     }
 
     async createPreference(body: CreatePreferenceBody): Promise<{ initPoint: string }> {
-        const { clases, clienteId, montoAFavorAplicado = 0 } = body;
+        const { clases, clienteId, montoAFavorAplicado = 0, clasesFavorAplicadas } = body;
         if (!clases?.length) {
             throw new BadRequestException("Debe incluir al menos una clase.");
         }
@@ -76,7 +79,7 @@ export class PagosService implements OnModuleInit {
             throw new BadRequestException("clienteId inválido.");
         }
 
-        const subtotal = clases.length * CLASS_UNIT_PRICE;
+        const subtotal = (clases.length - clasesFavorAplicadas) * CLASS_UNIT_PRICE;
         if (montoAFavorAplicado < 0 || montoAFavorAplicado > subtotal) {
             throw new BadRequestException("Monto a favor aplicado inválido.");
         }
@@ -101,6 +104,7 @@ export class PagosService implements OnModuleInit {
                     clases,
                     clienteId,
                     montoAFavorAplicado,
+                    clasesFavorAplicadas,
                 },
                 back_urls: {
                     success: `${frontendUrl}/success`, // Forwarding de ngrok
@@ -121,12 +125,37 @@ export class PagosService implements OnModuleInit {
             return { received: true, status: payment.status };
         }
 
-        const { clases, idCliente, montoAFavorAplicado } = leerMetadataPago(
+        const { clases, idCliente, montoAFavorAplicado, clasesFavorAplicadas } = leerMetadataPago(
             payment.metadata as Record<string, unknown> | undefined,
         );
 
         if (!idCliente || !clases.length) {
             throw new BadRequestException('Metadata de pago incompleta.');
+        }
+
+        if (!clasesFavorAplicadas || (clasesFavorAplicadas > 0)) {
+            const { data: cliente, error: clienteError } = await this.supabaseService.client
+                .from("Estado_Cliente")
+                .select("clases_favor")
+                .eq("id", idCliente)
+                .single();
+            if (clienteError || !cliente) {
+                throw new InternalServerErrorException(
+                    `Error al obtener saldo del cliente: ${clienteError?.message}`
+                );
+            }
+
+            const clasesActualizadas = (cliente.clases_favor - clasesFavorAplicadas);
+            const { error: errorActualizacion } = await this.supabaseService.client
+                .from("Estado_Cliente")
+                .update({ clases_favor: clasesActualizadas })
+                .eq("id", idCliente);
+
+            if (errorActualizacion) {
+                throw new InternalServerErrorException(
+                    `No se pudo actualizar la cantidad de clases a favor: ${errorActualizacion.message}`
+                );
+            }
         }
 
         const datosPorClase = inscripcionPorClaseEnCarrito(
@@ -152,7 +181,7 @@ export class PagosService implements OnModuleInit {
         const inscripciones: SeInscribeInsert[] = clases.map((clase, index) => ({
             id_clase: clase.id,
             id_cliente: idCliente,
-            estado: "pagado",
+            estado: "reservado",
             id_pago_mp: datosPorClase[index].id_pago_mp,
             monto_a_favor: datosPorClase[index].monto_a_favor,
         }));

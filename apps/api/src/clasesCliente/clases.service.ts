@@ -50,7 +50,7 @@ export class ClasesService {
   async getMontoAFavor(clienteId: number) {
     const { data, error } = await this.supabaseService.client
       .from("Estado_Cliente")
-      .select("monto_favor")
+      .select("monto_favor, clases_favor")
       .eq("id", clienteId)
       .single();
 
@@ -60,7 +60,7 @@ export class ClasesService {
       );
     }
 
-    return { monto_a_favor: data.monto_favor };
+    return { monto_a_favor: data.monto_favor, clases_a_favor: data.clases_favor };
   }
 
   private async verificarConflictoHorario(clienteId: number, claseId: number): Promise<void> {
@@ -145,28 +145,44 @@ export class ClasesService {
   }
 
   async inscribirConSaldo(dto: InscribirConSaldoDto) {
-    const { clienteId, clases, montoAFavorAplicado } = dto;
+    const { clienteId, clases, montoAFavorAplicado, clasesFavorAplicadas } = dto;
 
     if (!clases.length) {
       throw new BadRequestException("Debe incluir al menos una clase.");
     }
 
-    const subtotal = clases.length * CLASS_UNIT_PRICE;
-    if (montoAFavorAplicado < subtotal) {
-      throw new BadRequestException(
-        "El monto a favor debe cubrir el total para inscribir sin Mercado Pago."
-      );
-    }
-
     const { data: cliente, error: clienteError } = await this.supabaseService.client
       .from("Estado_Cliente")
-      .select("monto_favor")
+      .select("monto_favor, clases_favor")
       .eq("id", clienteId)
       .single();
 
     if (clienteError || !cliente) {
       throw new InternalServerErrorException(
         `Error al obtener saldo del cliente: ${clienteError?.message}`
+      );
+    }
+
+    const clasesFavorDisponibles = cliente.clases_favor || 0;
+    const clasesFavorUsadas = Math.min(clases.length, clasesFavorDisponibles);
+
+    const subtotal = (clases.length - clasesFavorUsadas) * CLASS_UNIT_PRICE;
+    const clasesActualizadas = clasesFavorDisponibles - clasesFavorUsadas;
+
+    if (montoAFavorAplicado < subtotal) {
+      throw new BadRequestException(
+        "El monto a favor debe cubrir el total para inscribir sin Mercado Pago."
+      );
+    }
+
+    const { error: errorActualizacion } = await this.supabaseService.client
+      .from("Estado_Cliente")
+      .update({ clases_favor: clasesActualizadas })
+      .eq("id", clienteId);
+
+    if (errorActualizacion) {
+      throw new InternalServerErrorException(
+        `No se pudo actualizar la cantidad de clases a favor: ${errorActualizacion.message}`
       );
     }
 
@@ -227,7 +243,7 @@ export class ClasesService {
     const inscripciones = clases.map((clase) => ({
       id_cliente: clienteId,
       id_clase: clase.id,
-      estado: "pagado",
+      estado: "reservado",
       id_pago_mp: datosPago.id_pago_mp,
       monto_a_favor: datosPago.monto_a_favor,
     }));
