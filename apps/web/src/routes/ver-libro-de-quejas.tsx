@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { MessageSquareText, Calendar, Clock, User2Icon, Star } from 'lucide-react';
+import { MessageSquareText, Calendar, Clock, User2Icon, Star, CalendarClock } from 'lucide-react';
 
 import { API_BASE } from '@/lib/constants';
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton';
@@ -28,6 +28,19 @@ interface Comentario {
     profesorNombre: string;
     profesorApellido: string;
 }
+
+
+const formatearFecha = (fechaISO: string) => {
+    const fecha = new Date(fechaISO);
+
+    return fecha.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
 
 
 
@@ -186,7 +199,7 @@ console.log("TOKEN:", token);
 
                                         <p>
                                             <Calendar className="inline mr-2 w-4"/>
-                                            {item.fechaClase}
+                                            Clase: {item.fechaClase}
                                         </p>
 
 
@@ -207,6 +220,12 @@ console.log("TOKEN:", token);
                                         <p>
                                             <User2Icon className="inline mr-2 w-4"/>
                                             {item.profesorNombre} {item.profesorApellido}
+                                        </p>
+
+
+                                        <p className="sm:col-span-2 text-slate-500">
+                                            <CalendarClock className="inline mr-2 w-4"/>
+                                            Comentario escrito el {formatearFecha(item.fechaComentario)}
                                         </p>
 
 
