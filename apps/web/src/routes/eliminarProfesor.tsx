@@ -143,7 +143,7 @@ function RouteComponent() {
         Eliminar <span style={{ color: GREEN, fontStyle: "italic" }}>profesor</span>
       </h1>
       <p style={{ margin: "0 0 32px", fontSize: "14px", fontWeight: 300, color: "rgba(13,31,24,0.55)" }}>
-        Seleccioná un profesor y presioná Eliminar profesor. La baja es lógica: el registro no se borra, solo se desactiva.
+        Seleccioná un profesor y presioná Eliminar profesor. 
       </p>
       <div style={{ width: "36px", height: "2px", background: GREEN, boxShadow: `0 0 10px ${GREEN}88`, marginBottom: "32px" }} />
 
