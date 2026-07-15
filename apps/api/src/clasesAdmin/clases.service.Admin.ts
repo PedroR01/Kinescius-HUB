@@ -61,10 +61,6 @@ export class ClasesAdminService {
       query = query.neq("estado", ESTADO_CLASE_CANCELADA);
     }
 
-    if (!incluirCanceladas) {
-      query = query.neq("estado", ESTADO_CLASE_CANCELADA);
-    }
-
     const { data, error } = await query;
 
     if (error) {
@@ -100,6 +96,19 @@ export class ClasesAdminService {
         );
       }
 
+      // DIAGNÓSTICO: si esto imprime menos filas de las esperadas (o 0),
+      // es casi seguro un problema de RLS en la tabla "Persona_" bloqueando
+      // la lectura de otras personas desde este cliente de Supabase, y NO
+      // un problema de este archivo. Revisar Authentication > Policies de
+      // "Persona_" en Supabase, o confirmar que supabaseService.client usa
+      // la service_role key (no la anon/authenticated key) en el backend.
+      if ((personas ?? []).length !== profesorIds.length) {
+        console.warn(
+          `[findAll] Se pidieron ${profesorIds.length} profesor(es) (ids: ${profesorIds.join(", ")}) ` +
+          `pero Persona_ devolvió solo ${personas?.length ?? 0}. Revisar RLS en la tabla Persona_.`
+        );
+      }
+
       (personas ?? []).forEach((persona: { id: number; nombre?: string | null; apellido?: string | null }) => {
         const nombre = [persona.nombre, persona.apellido].filter(Boolean).join(' ')
         profesorNombres.set(persona.id, nombre || null);
@@ -109,11 +118,19 @@ export class ClasesAdminService {
     // OJO: el frontend (verClases.tsx, cambiarProfesor.tsx, etc.) lee "clase.profesor",
     // no "clase.profesor_nombre". Por eso siempre aparecía "Sin profesor" aunque la
     // clase sí tuviera un id_profesor asignado.
+    //
+    // FIX: antes se usaba "clase.id_profesor ? ... : null", que es un chequeo "truthy".
+    // Si un profesor tiene id_profesor = 0 (posible, ya que 0 es un id válido en
+    // Persona_), JavaScript lo evalúa como falso y la clase quedaba mostrando
+    // "Sin profesor" a pesar de tener uno asignado. Se reemplaza por un chequeo
+    // explícito de tipo (typeof === "number"), consistente con el filtro de
+    // profesorIds de más arriba.
     return clases.map((clase) => ({
       ...clase,
-      profesor: clase.id_profesor
-        ? profesorNombres.get(clase.id_profesor) ?? null
-        : null,
+      profesor:
+        typeof clase.id_profesor === "number"
+          ? profesorNombres.get(clase.id_profesor) ?? null
+          : null,
     }));
   }
 
@@ -875,6 +892,29 @@ export class ClasesAdminService {
 
     if (persona.activo === false) {
       throw new BadRequestException("El profesor ya se encuentra dado de baja");
+    }
+
+    // No permitir la baja si el profesor tiene clases pendientes (futuras y no canceladas)
+    const hoy = new Date().toISOString().split("T")[0];
+
+    const { count: clasesPendientes, error: clasesPendientesError } =
+      await this.supabaseService.client
+        .from("Clase")
+        .select("id", { count: "exact", head: true })
+        .eq("id_profesor", id)
+        .gte("fecha", hoy)
+        .neq("estado", ESTADO_CLASE_CANCELADA);
+
+    if (clasesPendientesError) {
+      throw new InternalServerErrorException(
+        `Error al verificar clases pendientes: ${clasesPendientesError.message}`
+      );
+    }
+
+    if ((clasesPendientes ?? 0) > 0) {
+      throw new BadRequestException(
+        `No se puede dar de baja al profesor porque tiene ${clasesPendientes} clase/s pendiente/s. Cancelalas o reasigná el profesor antes de continuar.`
+      );
     }
 
     const { error: updateError } = await this.supabaseService.client

@@ -45,9 +45,10 @@ function EscanearAsistenciaPage() {
     );
   }
 
+  // TODO: Unificar los casos de error en el mismo return y componente.
   if (registrarMutation.isSuccess) {
     return (
-      <AuthPageLayout title="Escanear asistencia" subtitle="Lectura completada">
+      <AuthPageLayout title="Escanear asistencia" subtitle="Lectura completada" showBackButton>
         <AsistenciaFeedback
           status="success"
           message={registrarMutation.data.message}
