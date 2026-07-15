@@ -18,7 +18,6 @@ export const Route = createFileRoute('/notificacionManual')({
 function RouteComponent() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
-  const [busqueda, setBusqueda] = useState('')
   const [clienteId, setClienteId] = useState<number | ''>('')
   const [asunto, setAsunto] = useState('')
   const [mensaje, setMensaje] = useState('')
@@ -49,20 +48,6 @@ function RouteComponent() {
   useEffect(() => {
     void loadClientes()
   }, [])
-
-  const clientesFiltrados = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase()
-    if (!texto) return clientes
-
-    return clientes.filter((cliente) => {
-      const nombreCompleto = `${cliente.nombre ?? ''} ${cliente.apellido ?? ''}`.toLowerCase()
-      return (
-        nombreCompleto.includes(texto) ||
-        (cliente.dni ?? '').toLowerCase().includes(texto) ||
-        (cliente.mail ?? '').toLowerCase().includes(texto)
-      )
-    })
-  }, [clientes, busqueda])
 
   const clienteSeleccionado = useMemo(
     () => clientes.find((cliente) => cliente.id === clienteId) ?? null,
@@ -121,17 +106,6 @@ function RouteComponent() {
       <section className="bg-ks-off-white rounded-ks-lg p-6 shadow-[0_20px_60px_rgba(26,58,42,0.18)]">
         <div className="field-column">
           <label className="flex flex-col gap-1.5 text-sm font-medium">
-            Buscar cliente (nombre, DNI o mail)
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar..."
-              className="border border-ks-gray-border rounded-ks-full p-4"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5 text-sm font-medium">
             Cliente
             <select
               value={clienteId}
@@ -142,7 +116,7 @@ function RouteComponent() {
               <option value="">
                 {loadingClientes ? 'Cargando clientes...' : 'Seleccioná un cliente'}
               </option>
-              {clientesFiltrados.map((cliente) => (
+              {clientes.map((cliente) => (
                 <option key={cliente.id} value={cliente.id}>
                   {cliente.nombre} {cliente.apellido} — {cliente.dni} — {cliente.mail}
                 </option>

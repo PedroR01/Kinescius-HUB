@@ -23,6 +23,9 @@ const HISTORIAL_ESTADO_CANCELADA = "Cancelada";
 
 // Monto a favor que se acredita a cada cliente inscripto cuando se cancela su clase
 const MONTO_A_FAVOR_CANCELACION = 5000;
+//PARA ESTADISTICAS WACHIN
+const REGEX_MES = /^\d{4}-\d{2}$/;
+
 
 @Injectable()
 export class ClasesAdminService {
@@ -52,10 +55,6 @@ export class ClasesAdminService {
 
     if (endDate) {
       query = query.lte("fecha", endDate);
-    }
-
-    if (!incluirCanceladas) {
-      query = query.neq("estado", ESTADO_CLASE_CANCELADA);
     }
 
     if (!incluirCanceladas) {
@@ -97,6 +96,19 @@ export class ClasesAdminService {
         );
       }
 
+      // DIAGNÓSTICO: si esto imprime menos filas de las esperadas (o 0),
+      // es casi seguro un problema de RLS en la tabla "Persona_" bloqueando
+      // la lectura de otras personas desde este cliente de Supabase, y NO
+      // un problema de este archivo. Revisar Authentication > Policies de
+      // "Persona_" en Supabase, o confirmar que supabaseService.client usa
+      // la service_role key (no la anon/authenticated key) en el backend.
+      if ((personas ?? []).length !== profesorIds.length) {
+        console.warn(
+          `[findAll] Se pidieron ${profesorIds.length} profesor(es) (ids: ${profesorIds.join(", ")}) ` +
+          `pero Persona_ devolvió solo ${personas?.length ?? 0}. Revisar RLS en la tabla Persona_.`
+        );
+      }
+
       (personas ?? []).forEach((persona: { id: number; nombre?: string | null; apellido?: string | null }) => {
         const nombre = [persona.nombre, persona.apellido].filter(Boolean).join(' ')
         profesorNombres.set(persona.id, nombre || null);
@@ -106,11 +118,19 @@ export class ClasesAdminService {
     // OJO: el frontend (verClases.tsx, cambiarProfesor.tsx, etc.) lee "clase.profesor",
     // no "clase.profesor_nombre". Por eso siempre aparecía "Sin profesor" aunque la
     // clase sí tuviera un id_profesor asignado.
+    //
+    // FIX: antes se usaba "clase.id_profesor ? ... : null", que es un chequeo "truthy".
+    // Si un profesor tiene id_profesor = 0 (posible, ya que 0 es un id válido en
+    // Persona_), JavaScript lo evalúa como falso y la clase quedaba mostrando
+    // "Sin profesor" a pesar de tener uno asignado. Se reemplaza por un chequeo
+    // explícito de tipo (typeof === "number"), consistente con el filtro de
+    // profesorIds de más arriba.
     return clases.map((clase) => ({
       ...clase,
-      profesor: clase.id_profesor
-        ? profesorNombres.get(clase.id_profesor) ?? null
-        : null,
+      profesor:
+        typeof clase.id_profesor === "number"
+          ? profesorNombres.get(clase.id_profesor) ?? null
+          : null,
     }));
   }
 
@@ -874,6 +894,29 @@ export class ClasesAdminService {
       throw new BadRequestException("El profesor ya se encuentra dado de baja");
     }
 
+    // No permitir la baja si el profesor tiene clases pendientes (futuras y no canceladas)
+    const hoy = new Date().toISOString().split("T")[0];
+
+    const { count: clasesPendientes, error: clasesPendientesError } =
+      await this.supabaseService.client
+        .from("Clase")
+        .select("id", { count: "exact", head: true })
+        .eq("id_profesor", id)
+        .gte("fecha", hoy)
+        .neq("estado", ESTADO_CLASE_CANCELADA);
+
+    if (clasesPendientesError) {
+      throw new InternalServerErrorException(
+        `Error al verificar clases pendientes: ${clasesPendientesError.message}`
+      );
+    }
+
+    if ((clasesPendientes ?? 0) > 0) {
+      throw new BadRequestException(
+        `No se puede dar de baja al profesor porque tiene ${clasesPendientes} clase/s pendiente/s. Cancelalas o reasigná el profesor antes de continuar.`
+      );
+    }
+
     const { error: updateError } = await this.supabaseService.client
       .from("Persona_")
       .update({ activo: false })
@@ -976,6 +1019,125 @@ export class ClasesAdminService {
       noAbonados,
     };
   }
+
+// ...
+
+/**
+ * Estadísticas generales del mes: cuántos abonados pagaron (según lo que
+ * ya carga el webhook de Mercado Pago en "Pago"), cuáles faltan, y qué
+ * actividad tuvo más inscriptos reales. No modifica ninguna tabla, solo lee.
+ */
+async getEstadisticasGenerales(mes?: string) {
+  const mesTarget = mes ?? new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+
+  if (!REGEX_MES.test(mesTarget)) {
+    throw new BadRequestException("El mes debe tener el formato YYYY-MM");
+  }
+
+  const [anio, mesNumero] = mesTarget.split("-").map(Number);
+  const primerDia = `${mesTarget}-01`;
+  const ultimoDiaNum = new Date(anio, mesNumero, 0).getDate();
+  const ultimoDia = `${mesTarget}-${String(ultimoDiaNum).padStart(2, "0")}`;
+
+  // 1. Abonados activos
+  const { data: abonados, error: abonadosError } = await this.supabaseService.client
+    .from("Persona_")
+    .select("id, nombre, apellido, mail")
+    .eq("rol", ROL_CLIENTE_ABONADO_ID)
+    .eq("activo", true);
+
+  if (abonadosError) {
+    throw new InternalServerErrorException(
+      `Error al obtener abonados: ${abonadosError.message}`
+    );
+  }
+
+  const abonadosIds = (abonados ?? []).map((a: any) => a.id);
+
+  // 2. Pagos ya existentes en el mes para esos abonados (solo lectura)
+  let idsPagaron = new Set<number>();
+
+  if (abonadosIds.length > 0) {
+    const { data: pagos, error: pagosError } = await this.supabaseService.client
+      .from("Pago")
+      .select("id_cliente, fecha")
+      .in("id_cliente", abonadosIds)
+      .gte("fecha", primerDia)
+      .lte("fecha", ultimoDia);
+
+    if (pagosError) {
+      throw new InternalServerErrorException(
+        `Error al obtener pagos: ${pagosError.message}`
+      );
+    }
+
+    idsPagaron = new Set((pagos ?? []).map((p: any) => p.id_cliente));
+  }
+
+  const pagaron = (abonados ?? []).filter((a: any) => idsPagaron.has(a.id));
+  const faltantes = (abonados ?? []).filter((a: any) => !idsPagaron.has(a.id));
+
+  // 3. Actividad más concurrida del mes (Se_inscribe + Clase)
+  const { data: clasesDelMes, error: clasesError } = await this.supabaseService.client
+    .from("Clase")
+    .select("id, tipo")
+    .gte("fecha", primerDia)
+    .lte("fecha", ultimoDia)
+    .neq("estado", ESTADO_CLASE_CANCELADA);
+
+  if (clasesError) {
+    throw new InternalServerErrorException(
+      `Error al obtener clases del mes: ${clasesError.message}`
+    );
+  }
+
+  const tipoPorClaseId = new Map<number, string>();
+  (clasesDelMes ?? []).forEach((c: any) => {
+    tipoPorClaseId.set(c.id, c.tipo ?? "Sin tipo");
+  });
+
+  const claseIdsDelMes = [...tipoPorClaseId.keys()];
+  const conteoPorTipo = new Map<string, number>();
+  [...new Set(tipoPorClaseId.values())].forEach((tipo) => {
+  conteoPorTipo.set(tipo, 0);
+});
+
+  if (claseIdsDelMes.length > 0) {
+    const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
+      .from("Se_inscribe")
+      .select("id_clase")
+      .in("id_clase", claseIdsDelMes);
+
+    if (inscripcionesError) {
+      throw new InternalServerErrorException(
+        `Error al obtener inscripciones del mes: ${inscripcionesError.message}`
+      );
+    }
+
+    (inscripciones ?? []).forEach((i: any) => {
+      const tipo = tipoPorClaseId.get(i.id_clase) ?? "Sin tipo";
+      conteoPorTipo.set(tipo, (conteoPorTipo.get(tipo) ?? 0) + 1);
+    });
+  }
+
+  const actividadPorConcurrencia = [...conteoPorTipo.entries()]
+    .map(([tipo, inscriptos]) => ({ tipo, inscriptos }))
+    .sort((a, b) => b.inscriptos - a.inscriptos);
+
+  return {
+    mes: mesTarget,
+    pagos: {
+      totalAbonados: abonados?.length ?? 0,
+      pagaron: pagaron.map((p: any) => ({
+        id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
+      })),
+      faltantes: faltantes.map((p: any) => ({
+        id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
+      })),
+    },
+    actividadPorConcurrencia,
+  };
+}
   async getEstadisticas(claseId: number) {
     if (!Number.isInteger(claseId) || claseId <= 0) {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");
@@ -1063,8 +1225,8 @@ export class ClasesAdminService {
     const promedioOcupacion =
       ocupacionesValidas.length > 0
         ? Math.round(
-          ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
-        )
+            ocupacionesValidas.reduce((a, b) => a + b, 0) / ocupacionesValidas.length
+          )
         : null;
 
     const claseMasConcurrida = [...detalle].sort((a, b) => b.inscriptos - a.inscriptos)[0];
@@ -1082,6 +1244,7 @@ export class ClasesAdminService {
       detalle: [...detalle].sort((a, b) => a.fecha.localeCompare(b.fecha)), // ordenado por fecha
     };
   }
+
 
   /**
    * Envía una notificación manual (asunto + mensaje libre) por mail
@@ -1142,5 +1305,4 @@ export class ClasesAdminService {
       message: `Notificación enviada correctamente a ${nombreCompleto}`,
     };
   }
-
 }

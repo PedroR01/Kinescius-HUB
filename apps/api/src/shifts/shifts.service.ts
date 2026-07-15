@@ -37,7 +37,31 @@ export class ShiftsService {
       throw new NotFoundException('El cliente no está inscripto en la clase seleccionada.');
     }
 
+    // 2. Obtener rol del cliente desde Persona_
+    const { data: persona, error: errorPersona } = await this.supabase.client
+      .from('Persona_')
+      .select('rol')
+      .eq('id', clienteId)
+      .single();
+
+    if (errorPersona || !persona) {
+      throw new NotFoundException('No se encontró la persona.');
+    }
+
+    // Chequear penalización temporal en Estado_Cliente
+    const { data: estadoCliente } = await this.supabase.client
+      .from('Estado_Cliente')
+      .select('penalizado_hasta')
+      .eq('id', clienteId)
+      .single();
+
+    const penalizacionActiva = estadoCliente?.penalizado_hasta
+      && new Date(estadoCliente.penalizado_hasta) > new Date();
+    const esAbonado = persona.rol === 3 && !penalizacionActiva;
+
+    // Validación de reembolso solo para no-abonados (los abonados se validan en la strategy)
     if (
+      !esAbonado &&
       inscripcion.estado !== 'pagado' &&
       tipoReembolso !== TipoReembolso.NINGUNO
     ) {
@@ -50,19 +74,6 @@ export class ShiftsService {
       fecha: inscripcion.clase.fecha,
       hora: inscripcion.clase.hora,
     };
-
-    // 2. Obtener rol del cliente desde Persona_
-    const { data: persona, error: errorPersona } = await this.supabase.client
-      .from('Persona_')
-      .select('rol')
-      .eq('id', clienteId)
-      .single();
-
-    if (errorPersona || !persona) {
-      throw new NotFoundException('No se encontró la persona.');
-    }
-
-    const esAbonado = persona.rol === 3;
 
     // 3. Seleccionar estrategia
     let estrategia: EstrategiaCancelacion;
@@ -101,11 +112,11 @@ export class ShiftsService {
     let detalleReembolso: ResultadoReembolso | null = null;
 
     if (resultado.permitido) {
-      // 4. Ejecutar reembolso si corresponde
-      if (debeEjecutarReembolso(tipoReembolso, inscripcion.estado)) {
+      // 4. Ejecutar reembolso si corresponde (usar la decisión de la strategy, no del DTO)
+      if (debeEjecutarReembolso(resultado.reembolsoAplicado, inscripcion.estado)) {
         detalleReembolso = await this.reembolsoService.ejecutarReembolso(
           inscripcion,
-          tipoReembolso,
+          resultado.reembolsoAplicado,
         );
         await this.reembolsoService.marcarReembolsado(clienteId, claseId);
       }
@@ -123,15 +134,14 @@ export class ShiftsService {
         throw new InternalServerErrorException('No se pudo procesar la cancelación en la base de datos.');
       }
 
-      if (esAbonado) {
-        // 6. Si pierde beneficio de abonado → cambiar rol de 3 a 2
-        if (resultado.pierdeBeneficioAbonado) {
-          await this.supabase.client
-            .from('Persona_')
-            .update({ rol: 2 })
-            .eq('id', clienteId)
-            .eq('rol', 3);
-        }
+      if (esAbonado && resultado.pierdeBeneficioAbonado) {
+        // 6. Penalización temporal: pierde descuento por 30 días
+        const penalizadoHasta = new Date();
+        penalizadoHasta.setDate(penalizadoHasta.getDate() + 30);
+        await this.supabase.client
+          .from('Estado_Cliente')
+          .update({ penalizado_hasta: penalizadoHasta.toISOString() })
+          .eq('id', clienteId);
       }
 
       await this.notificacionEspera.notificarProximoEnEspera(claseId);
@@ -296,7 +306,7 @@ export class ShiftsService {
       `)
       .eq('Clase.estado', 0)
       .eq('id_cliente', idCliente)
-      //.or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
+      .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
       .gte('Clase.fecha', new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }));
 
     if (error) {
@@ -316,7 +326,17 @@ export class ShiftsService {
       .eq('id', idCliente)
       .single();
 
-    if (persona && persona.rol === 3) {
+    // Chequear penalización temporal en Estado_Cliente
+    const { data: estadoClienteLista } = await this.supabase.client
+      .from('Estado_Cliente')
+      .select('penalizado_hasta')
+      .eq('id', idCliente)
+      .single();
+
+    const penalizacionActivaLista = estadoClienteLista?.penalizado_hasta
+      && new Date(estadoClienteLista.penalizado_hasta) > new Date();
+
+    if (persona && persona.rol === 3 && !penalizacionActivaLista) {
       esAbonado = true;
       const primerDiaMesActual = new Date();
       primerDiaMesActual.setDate(1);
@@ -348,8 +368,7 @@ export class ShiftsService {
       const { data: personas, error: profesorError } = await this.supabase.client
         .from('Persona_')
         .select('id, nombre, apellido')
-        .in('id', profesorIds)
-        .eq('rol', 1);
+        .in('id', profesorIds);
       if (profesorError) {
         throw new InternalServerErrorException(
           'Error al obtener profesores: ' + profesorError.message,
@@ -410,27 +429,61 @@ export class ShiftsService {
           estado
         )
       `)
-      .eq('id_cliente', idCliente)
-      .in('Clase.estado', [1, 2]);
-
+      .eq('id_cliente', idCliente);
 
     if (error) {
       throw new InternalServerErrorException('Error al recuperar el historial: ' + error.message);
     }
 
+    // Filtrar localmente para traer clases pasadas (estado 1 o 2) O clases canceladas/cambiadas por el cliente
+    const dataFiltrada = (data || []).filter((item: any) => {
+      return (
+        item.Clase.estado === 1 ||
+        item.Clase.estado === 2 ||
+        item.historial_estado === 'turno cancelado' ||
+        item.historial_estado === 'Cambiada'
+      );
+    });
 
+    const profesorIds = [...new Set(
+      dataFiltrada
+        .map((item: any) => item.Clase?.id_profesor)
+        .filter((id): id is number => typeof id === 'number'),
+    )];
+    const profesorNombres = new Map<number, string>();
+    if (profesorIds.length > 0) {
+      const { data: personas, error: profesorError } = await this.supabase.client
+        .from('Persona_')
+        .select('id, nombre, apellido')
+        .in('id', profesorIds);
+      if (profesorError) {
+        throw new InternalServerErrorException(
+          'Error al obtener profesores: ' + profesorError.message,
+        );
+      }
+      (personas ?? []).forEach((persona: any) => {
+        const nombreCompleto = [persona.nombre, persona.apellido]
+          .filter(Boolean)
+          .join(' ');
+        profesorNombres.set(persona.id, nombreCompleto || 'Sin profesor');
+      });
+    }
 
     //Map del estado
-    const historialMapeado = data.map((item: any) => {
+    const historialMapeado = dataFiltrada.map((item: any) => {
       let estadoMostrar: string;
-      if (item.Clase.estado === 1) {
-        estadoMostrar = 'Dictada';
-      } else if (item.Clase.estado === 2) {
-        estadoMostrar = 'Cancelada';
-      } else {
-        estadoMostrar = 'Estado de clase desconocido';
-      }
 
+      if (item.historial_estado === 'turno cancelado') {
+        estadoMostrar = 'Cancelada por cliente';
+      } else if (item.historial_estado === 'Cambiada') {
+        estadoMostrar = 'Cambiada';
+      } else if (item.Clase.estado === 1) {
+        estadoMostrar = 'Completada';
+      } else if (item.Clase.estado === 2) {
+        estadoMostrar = 'Cancelada por admin';
+      } else {
+        estadoMostrar = item.historial_estado || 'Activa';
+      }
 
       return {
         id_clase: item.id_clase,
@@ -441,11 +494,12 @@ export class ShiftsService {
           fecha: item.Clase.fecha,
           hora: item.Clase.hora,
           tipo: item.Clase.tipo,
+          profesor: item.Clase.id_profesor
+            ? profesorNombres.get(item.Clase.id_profesor) ?? 'Sin profesor'
+            : 'Sin profesor',
         },
       };
     });
-
-    const permitidos = ['Turno cancelado', 'Clase cancelada', 'Completada'];
 
     return historialMapeado
       .sort((a, b) => {

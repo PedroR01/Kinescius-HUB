@@ -94,7 +94,7 @@ const IniciarSesion = () => {
       }
     } catch (err) {
       console.error("Error de red:", err);
-      setError("No se pudo conectar con el servidor.");
+      setError("No se pudo conectar con el servidor." + err);
     } finally {
       setIsProcessing(false);
     }

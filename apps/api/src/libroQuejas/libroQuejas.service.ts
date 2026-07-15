@@ -227,4 +227,177 @@ export class LibroQuejasService {
       );
     }
   }
+/**
+ * Comprueba que la persona tenga rol administrador
+ * (queda sin usar en el endpoint de admin/comentarios por ahora,
+ * pero se deja disponible por si se necesita en otro lado)
+ */
+async verificarEsAdministrador(idPersona:number){
+
+  const { data, error } = await this.db
+    .from('Persona_')
+    .select('rol')
+    .eq('id', idPersona)
+    .single();
+
+
+
+  if(error || !data){
+
+    throw new ForbiddenException(
+      'Usuario no encontrado'
+    );
+
+  }
+
+
+
+  // Según tu sistema:
+  // rol 0 = administrador
+  if(data.rol !== 0){
+
+    throw new ForbiddenException(
+      'No tenés permisos para ver el libro de quejas'
+    );
+
+  }
+
+}
+/**
+ * AC (Administrador):
+ * obtiene todos los comentarios del libro de quejas.
+ * Incluye:
+ * - cliente que escribió
+ * - clase
+ * - profesor
+ * - calificación
+ */
+async obtenerTodosLosComentarios(idAdmin: number) {
+
+  // verifico que sea administrador antes de mostrar información
+  await this.verificarEsAdministrador(idAdmin);
+
+
+  const { data, error } = await this.db
+    .from('LibroDeQuejas')
+    .select(`
+      id,
+      comentario,
+      calificacion,
+      fecha,
+
+      Persona_!LibroDeQuejas_id_cliente_fkey (
+        nombre,
+        apellido
+      ),
+
+      Clase!inner (
+        id,
+        fecha,
+        hora,
+        tipo,
+
+        Persona_!Clase_id_profesor_fkey (
+          nombre,
+          apellido
+        )
+      )
+    `)
+    .order('fecha', { ascending: false });
+
+
+  if (error) {
+    throw new BadRequestException(
+      'No se pudieron obtener los comentarios'
+    );
+  }
+
+
+  return this.mapComentarios(data);
+
+}
+
+/**
+ * Igual que obtenerTodosLosComentarios pero sin exigir admin
+ * (mismo criterio que ListaEsperaController: endpoint abierto)
+ */
+async obtenerTodosLosComentariosSinAuth() {
+
+  const { data, error } = await this.db
+    .from('LibroDeQuejas')
+    .select(`
+      id,
+      comentario,
+      calificacion,
+      fecha,
+
+      Persona_!LibroDeQuejas_id_cliente_fkey (
+        nombre,
+        apellido
+      ),
+
+      Clase!inner (
+        id,
+        fecha,
+        hora,
+        tipo,
+
+        Persona_!Clase_id_profesor_fkey (
+          nombre,
+          apellido
+        )
+      )
+    `)
+    .order('fecha', { ascending: false });
+
+
+  if (error) {
+    throw new BadRequestException(
+      'No se pudieron obtener los comentarios'
+    );
+  }
+
+
+  return this.mapComentarios(data);
+
+}
+
+// helper compartido para no repetir el mapeo en los dos métodos de arriba
+private mapComentarios(data: any[]) {
+
+  return (data ?? []).map((fila:any)=>{
+
+    const cliente = fila.Persona_;
+    const clase = fila.Clase;
+    const profesor = clase?.Persona_;
+
+
+    return {
+
+      idComentario: fila.id,
+
+      comentario: fila.comentario,
+      calificacion: fila.calificacion,
+      fechaComentario: fila.fecha,
+
+
+      clienteNombre: cliente?.nombre ?? '',
+      clienteApellido: cliente?.apellido ?? '',
+
+
+      idClase: clase?.id,
+      fechaClase: clase?.fecha,
+      horaClase: clase?.hora,
+      tipoClase: clase?.tipo,
+
+
+      profesorNombre: profesor?.nombre ?? '',
+      profesorApellido: profesor?.apellido ?? '',
+
+    };
+
+  });
+
+}
+
 }
