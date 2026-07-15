@@ -41,9 +41,13 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   const ahora = new Date();
   const diferenciaHoras = (fechaCompleta.getTime() - ahora.getTime()) / (1000 * 60 * 60);
 
-  // Para abonados con clase dentro de cuota, no se muestra reembolso
+  // --- Lógica diferenciada por tipo de cliente ---
   const abonadoDentroDeCuota = esAbonado && !esClaseFueraDeCuota;
-  const permiteReembolso = abonadoDentroDeCuota ? false : diferenciaHoras >= 24;
+  const abonadoFueraDeCuota = esAbonado && esClaseFueraDeCuota;
+
+  // Abonado: 48hs | No abonado: 24hs
+  const sinAntelacionAbonado = esAbonado && diferenciaHoras < 48;
+  const permiteReembolsoNoAbonado = !esAbonado && diferenciaHoras >= 24;
   const permiteReembolsoMercadoPago = !pagoConMontoAFavor;
 
   useEffect(() => {
@@ -53,7 +57,8 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
   }, [pagoConMontoAFavor]);
 
   const handleConfirmar = async () => {
-    if (permiteReembolso && !opcionSeleccionada) {
+    // Solo validar selección para no-abonados con reembolso permitido
+    if (!esAbonado && permiteReembolsoNoAbonado && !opcionSeleccionada) {
       setErrorMensaje('Por favor, seleccioná qué deseas hacer con tu dinero.');
       return;
     }
@@ -62,20 +67,22 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
     setErrorMensaje(null);
 
     try {
-      const payload = {
-        clienteId,
-        claseId,
-        tipoReembolso: abonadoDentroDeCuota
-          ? 'NINGUNO' as TipoReembolso
-          : permiteReembolso
-            ? opcionSeleccionada!
-            : 'NINGUNO' as TipoReembolso,
-      };
+      let tipoReembolso: TipoReembolso;
 
+      if (esAbonado) {
+        // Abonado fuera de cuota: auto A_FAVOR | Dentro de cuota: NINGUNO
+        tipoReembolso = abonadoFueraDeCuota ? 'A_FAVOR' : 'NINGUNO';
+      } else {
+        // No abonado: usa la opción seleccionada o NINGUNO si no tiene reembolso
+        tipoReembolso = permiteReembolsoNoAbonado
+          ? opcionSeleccionada!
+          : 'NINGUNO';
+      }
+
+      const payload = { clienteId, claseId, tipoReembolso };
       const result = await cancelarTurnoRequest(payload);
       onCancelSuccess(result.message);
     } catch (error: unknown) {
-      console.log(clienteId);
       const message =
         error instanceof Error ? error.message : 'No se pudo cancelar el turno.';
       setErrorMensaje(message);
@@ -84,29 +91,48 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
     }
   };
 
-  return (
-    <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
-      <h2 className="text-2xl font-heading font-extrabold text-dark-accent mb-6">Cancelar Turno</h2>
-
-      <div className="mb-6 bg-surface p-5 rounded-2xl text-slate-700">
-        <p className="mb-1"><strong className="font-semibold text-dark-accent">Actividad:</strong> {actividad}</p>
-        <p className="mb-1"><strong className="font-semibold text-dark-accent">Fecha:</strong> {fechaClase}</p>
-        <p><strong className="font-semibold text-dark-accent">Hora:</strong> {horaClase}</p>
-      </div>
-
-      {abonadoDentroDeCuota ? (
+  // --- Bloque informativo para abonados ---
+  const renderInfoAbonado = () => {
+    if (abonadoFueraDeCuota) {
+      return (
         <div className="mb-8 p-5 bg-main/5 text-slate-700 rounded-2xl">
-          <p className="font-bold mb-2 text-dark-accent">Clase dentro de tu cuota mensual</p>
+          <p className="font-bold mb-2 text-dark-accent">Clase fuera de tu cuota mensual</p>
           <p className="text-sm font-medium">
-            Esta clase está cubierta por tu abono. Al cancelar, no se efectuará reembolso.
+            Al cancelar, se acreditará el monto a tu saldo a favor automáticamente.
           </p>
         </div>
-      ) : permiteReembolso ? (
+      );
+    }
+
+    // Dentro de cuota
+    if (sinAntelacionAbonado) {
+      return (
+        <div className="mb-8 p-5 bg-amber-50 text-amber-800 rounded-2xl">
+          <p className="font-bold mb-2">Cancelación con menos de 48hs</p>
+          <p className="text-sm font-medium">
+            No se devolverá tu seña por cancelar con menos de 48 horas de anticipación.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-8 p-5 bg-main/5 text-slate-700 rounded-2xl">
+        <p className="font-bold mb-2 text-dark-accent">Clase dentro de tu cuota mensual</p>
+        <p className="text-sm font-medium">
+          Esta clase está cubierta por tu abono. Al cancelar, no se efectuará reembolso.
+        </p>
+      </div>
+    );
+  };
+
+  // --- Bloque de opciones para no-abonados ---
+  const renderOpcionesNoAbonado = () => {
+    if (permiteReembolsoNoAbonado) {
+      return (
         <div className="mb-8">
           <p className="text-sm text-slate-600 mb-4 font-medium">
-            {esAbonado
-              ? 'Esta clase está fuera de tu cuota mensual. Por favor, seleccioná una opción:'
-              : 'Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:'}
+            Estás cancelando con más de 24 horas de antelación. Por favor, seleccioná una opción:
           </p>
           <div className="flex flex-col gap-3">
             <div className="group relative">
@@ -171,14 +197,31 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
             </label>
           </div>
         </div>
-      ) : (
-        <div className="mb-8 p-5 bg-red-50 text-red-700 rounded-2xl">
-          <p className="font-bold mb-2">Cancelación fuera de término</p>
-          <p className="text-sm font-medium">
-            Al cancelar con menos de 24 horas de antelación, no se efectuará reembolso ni quedará saldo a favor.
-          </p>
-        </div>
-      )}
+      );
+    }
+
+    // No abonado, menos de 24hs
+    return (
+      <div className="mb-8 p-5 bg-red-50 text-red-700 rounded-2xl">
+        <p className="font-bold mb-2">Cancelación fuera de término</p>
+        <p className="text-sm font-medium">
+          Al cancelar con menos de 24 horas de antelación, no se efectuará reembolso ni quedará saldo a favor.
+        </p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full">
+      <h2 className="text-2xl font-heading font-extrabold text-dark-accent mb-6">Cancelar Turno</h2>
+
+      <div className="mb-6 bg-surface p-5 rounded-2xl text-slate-700">
+        <p className="mb-1"><strong className="font-semibold text-dark-accent">Actividad:</strong> {actividad}</p>
+        <p className="mb-1"><strong className="font-semibold text-dark-accent">Fecha:</strong> {fechaClase}</p>
+        <p><strong className="font-semibold text-dark-accent">Hora:</strong> {horaClase}</p>
+      </div>
+
+      {esAbonado ? renderInfoAbonado() : renderOpcionesNoAbonado()}
 
       {errorMensaje && (
         <div className="mb-5 text-red-600 text-sm font-bold bg-red-50 p-3 rounded-xl">

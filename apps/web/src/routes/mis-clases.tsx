@@ -168,7 +168,7 @@ export default function GestionClases() {
                 <div className="w-12 h-12 border-4 border-main/20 border-t-main rounded-full animate-spin" />
                 <p className="text-muted-foreground font-medium text-lg">Cargando tus clases...</p>
               </motion.div>
-            ) : misClases.filter((item) => item.Clase !== null).length === 0 ? (
+            ) : activeTab === 'PROXIMAS' && misClases.filter((item) => item.Clase !== null).length === 0 ? (
               <motion.div variants={fadeUp} className="bg-white rounded-3xl p-12 text-center shadow-md">
                 <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-main/5 text-main mb-6">
                   <Calendar className="w-10 h-10" />
@@ -237,6 +237,7 @@ export default function GestionClases() {
                             </div>
                             <span className="font-medium text-slate-700 text-[15px]">
                               {item.Clase.profesor}
+
                             </span>
                           </div>
                         </div>

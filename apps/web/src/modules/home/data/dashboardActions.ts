@@ -16,17 +16,18 @@ const ADMIN_ACTIONS: DashboardAction[] = [
   { label: "Eliminar profesor", to: "/eliminarProfesor" },
   { label: "Ver estado de suscripción", to: "/estadoSuscripcion" },
   { label: "Ver estadísticas", to: "/verEstadisticas" },
+  { label: "Cambiar contraseña", to: "/cambiarPasswd" },
+  {
+    label: "Recordatorios",
+    to: "/recordatorios",
+    description: "Configurá el horario de envío automático"
+  },
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
     description: "Mandale un mail puntual a un cliente"
   },
   {
-    label: "Recordatorios",
-    to: "/recordatorios",
-    description: "Configurá el horario de envío automático"
-  },
-    {
     label: "Ver libro de quejas",
     to: "/ver-libro-de-quejas",
     description: "Consultar comentarios y calificaciones de los clientes"
@@ -74,7 +75,7 @@ export function getDashboardActions(
   role: "admin" | "usuario" | "profesor" | null,
 ): DashboardAction[] {
   if (role === "admin") {
-    return [...ADMIN_ACTIONS, ...SHARED_ACTIONS];
+    return ADMIN_ACTIONS;
   }
 
   if (role === "profesor") {
