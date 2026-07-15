@@ -26,10 +26,15 @@ const ADMIN_ACTIONS: DashboardAction[] = [
     to: "/recordatorios",
     description: "Configurá el horario de envío automático"
   },
-    {
+  {
     label: "Ver libro de quejas",
     to: "/ver-libro-de-quejas",
     description: "Consultar comentarios y calificaciones de los clientes"
+  },
+  {
+    label: "Ver presentismo",
+    to: "/verPresentismo",
+    description: "Consultá la asistencia de los alumnos por clase"
   }
 ];
 

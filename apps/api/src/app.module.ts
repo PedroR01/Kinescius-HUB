@@ -17,6 +17,7 @@ import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.
 import { NotificationsModule } from "./notifications/notifications.module";
 import { AsistenciaModule } from "./asistencia/asistencia.module";
 import { LibroQuejasModule } from "./libroQuejas/libroQuejas.module"; //  nuevo
+import { PresentismoModule } from "./verPresentismo/verPresentismo.module"; //  nuevo!!!!
 
 
 @Module({
@@ -38,7 +39,8 @@ import { LibroQuejasModule } from "./libroQuejas/libroQuejas.module"; //  nuevo
     MpCheckoutProModule,
     PagosModule,
     NotificationsModule,
-    LibroQuejasModule //  nuevo
+    LibroQuejasModule, //  nuevo
+    PresentismoModule //  nuevo
 
   ],
   controllers: [AppController],
