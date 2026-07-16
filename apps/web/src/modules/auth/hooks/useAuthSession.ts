@@ -1,8 +1,8 @@
 import { API_BASE } from "@/lib/constants";
-import type { UserProfile } from "@/lib/user-interface";
+import type { EstadoCliente, UserData } from "@/lib/user-interface";
 import { useCallback, useEffect, useState } from "react";
 
-export type UserRole = "admin" | "usuario" | "profesor";
+export type UserRole = "admin" | "profesor" | "cliente" | "cliente abonado";
 
 const TOKEN_KEY = "miToken";
 const ROLE_KEY = "rol";
@@ -52,7 +52,7 @@ export function useAuthSession() {
 }
 
 export function useCurrentUserProfile() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserData | null>(null);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -64,7 +64,7 @@ export function useCurrentUserProfile() {
           }
         });
         const data = await response.json();
-        setUserProfile(data as UserProfile);
+        setUserProfile(data as UserData);
       } catch (error) {
         console.error("Error al obtener el perfil del usuario:", error);
       }
@@ -73,4 +73,27 @@ export function useCurrentUserProfile() {
   }, []);
 
   return userProfile;
+}
+
+export function useEstadoCliente() {
+  const [estadoCliente, setEstadoCliente] = useState<EstadoCliente | null>(null);
+  useEffect(() => {
+    const fetchEstadoCliente = async () => {
+      const token = localStorage.getItem(TOKEN_KEY);
+      try {
+        const response = await fetch(`${API_BASE}/auth/me/estado-cliente`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        setEstadoCliente(data as EstadoCliente);
+      } catch (error) {
+        console.error("Error al obtener el estado del cliente:", error);
+      }
+    };
+    fetchEstadoCliente();
+  }, []);
+
+  return estadoCliente;
 }

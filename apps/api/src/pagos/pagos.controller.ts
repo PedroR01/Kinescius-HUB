@@ -46,9 +46,19 @@ export class PagosController {
         return this.pagosService.createPreference(body);
     }
 
+    @Post("mensualidad")
+    async CreateMensualidadPreference(@Body() body: CreateMensualidadPreferenceBody) {
+        return this.pagosService.createMensualidadPreference(body);
+    }
+
+    @Post("suscripcion")
+    async CreateSuscripcionPreference(@Body() body: { id_cliente: number }) {
+        return this.pagosService.createSuscripcionPreference(body.id_cliente);
+    }
+
     @Post("notificacion")
     async preferenceNotification(@Body() body: WebhookNotification) {
-        return this.pagosService.preferenceNotification(body.data.id);
+        return this.pagosService.handlePreferenceNotification(body.data.id);
     }
 
     @Post("reembolsos")
@@ -60,15 +70,4 @@ export class PagosController {
     async getAllRefunds(@Query("idPago") idPago: string) {
         return this.pagosService.getAllRefunds(idPago);
     }
-
-    @Post("mensualidad")
-    async CreateMensualidadPreference(@Body() body: CreateMensualidadPreferenceBody) {
-        return this.pagosService.createMensualidadPreference(body);
-    }
-
-    @Post("notificacion_abonado")
-    async mensualidadNotification(@Body() body: WebhookNotification) {
-        return this.pagosService.mensualidadNotification(body.data.id);
-    }
-
 }

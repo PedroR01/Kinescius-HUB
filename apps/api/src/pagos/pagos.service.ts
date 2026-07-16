@@ -10,12 +10,10 @@ import {
 import { MpCheckoutProService } from "../integrations/mercado-pago/mp-checkoutPro.service";
 import { SupabaseService } from "../integrations/supabase/supabase.service";
 import { ClasePayload, CreateMensualidadPreferenceBody, CreatePreferenceBody } from "./pagos.controller";
-import { CLASS_UNIT_PRICE } from "./class-price.constant";
+import { CLASS_UNIT_PRICE, SUBSCRIPTION_PRICE } from "./class-price.constant";
 import { inscripcionPorClaseEnCarrito } from "./inscripcion-desglose.util";
 import { AuthService } from "src/auth/auth.service";
-import { string } from "zod";
 
-export { CLASS_UNIT_PRICE } from "./class-price.constant";
 
 type PagoInsert = {
     id_cliente: number;
@@ -101,6 +99,7 @@ export class PagosService implements OnModuleInit {
                     unit_price: totalFinal,
                 }],
                 metadata: {
+                    tipo: "inscripcion",
                     clases,
                     clienteId,
                     montoAFavorAplicado,
@@ -115,88 +114,6 @@ export class PagosService implements OnModuleInit {
             },
         }).then((res: PreferenceResponse) => ({ initPoint: res.init_point! }))
             .catch((error: Error) => { throw new Error(error.message); });
-    }
-
-    async preferenceNotification(paymentId: string) {
-
-        const paymentClient = new Payment(this.mpCheckoutProService.client);
-        const payment = await paymentClient.get({ id: paymentId });
-        if (payment.status !== 'approved') {
-            return { received: true, status: payment.status };
-        }
-
-        const { clases, idCliente, montoAFavorAplicado, clasesFavorAplicadas } = leerMetadataPago(
-            payment.metadata as Record<string, unknown> | undefined,
-        );
-
-        if (!idCliente || !clases.length) {
-            throw new BadRequestException('Metadata de pago incompleta.');
-        }
-
-        if (!clasesFavorAplicadas || (clasesFavorAplicadas > 0)) {
-            const { data: cliente, error: clienteError } = await this.supabaseService.client
-                .from("Estado_Cliente")
-                .select("clases_favor")
-                .eq("id", idCliente)
-                .single();
-            if (clienteError || !cliente) {
-                throw new InternalServerErrorException(
-                    `Error al obtener saldo del cliente: ${clienteError?.message}`
-                );
-            }
-
-            const clasesActualizadas = (cliente.clases_favor - clasesFavorAplicadas);
-            const { error: errorActualizacion } = await this.supabaseService.client
-                .from("Estado_Cliente")
-                .update({ clases_favor: clasesActualizadas })
-                .eq("id", idCliente);
-
-            if (errorActualizacion) {
-                throw new InternalServerErrorException(
-                    `No se pudo actualizar la cantidad de clases a favor: ${errorActualizacion.message}`
-                );
-            }
-        }
-
-        const datosPorClase = inscripcionPorClaseEnCarrito(
-            clases,
-            montoAFavorAplicado,
-            paymentId,
-        );
-        const now = new Date();
-
-        const pago: PagoInsert = {
-            id_cliente: idCliente,
-            fecha: now.toISOString().split('T')[0],
-            hora: now.toTimeString().split(' ')[0],
-            id_pago: Number(paymentId),
-        };
-
-        const { error: pagoError } = await this.supabaseService.client
-            .from('Pago')
-            .insert(pago);
-
-        if (pagoError) throw new Error(pagoError.message);
-
-        const inscripciones: SeInscribeInsert[] = clases.map((clase, index) => ({
-            id_clase: clase.id,
-            id_cliente: idCliente,
-            estado: "reservado",
-            id_pago_mp: datosPorClase[index].id_pago_mp,
-            monto_a_favor: datosPorClase[index].monto_a_favor,
-        }));
-
-        const { error: inscripcionError } = await this.supabaseService.client
-            .from('Se_inscribe')
-            .insert(inscripciones);
-
-        if (inscripcionError) throw new Error(inscripcionError.message);
-
-        if (montoAFavorAplicado > 0) {
-            await this.deductMontoAFavor(idCliente, montoAFavorAplicado);
-        }
-
-        return { received: true };
     }
 
     async acreditarMontoAFavor(clienteId: number, amount: number) {
@@ -333,6 +250,7 @@ export class PagosService implements OnModuleInit {
                     unit_price: MENSUALIDAD_PRICE,
                 }],
                 metadata: {
+                    tipo: "mensualidad",
                     nombre: datosRegistro.nombre,
                     apellido: datosRegistro.apellido,
                     email: datosRegistro.email,
@@ -351,21 +269,116 @@ export class PagosService implements OnModuleInit {
             .catch((error: Error) => { throw new Error(error.message); });
     }
 
-    async mensualidadNotification(paymentId: string) {
+    async createSuscripcionPreference(clienteId: number) {
+
+        if (!clienteId) {
+            throw new BadRequestException("Datos de suscripción o cliente inválidos.");
+        }
+
+        const frontendUrl = getFrontendUrl();
+        const preference = new Preference(this.mpCheckoutProService.client);
+        return preference.create({
+            body: {
+                items: [{
+                    id: "suscripcion-kinescius",
+                    title: `Suscripción Abonado - Kinescius`,
+                    quantity: 1,
+                    unit_price: SUBSCRIPTION_PRICE,
+                }],
+                metadata: {
+                    tipo: "suscripcion",
+                    id_cliente: clienteId,
+                },
+                back_urls: {
+                    success: `${frontendUrl}/success-abonado`, // Forwarding de ngrok
+                    failure: `${frontendUrl}/failure`,
+                    pending: `${frontendUrl}/pending`,
+                },
+                auto_return: "approved",
+            },
+        }).then((res: PreferenceResponse) => ({ initPoint: res.init_point! }))
+            .catch((error: Error) => { throw new Error(error.message); });
+    }
+
+    async handlePreferenceNotification(paymentId: string) {
         const paymentClient = new Payment(this.mpCheckoutProService.client);
         const payment = await paymentClient.get({ id: paymentId });
-        if (payment.status !== 'approved') {
+
+        if (payment.status !== "approved") {
             return { received: true, status: payment.status };
         }
 
-        const metadata = payment.metadata as Record<string, unknown>;
+        const tipo = (payment.metadata as Record<string, unknown>)?.tipo;
+
+        switch (tipo) {
+            case "inscripcion":
+                return this.procesarInscripcion(payment.metadata, paymentId);
+            case "mensualidad":
+                return this.procesarMensualidad(payment.metadata, paymentId);
+            case "suscripcion":
+                return this.procesarSuscripcion(payment.metadata, paymentId);
+            default:
+                throw new BadRequestException(`Tipo de pago desconocido: ${tipo}`);
+        }
+    }
+
+    async procesarInscripcion(paymentData: Record<string, unknown>, paymentId: string) {
+
+        const { clases, idCliente, montoAFavorAplicado } = leerMetadataPago(paymentData);
+
+        if (!idCliente || !clases.length) {
+            throw new BadRequestException('Metadata de pago incompleta.');
+        }
+
+        const datosPorClase = inscripcionPorClaseEnCarrito(
+            clases,
+            montoAFavorAplicado,
+            paymentId,
+        );
+        const now = new Date();
+
+        const pago: PagoInsert = {
+            id_cliente: idCliente,
+            fecha: now.toISOString().split('T')[0],
+            hora: now.toTimeString().split(' ')[0],
+            id_pago: Number(paymentId),
+        };
+
+        const { error: pagoError } = await this.supabaseService.client
+            .from('Pago')
+            .insert(pago);
+
+        if (pagoError) throw new Error(pagoError.message);
+
+        const inscripciones: SeInscribeInsert[] = clases.map((clase, index) => ({
+            id_clase: clase.id,
+            id_cliente: idCliente,
+            estado: "pagado",
+            id_pago_mp: datosPorClase[index].id_pago_mp,
+            monto_a_favor: datosPorClase[index].monto_a_favor,
+        }));
+
+        const { error: inscripcionError } = await this.supabaseService.client
+            .from('Se_inscribe')
+            .insert(inscripciones);
+
+        if (inscripcionError) throw new Error(inscripcionError.message);
+
+        if (montoAFavorAplicado > 0) {
+            await this.deductMontoAFavor(idCliente, montoAFavorAplicado);
+        }
+
+        return { received: true };
+    }
+
+    async procesarMensualidad(paymentData: Record<string, unknown>, paymentId: string) {
         const datosRegistro = {
-            nombre: String(metadata.nombre),
-            apellido: String(metadata.apellido),
-            email: String(metadata.email),
-            dni: String(metadata.dni),
-            telefono: metadata.telefono ? String(metadata.telefono) : undefined, //puede no ingresarsee
-            rol: Number(metadata.rol),
+            nombre: String(paymentData.nombre),
+            apellido: String(paymentData.apellido),
+            email: String(paymentData.email),
+            dni: String(paymentData.dni),
+            telefono: paymentData.telefono ? String(paymentData.telefono) : undefined, //puede no ingresarsee
+            rol: Number(paymentData.rol),
         };
 
         await this.authService.registrarUsuario(datosRegistro);
@@ -373,7 +386,7 @@ export class PagosService implements OnModuleInit {
         const { data: persona, error: errorPersona } = await this.supabaseService.client
             .from('Persona_')
             .select('id')
-            .eq('mail', metadata.email)
+            .eq('mail', paymentData.email)
             .single();
         if (errorPersona || !persona) {
             throw new UnauthorizedException('No se encontró el ID del cliente.');
@@ -391,6 +404,66 @@ export class PagosService implements OnModuleInit {
             .insert(pago);
         if (pagoError) throw new Error(pagoError.message);
 
+        await this.supabaseService.client
+            .from('Estado_Cliente')
+            .update({ id_pago_abonado: Number(paymentId) })
+            .eq('id', persona.id);
+
+
+        return { received: true };
+    }
+
+    async procesarSuscripcion(paymentData: Record<string, unknown>, paymentId: string) {
+        const { data: estadoCliente, error: errorEstadoCliente } = await this.supabaseService.client
+            .from('Estado_Cliente')
+            .select('id_pago_abonado')
+            .eq('id', Number(paymentData.id_cliente))
+            .single();
+        if (!estadoCliente || errorEstadoCliente) {
+            throw new UnauthorizedException('No se encontró el ID del cliente.');
+        } else {
+            if (estadoCliente.id_pago_abonado === null) {
+                const now = new Date();
+                const pago: PagoInsert = {
+                    id_cliente: Number(paymentData.id_cliente),
+                    fecha: now.toISOString().split('T')[0],
+                    hora: now.toTimeString().split(' ')[0],
+                    id_pago: Number(paymentId),
+                };
+                const { error: errorPago } = await this.supabaseService.client
+                    .from('Pago')
+                    .insert(pago)
+                if (errorPago) throw new Error(errorPago.message);
+            } else {
+                const { error: errorPago } = await this.supabaseService.client
+                    .from('Pago')
+                    .update({
+                        fecha: new Date().toISOString().split('T')[0],
+                        hora: new Date().toTimeString().split(' ')[0],
+                    })
+                    .eq('id', estadoCliente.id_pago_abonado)
+                    .single();
+                if (errorPago) throw new Error(errorPago.message);
+            }
+        }
+
+        const { data: persona, error: errorPersona } = await this.supabaseService.client
+            .from('Persona_')
+            .select('rol')
+            .eq('id', Number(paymentData.id_cliente))
+            .single();
+        if (errorPersona || !persona) {
+            throw new UnauthorizedException('No se encontró el ID del cliente.');
+        } else if (persona.rol === 2) {
+            const { data: cliente, error: errorCliente } = await this.supabaseService.client
+                .from('Persona_')
+                .update({ rol: 3 }) // 3 es el rol de cliente abonado
+                .eq('id', Number(paymentData.id_cliente))
+                .single();
+            if (errorCliente || !cliente) {
+                throw new UnauthorizedException('Error al actualizar el rol del cliente.');
+            }
+        }
         return { received: true };
     }
 }

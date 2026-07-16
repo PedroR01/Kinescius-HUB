@@ -52,16 +52,16 @@ export function HomeNavbar() {
           <div className="hidden lg:flex lg:flex-row lg:gap-2">
             {estaLogueado ? (
               <div className="flex flex-row gap-2">
-              <ButtonLink to="/home" size="sm" className="text-sm font-medium  transition-colors hover:text-main sm:text-[0.95rem]">
+                <ButtonLink to="/home" size="sm" className="text-sm font-medium  transition-colors hover:text-main sm:text-[0.95rem]">
                   Home
                 </ButtonLink>
-              <button
-                type="button"
-                onClick={() => setIsLogoutModalOpen(true)}
-                className={cn(btnBase, btnSecondary)}
-              >
-                Cerrar sesión
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLogoutModalOpen(true)}
+                  className={cn(btnBase, btnSecondary)}
+                >
+                  Cerrar sesión
+                </button>
               </div>
             ) : (
               <>
@@ -70,6 +70,9 @@ export function HomeNavbar() {
                 </ButtonLink>
                 <ButtonLink variant="secondary" to="/registro" size="sm">
                   Registrarse
+                </ButtonLink>
+                <ButtonLink variant="secondary" to="/registroAbonado" size="sm">
+                  Registrarse como abonado
                 </ButtonLink>
               </>
             )}
@@ -108,28 +111,28 @@ export function HomeNavbar() {
                   className="mb-4"
                 />
                 {estaLogueado ? (
-              <div className="flex flex-row gap-2">
-              <ButtonLink to="/home" size="sm" className="text-sm font-medium  transition-colors hover:text-main sm:text-[0.95rem]">
-                  Home
-                </ButtonLink>
-              <button
-                type="button"
-                onClick={() => setIsLogoutModalOpen(true)}
-                className={cn(btnBase, btnSecondary)}
-              >
-                Cerrar sesión
-              </button>
-              </div>
-            ) : (
-              <>
-                <ButtonLink to="/iniciarSesion" size="sm">
-                  Iniciar sesión
-                </ButtonLink>
-                <ButtonLink variant="secondary" to="/registro" size="sm">
-                  Registrarse
-                </ButtonLink>
-              </>
-            )}
+                  <div className="flex flex-row gap-2">
+                    <ButtonLink to="/home" size="sm" className="text-sm font-medium  transition-colors hover:text-main sm:text-[0.95rem]">
+                      Home
+                    </ButtonLink>
+                    <button
+                      type="button"
+                      onClick={() => setIsLogoutModalOpen(true)}
+                      className={cn(btnBase, btnSecondary)}
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <ButtonLink to="/iniciarSesion" size="sm">
+                      Iniciar sesión
+                    </ButtonLink>
+                    <ButtonLink variant="secondary" to="/registro" size="sm">
+                      Registrarse
+                    </ButtonLink>
+                  </>
+                )}
               </motion.div>
             </motion.div>
           )}
