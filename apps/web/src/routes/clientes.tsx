@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
-import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
+//import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import type { UserData } from '@/lib/user-interface'
+import { ArrowLeftIcon } from "lucide-react";
 
 export const Route = createFileRoute('/clientes')({
   component: RouteComponent,
@@ -70,7 +71,13 @@ function RouteComponent() {
 
   return (
     <main className="min-h-screen bg-white px-8 py-14">
-      <BackPreviousRouteButton className="mb-6" />
+      {/* <BackPreviousRouteButton className="mb-6" /> */}
+      <Link
+        to="/home"
+        className="mb-6 inline-block size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
+      >
+        <ArrowLeftIcon className="size-6" />
+      </Link>
 
       <section className="mx-auto max-w-7xl">
         <div className="mb-20 text-center">
