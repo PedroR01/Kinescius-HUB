@@ -4,11 +4,10 @@ import { ResultadoReembolso } from '../pagos/reembolso.service';
 export function debeEjecutarReembolso(
   tipoReembolso: TipoReembolso,
   estadoInscripcion: string,
+  esAbonado: boolean,
 ): boolean {
-  return (
-    estadoInscripcion === 'pagado' &&
-    tipoReembolso !== TipoReembolso.NINGUNO
-  );
+  if (tipoReembolso === TipoReembolso.NINGUNO) return false;
+  return esAbonado || estadoInscripcion === 'pagado';
 }
 
 export function construirMensajeReembolso(
@@ -24,7 +23,7 @@ export function construirMensajeReembolso(
 
   if (detalle.montoSaldo > 0) {
     partes.push(
-      `Se acreditó $${detalle.montoSaldo.toLocaleString('es-AR')} en tu saldo a favor.`,
+      `Se acreditó $${detalle.montoSaldo.toLocaleString('es-AR')} en tu monto a favor.`,
     );
   }
 
