@@ -45,6 +45,8 @@ function RouteComponent() {
     enrolledClassIds,
     montoAFavor,
     clasesAFavor,
+    esAbonado,
+    penalizadoHasta,
     setMontoAFavor,
     refresh,
   } = useTurnosData(clienteId);
@@ -133,6 +135,9 @@ function RouteComponent() {
         <p className="relative mt-3 text-[14px] font-medium text-white/90">
           Todas las clases tienen el mismo valor:{" "}
           <strong className="text-white">${(CLASS_PRICE * 2).toLocaleString("es-AR")}</strong>
+          <span className="mt-1 block text-[13px] font-light text-white/72">
+            * Si sos abonado se te realizará un 20% de descuento a la hora de pagar la totalidad de la clase presencialmente.
+          </span>
         </p>
         <p className="relative mt-3 text-[14px] font-medium text-white/90">
           La reserva del turno tiene un costo de seña inicial del 50% del valor de la clase:{" "}
@@ -222,6 +227,8 @@ function RouteComponent() {
         items={checkoutItems}
         montoAFavor={montoAFavor}
         clasesAFavor={clasesAFavor}
+        isAbonado={esAbonado}
+        penalizadoHasta={penalizadoHasta}
         clienteId={clienteId}
         allowRemove={checkoutFromCart}
         onClose={closeCheckout}

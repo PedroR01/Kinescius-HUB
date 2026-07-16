@@ -19,6 +19,8 @@ type PaymentSummaryModalProps = {
   montoAFavor: number;
   clienteId: number | null;
   clasesAFavor: number;
+  isAbonado?: boolean;
+  penalizadoHasta?: string | null;
   allowRemove?: boolean;
   onClose: () => void;
   onRemoveItem?: (key: string) => void;
@@ -36,6 +38,8 @@ export function PaymentSummaryModal({
   montoAFavor,
   clienteId,
   clasesAFavor,
+  isAbonado = false,
+  penalizadoHasta = null,
   allowRemove = false,
   onClose,
   onRemoveItem,
@@ -54,9 +58,19 @@ export function PaymentSummaryModal({
     }
   }, [isOpen, items]);
 
+  const penalizadoActivo =
+    penalizadoHasta != null && new Date(penalizadoHasta) > new Date();
+
+  const aplicaDescuentoAbonado = isAbonado && !penalizadoActivo;
+
+  const precioPorClase = aplicaDescuentoAbonado ? CLASS_PRICE * 0.8 : CLASS_PRICE;
+
   const clasesFavorAplicadas = Math.min(items.length, clasesAFavor);
   const clasesRestantes = items.length - clasesFavorAplicadas;
-  const subtotal = clasesRestantes * CLASS_PRICE;
+  const subtotal = clasesRestantes * precioPorClase;
+  const descuentoAbonado = aplicaDescuentoAbonado
+    ? clasesRestantes * CLASS_PRICE * 0.2
+    : 0;
   const montoAplicado = applyMontoAFavor ? Math.min(montoAFavor, subtotal) : 0;
   const totalFinal = subtotal - montoAplicado;
 
@@ -176,7 +190,7 @@ export function PaymentSummaryModal({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-outfit text-sm font-semibold text-ks-green-mid">
-                        ${formatCurrency(CLASS_PRICE)}
+                        ${formatCurrency(precioPorClase)}
                       </span>
                       {allowRemove && onRemoveItem ? (
                         <button
@@ -204,12 +218,19 @@ export function PaymentSummaryModal({
 
               <div className="flex justify-between text-ks-gray-text">
                 <span>
-                  Subtotal ({clasesRestantes} × ${formatCurrency(CLASS_PRICE)})
+                  Subtotal ({clasesRestantes} × ${formatCurrency(precioPorClase)})
                 </span>
                 <span className="font-semibold text-ks-text-dark">
                   ${formatCurrency(subtotal)}
                 </span>
               </div>
+
+              {aplicaDescuentoAbonado ? (
+                <div className="flex justify-between text-ks-green-mid">
+                  <span>Descuento por abono (20%)</span>
+                  <span className="font-semibold">-${formatCurrency(descuentoAbonado)}</span>
+                </div>
+              ) : null}
 
               <div className="flex justify-between text-ks-gray-text">
                 <span>Saldo a favor disponible</span>

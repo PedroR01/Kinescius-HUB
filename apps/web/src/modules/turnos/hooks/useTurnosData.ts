@@ -8,6 +8,8 @@ export function useTurnosData(clienteId: number | null) {
   const [enrolledClassIds, setEnrolledClassIds] = useState<Set<number>>(() => new Set());
   const [montoAFavor, setMontoAFavor] = useState(0);
   const [clasesAFavor, setClasesAFavor] = useState(0);
+  const [esAbonado, setEsAbonado] = useState(false);
+  const [penalizadoHasta, setPenalizadoHasta] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = useCallback(() => {
@@ -21,6 +23,8 @@ export function useTurnosData(clienteId: number | null) {
     void fetchMontoAFavor(clienteId).then((res) => {
       setMontoAFavor(res.monto_a_favor);
       setClasesAFavor(res.clases_a_favor);
+      setEsAbonado(res.es_abonado ?? false);
+      setPenalizadoHasta(res.penalizado_hasta ?? null);
     });
   }, [clienteId, refreshKey]);
 
@@ -49,6 +53,8 @@ export function useTurnosData(clienteId: number | null) {
     enrolledClassIds,
     montoAFavor,
     clasesAFavor,
+    esAbonado,
+    penalizadoHasta,
     setMontoAFavor,
     refresh,
   };

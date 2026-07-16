@@ -29,6 +29,13 @@ export type CreateMensualidadPayload = {
   rol: number;
 }
 
+export type MontoAFavorResponse = {
+  monto_a_favor: number;
+  clases_a_favor: number;
+  es_abonado: boolean;
+  penalizado_hasta: string | null;
+};
+
 export async function createMercadoPagoPreference(
   payload: CreatePreferencePayload
 ): Promise<{ initPoint: string }> {
@@ -75,16 +82,25 @@ export async function inscribirConSaldoAFavor(
   return response.json();
 }
 
-export async function fetchMontoAFavor(clienteId: number): Promise<{ monto_a_favor: number; clases_a_favor: number }> {
+export async function fetchMontoAFavor(clienteId: number): Promise<MontoAFavorResponse> {
   const response = await fetch(`${API_BASE}/clases/cliente/${clienteId}/monto-a-favor`);
   //Agrego el uso de las clases a favor
-  if (!response.ok) return { monto_a_favor: 0, clases_a_favor: 0 };
+  if (!response.ok) {
+    return { monto_a_favor: 0, clases_a_favor: 0, es_abonado: false, penalizado_hasta: null };
+  }
 
-  const data = (await response.json()) as { monto_a_favor?: number, clases_a_favor?: number };
+  const data = (await response.json()) as {
+    monto_a_favor?: number;
+    clases_a_favor?: number;
+    es_abonado?: boolean;
+    penalizado_hasta?: string | null;
+  };
 
   return {
     monto_a_favor: Number(data.monto_a_favor) || 0,
     clases_a_favor: Number(data.clases_a_favor) || 0,
+    es_abonado: Boolean(data.es_abonado),
+    penalizado_hasta: data.penalizado_hasta ?? null,
   };
 }
 

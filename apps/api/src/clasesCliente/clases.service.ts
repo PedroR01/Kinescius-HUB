@@ -58,7 +58,7 @@ export class ClasesService {
   async getMontoAFavor(clienteId: number) {
     const { data, error } = await this.supabaseService.client
       .from("Estado_Cliente")
-      .select("monto_favor, clases_favor")
+      .select("monto_favor, clases_favor, id_pago_abonado, penalizado_hasta")
       .eq("id", clienteId)
       .single();
 
@@ -68,7 +68,12 @@ export class ClasesService {
       );
     }
 
-    return { monto_a_favor: data.monto_favor, clases_a_favor: data.clases_favor };
+    return {
+      monto_a_favor: data.monto_favor,
+      clases_a_favor: data.clases_favor,
+      es_abonado: data.id_pago_abonado != null,
+      penalizado_hasta: data.penalizado_hasta,
+    };
   }
 
   private async verificarConflictoHorario(clienteId: number, claseId: number): Promise<void> {
