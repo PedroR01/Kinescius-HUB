@@ -109,3 +109,25 @@ export async function createMensualidadPreference(payload: CreateMensualidadPayl
   }
   return data;
 }
+
+export async function createSuscripcionPreference(id_cliente: number) {
+
+  const response = await fetch(`${API_BASE}/api/mercadopago/suscripcion`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_cliente }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as { message?: string }).message ||
+      `Error al crear la preferencia para el pago de suscripción: ${response.status}`
+    );
+  }
+  const data = (await response.json()) as { initPoint: string };
+  if (!data.initPoint?.startsWith("https://")) {
+    throw new Error("La API no devolvió una URL de pago válida.")
+  }
+  return data;
+}
