@@ -1,6 +1,7 @@
 import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { RecordatoriosService } from './shifts-reminders.service';
 import { ActualizarHorarioDto } from './dto/actualizar-horario.dto';
+import { ActualizarHorarioPagoDto } from './dto/actualizar-horario-pago.dto';
 
 @Controller('recordatorios')
 export class RecordatoriosController {
@@ -14,5 +15,10 @@ export class RecordatoriosController {
   @Patch('horario')
   async actualizarHorario(@Body() dto: ActualizarHorarioDto) {
     return this.recordatoriosService.actualizarHorario(dto.hora, dto.minuto);
+  }
+
+  @Patch('horario-pago')
+  async actualizarHorarioPago(@Body() dto: ActualizarHorarioPagoDto) {
+    return this.recordatoriosService.actualizarHorarioPago(dto.hora, dto.minuto);
   }
 }
