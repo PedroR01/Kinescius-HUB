@@ -22,6 +22,9 @@ export const btnPrimary =
 export const btnSecondary =
   'border border-[rgba(82,183,136,0.3)] bg-ks-gray-soft text-ks-green-dark'
 
+export const btnDanger =
+  'border border-[rgba(192,57,43,0.3)] bg-ks-red-soft text-ks-red-dark hover:bg-ks-red-dark'
+
 export const btnGhost =
   'border border-[rgba(82,183,136,0.3)] bg-transparent hover:bg-ks-gray-soft backdrop-blur-md text-ks-green-dark'
 

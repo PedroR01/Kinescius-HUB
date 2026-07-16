@@ -65,4 +65,13 @@ export class AuthController {
     return this.authService.getUserProfile(token);
   }
 
+  @Get('me/estado-cliente')
+  getEstadoCliente(@Headers('authorization') authHeader: string) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('No se proporcionó un token de autorización válido.');
+    }
+    const token = authHeader.split(' ')[1];
+    return this.authService.getEstadoCliente(token);
+  }
+
 }

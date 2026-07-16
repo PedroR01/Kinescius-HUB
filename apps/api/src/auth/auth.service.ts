@@ -414,7 +414,7 @@ export class AuthService {
 
     const { data: persona, error: personaError } = await this.supabaseService.client
       .from('Persona_')
-      .select('nombre, apellido, mail')
+      .select('nombre, apellido, mail, dni, telefono, rol')
       .eq('mail', userData.user.email)
       .single();
 
@@ -426,7 +426,67 @@ export class AuthService {
       nombre: persona.nombre,
       apellido: persona.apellido,
       mail: persona.mail,
+      dni: persona.dni,
+      telefono: persona.telefono,
+      rol: persona.rol,
     };
+  }
+
+  async getEstadoCliente(token: string) {
+    const { data: userData, error: userError } = await this.supabaseService.client.auth.getUser(token);
+    if (userError || !userData.user) {
+      throw new UnauthorizedException('Sesión inválida o expirada.');
+    }
+
+    const { data: persona, error: personaError } = await this.supabaseService.client
+    .from('Persona_')
+    .select('id')
+    .eq('mail', userData.user.email)
+    .single();
+
+    if (personaError || !persona) {
+      throw new UnauthorizedException('No se encontró el perfil del usuario.');
+    }
+
+    const { data: cuenta, error: cuentaError } = await this.supabaseService.client
+      .from('Estado_Cliente')
+      .select('monto_favor, id_pago_abonado, clases_favor')
+      .eq('id', persona.id)
+      .single();
+
+    if (cuentaError || !cuenta) {
+      throw new UnauthorizedException('No se encontró el estado del cliente.');
+    }
+
+    if (cuenta.id_pago_abonado) {
+    const { data: pagoInfo, error: pagoInfoError } = await this.supabaseService.client
+    .from('Pago')
+    .select('fecha')
+    .eq('id_pago', cuenta.id_pago_abonado)
+    .single();
+
+    if (pagoInfoError || !pagoInfo) {
+      throw new UnauthorizedException('No se encontró la información del pago.');
+    }
+
+    return {
+      id: persona.id,
+      monto_favor: cuenta.monto_favor,
+      id_pago_abonado: cuenta.id_pago_abonado,
+      fecha_pago: pagoInfo.fecha,
+      fecha_fin: new Date(pagoInfo.fecha).setMonth(new Date(pagoInfo.fecha).getMonth() + 1),
+      clases_utilizadas: cuenta.clases_favor,
+    };
+    } else {
+      return {
+      id: persona.id,
+        monto_favor: cuenta.monto_favor,
+        id_pago_abonado: null,
+        fecha_pago: null,
+        fecha_fin: null,
+        clases_utilizadas: null,
+      };
+    }
   }
 
 }

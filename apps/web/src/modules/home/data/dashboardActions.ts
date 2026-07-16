@@ -1,3 +1,5 @@
+import type { UserRole } from "@/modules/auth/hooks/useAuthSession";
+
 export type DashboardAction = {
   label: string;
   to: string;
@@ -55,6 +57,11 @@ const USER_ACTIONS: DashboardAction[] = [
     label: "Libro de quejas",
     to: "/libro-quejas",
     description: "Calificá y comentá tus clases pasadas"
+  },
+  {
+    label: "Estado de cuenta",
+    to: "/estado-cliente",
+    description: "Ver información y estado de tu cuenta"
   }
 ];
 
@@ -71,7 +78,7 @@ const SHARED_ACTIONS: DashboardAction[] = [
 ];
 
 export function getDashboardActions(
-  role: "admin" | "usuario" | "profesor" | null,
+  role: UserRole | null
 ): DashboardAction[] {
   if (role === "admin") {
     return [...ADMIN_ACTIONS, ...SHARED_ACTIONS];
