@@ -15,7 +15,6 @@ import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import type { KinesciusClass } from '@/lib/class-interface'
 import { formatDate, formatTime, normalizeFecha, getMinFecha } from '@/lib/utils'
-import { DatePicker } from '@/components/DatePicker'
 import {
   BarChart,
   Bar,
@@ -72,6 +71,7 @@ type AbonadoResumen = {
 type GeneralResumen = {
   mes: string
   pagos: {
+    hayInformacionPagos: boolean
     totalAbonados: number
     pagaron: AbonadoResumen[]
     faltantes: AbonadoResumen[]
@@ -175,8 +175,9 @@ function RouteComponent() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [startDate, setStartDate] = useState(getMinFecha())
-  const [endDate, setEndDate] = useState('')
+
+  // Controla si se muestra el bloque de "Historial por clase" (listado + fichas)
+  const [showHistorial, setShowHistorial] = useState(false)
 
   const [statsClassId, setStatsClassId] = useState<number | null>(null)
   const [statsClassLabel, setStatsClassLabel] = useState<string | null>(null)
@@ -195,25 +196,12 @@ function RouteComponent() {
   const modalRef = useRef<HTMLDivElement | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
 
-  const dateRangeInvalid = Boolean(endDate && startDate && endDate < startDate)
-
   const loadClasses = useCallback(async () => {
-    if (dateRangeInvalid) {
-      setError('La fecha "hasta" no puede ser anterior a la fecha "desde".')
-      return
-    }
-
     setLoading(true)
     setMessage(null)
     setError(null)
     try {
-      let url = `${API_BASE}/admin/clases`
-      const params = new URLSearchParams()
-      if (startDate) params.append('startDate', startDate)
-      if (endDate) params.append('endDate', endDate)
-      if (params.toString()) url += `?${params.toString()}`
-
-      const response = await fetch(url)
+      const response = await fetch(`${API_BASE}/admin/clases`)
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
@@ -225,7 +213,7 @@ function RouteComponent() {
       setClasses(clasesVisibles)
 
       if (clasesVisibles.length === 0) {
-        setMessage('No hay clases en el rango seleccionado.')
+        setMessage('No hay clases disponibles.')
       }
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Error desconocido')
@@ -233,7 +221,7 @@ function RouteComponent() {
     } finally {
       setLoading(false)
     }
-  }, [startDate, endDate, dateRangeInvalid])
+  }, [])
 
   const loadGeneral = useCallback(async (mes: string) => {
     setGeneralLoading(true)
@@ -256,13 +244,16 @@ function RouteComponent() {
   }, [])
 
   useEffect(() => {
-    void loadClasses()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
     void loadGeneral(mesSeleccionado)
   }, [mesSeleccionado, loadGeneral])
+
+  // Sólo cargamos las clases cuando el usuario abre el bloque de historial
+  useEffect(() => {
+    if (showHistorial && classes.length === 0 && !loading) {
+      void loadClasses()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHistorial])
 
   const openStats = async (clase: ClaseConProfesor) => {
     setStatsClassId(clase.id)
@@ -314,8 +305,9 @@ function RouteComponent() {
   }, [statsClassId, closeStats])
 
   // Ratio de pagos para colorear el estado (verde / ámbar / rojo)
+  // Sólo se calcula si hay información de pagos para el mes consultado
   const pagosRatio = useMemo(() => {
-    if (!general || general.pagos.totalAbonados === 0) return null
+    if (!general || !general.pagos.hayInformacionPagos || general.pagos.totalAbonados === 0) return null
     return (general.pagos.pagaron.length / general.pagos.totalAbonados) * 100
   }, [general])
 
@@ -425,7 +417,7 @@ function RouteComponent() {
                 >
                   <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
                   Pagos
-                  {pagosEstado && pagosEstado.label !== 'Al día' ? (
+                  {pagosEstado && general.pagos.hayInformacionPagos && pagosEstado.label !== 'Al día' ? (
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${pagosEstado.color}`}
                       aria-hidden="true"
@@ -451,61 +443,72 @@ function RouteComponent() {
               {/* Tab: Pagos */}
               {tabResumen === 'pagos' ? (
                 <div className="flex flex-col gap-3" role="tabpanel">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-white rounded-ks-lg p-4 border border-ks-gray-border flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-ks-gray-text">Abonados que pagaron</span>
-                        <CheckCircle2 className="h-4 w-4 text-ks-green-dark" aria-hidden="true" />
-                      </div>
-                      <div className="text-xl font-semibold text-ks-green-dark">
-                        {general.pagos.pagaron.length}
-                        <span className="text-sm font-normal text-ks-gray-text"> / {general.pagos.totalAbonados}</span>
-                      </div>
-                      {pagosRatio !== null && pagosEstado ? (
-                        <ProgressBar value={pagosRatio} colorClass={pagosEstado.color} />
-                      ) : null}
-                    </div>
-
-                    <div className="bg-white rounded-ks-lg p-4 border border-ks-gray-border flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-ks-gray-text">Abonados que faltan pagar</span>
-                        {general.pagos.faltantes.length > 0 ? (
-                          <AlertTriangle
-                            className={`h-4 w-4 ${pagosEstado?.text ?? 'text-ks-gray-text'}`}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <CheckCircle2 className="h-4 w-4 text-ks-green-dark" aria-hidden="true" />
-                        )}
-                      </div>
-                      <div
-                        className={`text-xl font-semibold ${
-                          general.pagos.faltantes.length > 0 ? (pagosEstado?.text ?? 'text-ks-green-dark') : 'text-ks-green-dark'
-                        }`}
-                      >
-                        {general.pagos.faltantes.length}
-                      </div>
-                    </div>
-                  </div>
-
-                  {general.pagos.faltantes.length > 0 ? (
-                    <details className="text-sm">
-                      <summary className="cursor-pointer text-ks-green-dark font-medium focus:outline-none focus:ring-2 focus:ring-ks-green-dark rounded">
-                        Ver quiénes faltan pagar
-                      </summary>
-                      <ul className="mt-2 flex flex-col divide-y divide-ks-gray-border border border-ks-gray-border rounded-ks-lg overflow-hidden">
-                        {general.pagos.faltantes.map((p) => (
-                          <li key={p.id} className="text-ks-gray-text bg-white px-3 py-2 text-sm">
-                            {p.nombre} {p.apellido} <span className="text-xs">— {p.mail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
+                  {!general.pagos.hayInformacionPagos ? (
+                    <EmptyState label="No hay información de pagos para este mes." />
                   ) : (
-                    <p className="text-sm text-ks-gray-text flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-ks-green-dark" aria-hidden="true" />
-                      Todos los abonados están al día.
-                    </p>
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-white rounded-ks-lg p-4 border border-ks-gray-border flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-ks-gray-text">Abonados que pagaron</span>
+                            <CheckCircle2 className="h-4 w-4 text-ks-green-dark" aria-hidden="true" />
+                          </div>
+                          <div className="text-xl font-semibold text-ks-green-dark">
+                            {general.pagos.pagaron.length}
+                            <span className="text-sm font-normal text-ks-gray-text">
+                              {' '}
+                              / {general.pagos.totalAbonados}
+                            </span>
+                          </div>
+                          {pagosRatio !== null && pagosEstado ? (
+                            <ProgressBar value={pagosRatio} colorClass={pagosEstado.color} />
+                          ) : null}
+                        </div>
+
+                        <div className="bg-white rounded-ks-lg p-4 border border-ks-gray-border flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-ks-gray-text">Abonados que faltan pagar</span>
+                            {general.pagos.faltantes.length > 0 ? (
+                              <AlertTriangle
+                                className={`h-4 w-4 ${pagosEstado?.text ?? 'text-ks-gray-text'}`}
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 text-ks-green-dark" aria-hidden="true" />
+                            )}
+                          </div>
+                          <div
+                            className={`text-xl font-semibold ${
+                              general.pagos.faltantes.length > 0
+                                ? pagosEstado?.text ?? 'text-ks-green-dark'
+                                : 'text-ks-green-dark'
+                            }`}
+                          >
+                            {general.pagos.faltantes.length}
+                          </div>
+                        </div>
+                      </div>
+
+                      {general.pagos.faltantes.length > 0 ? (
+                        <details className="text-sm">
+                          <summary className="cursor-pointer text-ks-green-dark font-medium focus:outline-none focus:ring-2 focus:ring-ks-green-dark rounded">
+                            Ver quiénes faltan pagar
+                          </summary>
+                          <ul className="mt-2 flex flex-col divide-y divide-ks-gray-border border border-ks-gray-border rounded-ks-lg overflow-hidden">
+                            {general.pagos.faltantes.map((p) => (
+                              <li key={p.id} className="text-ks-gray-text bg-white px-3 py-2 text-sm">
+                                {p.nombre} {p.apellido} <span className="text-xs">— {p.mail}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      ) : (
+                        <p className="text-sm text-ks-gray-text flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-ks-green-dark" aria-hidden="true" />
+                          Todos los abonados están al día.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               ) : null}
@@ -560,77 +563,59 @@ function RouteComponent() {
         </SectionCard>
 
         {/* Selección de clase puntual para ver historial */}
-        <SectionCard id="historial-heading" title="Historial por clase">
-          <p className="text-sm text-ks-gray-text -mt-1">
-            Elegí una clase para ver la concurrencia histórica de esa actividad.
-          </p>
-
-          <div className="field-column">
-            <div className="flex items-end gap-4 flex-wrap">
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Fecha desde
-                <DatePicker
-                  value={startDate}
-                  onChange={setStartDate}
-                  minDate={getMinFecha()}
-                  placeholder="Fecha desde..."
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Fecha hasta
-                <DatePicker
-                  value={endDate}
-                  onChange={setEndDate}
-                  minDate={startDate || getMinFecha()}
-                  placeholder="Fecha hasta..."
-                />
-              </label>
-            </div>
-
-            <div className="actions-row">
+        <SectionCard
+          id="historial-heading"
+          title="Historial por clase"
+          action={
+            showHistorial ? (
               <button
-                className="bg-ks-green-dark text-white rounded-ks-full px-5 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-ks-green-dark focus:ring-offset-2"
                 type="button"
-                onClick={() => void loadClasses()}
-                disabled={loading || dateRangeInvalid}
+                onClick={() => setShowHistorial(false)}
+                className="text-sm text-ks-gray-text hover:text-ks-green-dark transition-colors focus:outline-none focus:ring-2 focus:ring-ks-green-dark rounded px-2 py-1"
               >
-                {loading ? 'Cargando...' : 'Visualizar clases'}
+                Ocultar
               </button>
-
-              {(startDate !== getMinFecha() || endDate) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStartDate(getMinFecha())
-                    setEndDate('')
-                    setClasses([])
-                    setMessage(null)
-                    setError(null)
-                  }}
-                  className="bg-transparent border border-ks-green-light text-ks-green-light rounded-ks-full px-5 py-2.5 cursor-pointer text-sm hover:bg-ks-green-light/10 focus:outline-none focus:ring-2 focus:ring-ks-green-light"
-                >
-                  Limpiar filtros
-                </button>
-              )}
+            ) : undefined
+          }
+        >
+          {!showHistorial ? (
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm text-ks-gray-text">
+                Elegí una clase para ver la concurrencia histórica de esa actividad.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowHistorial(true)}
+                className="flex items-center gap-2 bg-ks-green-dark text-white rounded-ks-full px-5 py-2.5 text-sm font-medium hover:opacity-90 active:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-ks-green-dark focus:ring-offset-2"
+              >
+                <BarChart3 className="h-4 w-4" aria-hidden="true" />
+                Ver historial por clases
+              </button>
             </div>
-          </div>
+          ) : (
+            <>
+              <p className="text-sm text-ks-gray-text -mt-1">
+                Elegí una clase para ver la concurrencia histórica de esa actividad.
+              </p>
 
-          {error ? (
-            <p className="status-badge full" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {message ? <p className="status-badge success">{message}</p> : null}
+              {error ? (
+                <p className="status-badge full" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              {message ? <p className="status-badge success">{message}</p> : null}
 
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {[0, 1, 2].map((i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
-          ) : classes.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{classCards}</div>
-          ) : null}
+              {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[0, 1, 2].map((i) => (
+                    <SkeletonCard key={i} />
+                  ))}
+                </div>
+              ) : classes.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{classCards}</div>
+              ) : null}
+            </>
+          )}
         </SectionCard>
       </div>
 
@@ -675,15 +660,15 @@ function RouteComponent() {
 
             {stats && stats.hayEstadisticas ? (
               <div className="flex flex-col gap-4">
-                {/* Explicación: qué se está mostrando y por qué */}
-                <div className="flex items-start gap-2 bg-white border border-ks-gray-border rounded-ks-lg p-3">
-                  <Info className="h-4 w-4 text-ks-green-dark mt-0.5 shrink-0" aria-hidden="true" />
-                  <p className="text-xs text-ks-gray-text leading-relaxed">
+                {/* Explicación: qué se está mostrando y por qué (celeste, como antes) */}
+                <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-ks-lg p-3">
+                  <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" aria-hidden="true" />
+                  <p className="text-xs text-blue-900 leading-relaxed">
                     Esta clase todavía no sucedió. Lo que ves abajo es el historial de las{' '}
-                    <span className="text-ks-green-dark font-medium">
+                    <span className="font-medium">
                       {stats.totalClasesPrevias} clases anteriores
                     </span>{' '}
-                    de tipo <span className="text-ks-green-dark font-medium">"{stats.tipo}"</span>, para
+                    de tipo <span className="font-medium">"{stats.tipo}"</span>, para
                     estimar cuánta gente suele venir.
                   </p>
                 </div>
@@ -726,18 +711,28 @@ function RouteComponent() {
                             const esMin = c.id === stats.claseMenosConcurrida.id
                             const pct = c.ocupacion ?? 0
 
+                            // Colores por fila: verde para la más concurrida, ámbar para la menos concurrida
+                            const rowBg = esMax ? 'bg-green-50' : esMin ? 'bg-amber-50' : 'bg-white'
+                            const barColor = esMax
+                              ? 'bg-ks-green-dark'
+                              : esMin
+                                ? 'bg-amber-500'
+                                : 'bg-ks-green-dark'
+                            const iconColor = esMax
+                              ? 'text-ks-green-dark'
+                              : esMin
+                                ? 'text-amber-600'
+                                : 'text-ks-green-dark'
+
                             return (
-                              <tr key={c.id} className="bg-white border-t border-ks-gray-border">
+                              <tr key={c.id} className={`${rowBg} border-t border-ks-gray-border`}>
                                 <td className="py-2 px-3">
-                                  <div className="flex items-center gap-1.5 text-ks-green-dark">
+                                  <div className={`flex items-center gap-1.5 ${iconColor}`}>
                                     {esMax ? (
                                       <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                     ) : null}
                                     {esMin ? (
-                                      <TrendingDown
-                                        className="h-3.5 w-3.5 shrink-0 text-ks-gray-text"
-                                        aria-hidden="true"
-                                      />
+                                      <TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                     ) : null}
                                     <span className="whitespace-nowrap">
                                       {formatDate(c.fecha)} · {formatTime(c.hora)}
@@ -751,7 +746,7 @@ function RouteComponent() {
                                   <div className="flex items-center justify-end gap-2">
                                     <div className="w-16 h-1.5 bg-ks-gray-soft rounded-full overflow-hidden">
                                       <div
-                                        className="h-full rounded-full bg-ks-green-dark"
+                                        className={`h-full rounded-full ${barColor}`}
                                         style={{ width: `${Math.min(pct, 100)}%` }}
                                       />
                                     </div>
