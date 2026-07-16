@@ -131,3 +131,24 @@ export async function createSuscripcionPreference(id_cliente: number) {
   }
   return data;
 }
+
+export async function updateSuscripcionCancelada(
+  id_cliente: number,
+  cancelado: boolean
+): Promise<{ id: number; cancelado: boolean }> {
+  const response = await fetch(`${API_BASE}/api/mercadopago/suscripcion/cancelacion`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_cliente, cancelado }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      (errorData as { message?: string }).message ||
+      `Error al actualizar la cancelación de suscripción: ${response.status}`
+    );
+  }
+
+  return response.json();
+}

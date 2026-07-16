@@ -12,6 +12,7 @@ import {
 import { AsistenciaService } from './asistencia.service';
 import { GenerarTokenDto } from './dto/generar-token.dto';
 import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
+import { RegistrarAsistenciaManualDto } from './dto/registrar-asistencia-manual.dto';
 
 @Controller('asistencia')
 export class AsistenciaController {
@@ -33,6 +34,15 @@ export class AsistenciaController {
     @Body() dto: RegistrarAsistenciaDto,
   ) {
     return this.asistenciaService.registrarAsistencia(authHeader, dto);
+  }
+
+  @Post('registrar-manual')
+  @HttpCode(HttpStatus.OK)
+  registrarAsistenciaManual(
+    @Headers('authorization') authHeader: string,
+    @Body() dto: RegistrarAsistenciaManualDto,
+  ) {
+    return this.asistenciaService.registrarAsistenciaManual(authHeader, dto);
   }
 
   @Get('clase/:claseId')

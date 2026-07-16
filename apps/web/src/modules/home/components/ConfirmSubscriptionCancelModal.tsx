@@ -1,18 +1,47 @@
+import { updateSuscripcionCancelada } from "@/api/payments";
 import { btnBase, btnPrimary, btnSecondary } from "@/lib/ks-page-styles";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { AlertTriangle } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface ConfirmSubscriptionCancelModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-  }
-  
-  export function ConfirmSubscriptionCancelModal({ isOpen, onClose, onConfirm }: ConfirmSubscriptionCancelModalProps) {
-    return (
-        <AnimatePresence>
+  isOpen: boolean;
+  clienteId: number | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+export function ConfirmSubscriptionCancelModal({ isOpen, clienteId, onClose, onConfirm }: ConfirmSubscriptionCancelModalProps) {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCancelSubscription = async () => {
+    if (!clienteId) {
+      setErrorMessage("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
+      return;
+    }
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      await updateSuscripcionCancelada(clienteId, true);
+      toast.success("Solicitud de cancelación registrada. Se efectuará al vencimiento de tu suscripción.");
+      onConfirm();
+      onClose();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "No se pudo cancelar tu suscripción. Intentá de nuevo.";
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-1000 flex items-center justify-center bg-[rgba(15,36,25,0.45)] p-6"
@@ -50,17 +79,28 @@ interface ConfirmSubscriptionCancelModalProps {
               </div>
             </div>
 
+            {errorMessage ? (
+              <p className="mb-4 rounded-ks-md border border-[rgba(192,57,43,0.3)] bg-ks-red-soft px-4 py-3 text-sm font-medium text-ks-red">
+                {errorMessage}
+              </p>
+            ) : null}
+
             <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
-              <button type="button" className={cn(btnBase, btnSecondary, "sm:px-5")} onClick={onClose}>
+              <button type="button" className={cn(btnBase, btnSecondary, "sm:px-5")} onClick={onClose} disabled={isSubmitting}>
                 Cancelar
               </button>
-              <button type="button" className={cn(btnBase, btnPrimary, "sm:px-5")} onClick={onConfirm}>
-                Sí, cancelar suscripción
+              <button
+                type="button"
+                className={cn(btnBase, btnPrimary, "sm:px-5")}
+                onClick={() => void handleCancelSubscription()}
+                disabled={isSubmitting || !clienteId}
+              >
+                {isSubmitting ? "Procesando..." : "Sí, cancelar suscripción"}
               </button>
             </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
-    )
+  )
 }

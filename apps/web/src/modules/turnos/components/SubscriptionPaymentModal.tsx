@@ -15,7 +15,6 @@ type SubscriptionPaymentModalProps = {
     clienteId: number | null;
     onClose: () => void;
     onPaymentStarted?: () => void;
-    onSuccess: () => void;
 };
 
 function formatCurrency(amount: number) {
@@ -27,7 +26,6 @@ export function SubscriptionPaymentModal({
     clienteId,
     onClose,
     onPaymentStarted,
-    onSuccess,
 }: SubscriptionPaymentModalProps) {
     const [isPaying, setIsPaying] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
