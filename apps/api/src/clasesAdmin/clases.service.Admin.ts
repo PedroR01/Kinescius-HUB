@@ -407,8 +407,12 @@ export class ClasesAdminService {
     }
 
     // 3.5. Eliminar tokens de confirmación que referencian la clase
+    // FIX: la tabla real en el schema se llama "Token_Qr" (con esa
+    // capitalización), no "tokens_confirmacion". Ese nombre no existe
+    // en Supabase, por eso tiraba: "Could not find the table
+    // 'public.tokens_confirmacion' in the schema cache".
     const { error: tokenError } = await this.supabaseService.client
-      .from("tokens_confirmacion")
+      .from("Token_Qr")
       .delete()
       .eq("clase_id", id);
 
