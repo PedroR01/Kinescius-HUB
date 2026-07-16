@@ -4,8 +4,10 @@ import { useState } from 'react';
 // Componente de estrellas para la calificación
 import { StarRating } from './StarRating';
 
-// Hook que conecta con la API (React Query mutation)
+// Hooks que conectan con la API (React Query mutations)
 import { useCrearQueja } from '../../hooks/useCrearQueja';
+import { useEditarQueja } from '../../hooks/useEditarQueja';
+import { useEliminarQueja } from '../../hooks/useEliminarQueja';
 
 // Límite máximo de caracteres para el comentario
 const MAX_COMENTARIO = 500;
@@ -16,7 +18,12 @@ interface ComentarioFormProps {
   idClase: number;       // clase que se está evaluando
   claseNombre?: string;  // nombre opcional de la clase
   claseFecha?: string;   // fecha opcional de la clase
-  onSuccess?: () => void; // callback opcional cuando se envía con éxito
+  onSuccess?: () => void; // callback opcional cuando se envía/edita con éxito
+  onEliminado?: () => void; // callback opcional cuando se elimina con éxito
+
+  // Si vienen estos dos, el form arranca en modo edición
+  comentarioExistente?: string;
+  calificacionExistente?: number;
 }
 
 export function ComentarioForm({
@@ -25,22 +32,36 @@ export function ComentarioForm({
   claseNombre,
   claseFecha,
   onSuccess,
+  onEliminado,
+  comentarioExistente,
+  calificacionExistente,
 }: ComentarioFormProps) {
 
+  const esEdicion = comentarioExistente !== undefined && calificacionExistente !== undefined;
+
   // Estado para la calificación (1 a 5)
-  const [calificacion, setCalificacion] = useState(0);
+  const [calificacion, setCalificacion] = useState(calificacionExistente ?? 0);
 
   // Estado para el texto del comentario
-  const [comentario, setComentario] = useState('');
+  const [comentario, setComentario] = useState(comentarioExistente ?? '');
 
   // Estado para errores de validación del frontend
   const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
 
-  // Mutation de React Query para enviar el comentario al backend
-  const { mutate, isPending, isSuccess, error, reset } = useCrearQueja();
+  // Estado para confirmar antes de eliminar
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
+
+  // Mutations de React Query
+  const crear = useCrearQueja();
+  const editar = useEditarQueja();
+  const eliminar = useEliminarQueja();
+
+  const isPending = esEdicion ? editar.isPending : crear.isPending;
+  const isSuccess = esEdicion ? editar.isSuccess : crear.isSuccess;
+  const error = esEdicion ? editar.error : crear.error;
 
   /**
-   * Maneja el envío del formulario
+   * Maneja el envío del formulario (crear o editar según el modo)
    */
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); // evita recarga de la página
@@ -58,15 +79,31 @@ export function ComentarioForm({
       return;
     }
 
-    // Llamo a la API con los datos del formulario
-    mutate(
-      {
-        id_cliente: idCliente,
-        id_clase: idClase,
-        comentario,
-        calificacion,
-      },
-      { onSuccess }, // callback opcional del padre
+    if (esEdicion) {
+      editar.mutate(
+        { idCliente, idClase, comentario, calificacion },
+        { onSuccess },
+      );
+    } else {
+      crear.mutate(
+        {
+          id_cliente: idCliente,
+          id_clase: idClase,
+          comentario,
+          calificacion,
+        },
+        { onSuccess },
+      );
+    }
+  }
+
+  /**
+   * Maneja la eliminación del comentario
+   */
+  function handleEliminar() {
+    eliminar.mutate(
+      { idCliente, idClase },
+      { onSuccess: onEliminado },
     );
   }
 
@@ -86,7 +123,7 @@ export function ComentarioForm({
 
         {/* Mensaje de éxito */}
         <h3 className="text-lg font-semibold text-[#2F3B1F]">
-          Gracias por tu comentario
+          {esEdicion ? 'Comentario actualizado' : 'Gracias por tu comentario'}
         </h3>
 
         <p className="mt-1 text-sm text-[#6B7A52]">
@@ -108,7 +145,7 @@ export function ComentarioForm({
       {/* Título del formulario */}
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-[#2F3B1F]">
-          ¿Cómo estuvo la clase?
+          {esEdicion ? 'Editá tu comentario' : '¿Cómo estuvo la clase?'}
         </h2>
 
         {/* Info opcional de la clase */}
@@ -163,21 +200,55 @@ export function ComentarioForm({
       </div>
 
       {/* Errores de validación o de API */}
-      {(errorValidacion || error) && (
+      {(errorValidacion || error || eliminar.error) && (
         <p role="alert" className="mb-4 text-sm text-[#A34B2A]">
-          {errorValidacion ?? error?.message}
+          {errorValidacion ?? error?.message ?? eliminar.error?.message}
         </p>
       )}
 
-      {/* Botón de envío */}
-      <button
-        type="submit"
-        disabled={isPending}
-        onClick={() => reset()} // reinicia estado de mutation
-        className="w-full rounded-lg bg-[#5B7A3A] px-4 py-2.5 text-sm font-medium text-[#FBFAEF] transition-colors hover:bg-[#4A6530] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B7A3A] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? 'Enviando…' : 'Enviar comentario'}
-      </button>
+      {/* Botones */}
+      <div className="flex flex-col gap-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full rounded-lg bg-[#5B7A3A] px-4 py-2.5 text-sm font-medium text-[#FBFAEF] transition-colors hover:bg-[#4A6530] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B7A3A] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isPending
+            ? (esEdicion ? 'Guardando…' : 'Enviando…')
+            : (esEdicion ? 'Guardar cambios' : 'Enviar comentario')}
+        </button>
+
+        {esEdicion && (
+          confirmandoEliminar ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleEliminar}
+                disabled={eliminar.isPending}
+                className="flex-1 rounded-lg bg-[#A34B2A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#8a3f22] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {eliminar.isPending ? 'Eliminando…' : 'Confirmar eliminación'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmandoEliminar(false)}
+                disabled={eliminar.isPending}
+                className="flex-1 rounded-lg border border-[#DCD9AE] px-4 py-2.5 text-sm font-medium text-[#2F3B1F] transition-colors hover:bg-[#F3F1DD]"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmandoEliminar(true)}
+              className="w-full rounded-lg border border-[#A34B2A]/40 px-4 py-2.5 text-sm font-medium text-[#A34B2A] transition-colors hover:bg-[#A34B2A]/10"
+            >
+              Eliminar comentario
+            </button>
+          )
+        )}
+      </div>
     </form>
   );
 }

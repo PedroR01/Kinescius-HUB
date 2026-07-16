@@ -49,4 +49,81 @@ export async function crearQueja(
   }
 
   return res.json();
+  
+}
+export interface EditarQuejaPayload {
+  idCliente: number;
+  idClase: number;
+  comentario: string;
+  calificacion: number; // puntuación de 1 a 5
+}
+
+// Defino la respuesta esperada del backend
+export interface EditarQuejaResponse {
+  mensaje: string; // mensaje de confirmación
+}
+
+export async function editarQueja(
+  payload: EditarQuejaPayload,
+): Promise<EditarQuejaResponse> {
+  const token = localStorage.getItem('miToken'); // ajustar key si tu login usa otra
+
+  const res = await fetch(
+    `${API_BASE}/libro-quejas/cliente/${payload.idCliente}/clase/${payload.idClase}/comentario`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        comentario: payload.comentario,
+        calificacion: payload.calificacion,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    // El back devuelve { message, statusCode } en las excepciones de Nest
+    const body = await res.json().catch(() => null);
+    const mensaje =
+      body?.message ?? 'No se pudo editar el comentario. Probá de nuevo.';
+    throw new LibroQuejasApiError(mensaje, res.status);
+  }
+
+  return res.json();
+}
+
+export interface EliminarQuejaPayload {
+  idCliente: number;
+  idClase: number;
+}
+
+// Defino la respuesta esperada del backend
+export interface EliminarQuejaResponse {
+  mensaje: string; // mensaje de confirmación
+}
+
+export async function eliminarQueja(
+  payload: EliminarQuejaPayload,
+): Promise<EliminarQuejaResponse> {
+  const token = localStorage.getItem('miToken'); // ajustar key si tu login usa otra
+
+  const res = await fetch(
+    `${API_BASE}/libro-quejas/cliente/${payload.idCliente}/clase/${payload.idClase}/comentario`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+
+  if (!res.ok) {
+    // El back devuelve { message, statusCode } en las excepciones de Nest
+    const body = await res.json().catch(() => null);
+    const mensaje =
+      body?.message ?? 'No se pudo eliminar el comentario. Probá de nuevo.';
+    throw new LibroQuejasApiError(mensaje, res.status);
+  }
+
+  return res.json();
 }
