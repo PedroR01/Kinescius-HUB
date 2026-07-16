@@ -86,17 +86,33 @@ export class AuthService {
         throw new BadRequestException(`No se pudieron registrar los datos personales: ${error?.message}`);
       }
 
-      const { error: errorEstadoCliente } = await this.supabaseService.client
-        .from('Estado_Cliente')
-        .insert([
-          {
-            id: personaData.id
-          }
-        ]);
-      if (errorEstadoCliente) {
-        // Si falla la cración del estado del cliente, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
-        await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
-        throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorEstadoCliente.message}`);
+      if (datos.rol === 2) {
+        const { error: errorEstadoCliente } = await this.supabaseService.client
+          .from('Estado_Cliente')
+          .insert([
+            {
+              id: personaData.id
+            }
+          ]);
+        if (errorEstadoCliente) {
+          // Si falla la cración del estado del cliente, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+          await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+          throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorEstadoCliente.message}`);
+        }
+      } else if (datos.rol === 3) {
+        const { error: errorEstadoCliente } = await this.supabaseService.client
+          .from('Estado_Cliente')
+          .insert([
+            {
+              id: personaData.id,
+              clases_favor: 3,
+            }
+          ]);
+        if (errorEstadoCliente) {
+          // Si falla la cración del estado del cliente, hacemos un "rollback" eliminando la cuenta de Auth para no dejar datos huérfanos
+          await this.supabaseService.client.auth.admin.deleteUser(authData.user.id);
+          throw new BadRequestException(`No se pudo asignar el id como abonado en la base de datos: ${errorEstadoCliente.message}`);
+        }
       }
 
 
