@@ -6,6 +6,7 @@ import { CLASS_PRICE } from "@/lib/constants";
 
 type CartFloatingBarProps = {
   count: number;
+  clasesAFavor?: number;
   onCheckout: () => void;
 };
 
@@ -13,8 +14,10 @@ function formatCurrency(amount: number) {
   return amount.toLocaleString("es-AR");
 }
 
-export function CartFloatingBar({ count, onCheckout }: CartFloatingBarProps) {
-  const subtotal = count * CLASS_PRICE;
+export function CartFloatingBar({ count, clasesAFavor = 0, onCheckout }: CartFloatingBarProps) {
+  const clasesFavorAplicadas = Math.min(count, clasesAFavor);
+  const clasesRestantes = count - clasesFavorAplicadas;
+  const subtotal = clasesRestantes * CLASS_PRICE;
 
   return (
     <AnimatePresence>

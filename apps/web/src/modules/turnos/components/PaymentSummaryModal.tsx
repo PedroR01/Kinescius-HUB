@@ -18,6 +18,7 @@ type PaymentSummaryModalProps = {
   items: ClassSlot[];
   montoAFavor: number;
   clienteId: number | null;
+  clasesAFavor: number;
   allowRemove?: boolean;
   onClose: () => void;
   onRemoveItem?: (key: string) => void;
@@ -34,6 +35,7 @@ export function PaymentSummaryModal({
   items,
   montoAFavor,
   clienteId,
+  clasesAFavor,
   allowRemove = false,
   onClose,
   onRemoveItem,
@@ -52,7 +54,9 @@ export function PaymentSummaryModal({
     }
   }, [isOpen, items]);
 
-  const subtotal = items.length * CLASS_PRICE;
+  const clasesFavorAplicadas = Math.min(items.length, clasesAFavor);
+  const clasesRestantes = items.length - clasesFavorAplicadas;
+  const subtotal = clasesRestantes * CLASS_PRICE;
   const montoAplicado = applyMontoAFavor ? Math.min(montoAFavor, subtotal) : 0;
   const totalFinal = subtotal - montoAplicado;
 
@@ -80,6 +84,7 @@ export function PaymentSummaryModal({
           clienteId,
           clases: clases.map((c) => ({ id: c.id })),
           montoAFavorAplicado: montoAplicado,
+          clasesFavorAplicadas
         });
         toast.success("¡Inscripción confirmada con tu saldo a favor!");
         onSuccess(paidKeys, result.saldoRestante);
@@ -91,6 +96,7 @@ export function PaymentSummaryModal({
         clases,
         clienteId,
         montoAFavorAplicado: montoAplicado,
+        clasesFavorAplicadas
       });
 
       toast.success(
@@ -189,9 +195,16 @@ export function PaymentSummaryModal({
             )}
 
             <div className="mt-5 grid gap-2 border-t-[1.5px] border-ks-gray-soft pt-4 text-sm">
+              {clasesFavorAplicadas > 0 ? (
+                <div className="flex justify-between text-ks-green-mid">
+                  <span>Clases bonificadas a favor</span>
+                  <span className="font-semibold">{clasesFavorAplicadas}</span>
+                </div>
+              ) : null}
+
               <div className="flex justify-between text-ks-gray-text">
                 <span>
-                  Subtotal ({items.length} × ${formatCurrency(CLASS_PRICE)})
+                  Subtotal ({clasesRestantes} × ${formatCurrency(CLASS_PRICE)})
                 </span>
                 <span className="font-semibold text-ks-text-dark">
                   ${formatCurrency(subtotal)}
