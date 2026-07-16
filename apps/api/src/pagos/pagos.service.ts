@@ -472,4 +472,28 @@ export class PagosService implements OnModuleInit {
         }
         return { received: true };
     }
+
+    async setSuscripcionCancelada(clienteId: number, cancelado: boolean) {
+        if (!clienteId || clienteId < 1) {
+            throw new BadRequestException("clienteId inválido.");
+        }
+        if (typeof cancelado !== "boolean") {
+            throw new BadRequestException("El campo cancelado debe ser un booleano.");
+        }
+
+        const { data, error } = await this.supabaseService.client
+            .from("Estado_Cliente")
+            .update({ cancelado })
+            .eq("id", clienteId)
+            .select("id, cancelado")
+            .single();
+
+        if (error || !data) {
+            throw new BadRequestException(
+                `No se pudo actualizar el estado de cancelación: ${error?.message ?? "cliente no encontrado"}`,
+            );
+        }
+
+        return { id: data.id, cancelado: data.cancelado };
+    }
 }

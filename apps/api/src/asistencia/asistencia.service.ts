@@ -12,6 +12,7 @@ import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { getFrontendUrl } from '../config/frontend-url';
 import { GenerarTokenDto } from './dto/generar-token.dto';
 import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
+import { RegistrarAsistenciaManualDto } from './dto/registrar-asistencia-manual.dto';
 import { buildAttendanceWindow } from './asistencia-time.util';
 
 @Injectable()
@@ -113,34 +114,7 @@ export class AsistenciaService {
       throw new ForbiddenException('No estás inscripto en esta clase.');
     }
 
- // 2. Verificar asistencia existente en Asistencia_Clase
- const { data: asistenciaExistente, error: asistenciaError } = await this.supabase.client
- .from('Asistencia_Clase')
- .select('id_cliente')
- .eq('id_cliente', clienteId)
- .eq('id_clase', tokenRow.clase_id)
- .maybeSingle();
- 
- if (asistenciaError) {
- throw new InternalServerErrorException('No se pudo verificar la asistencia.');
- }
- 
- if (asistenciaExistente) {
- throw new ConflictException('Ya registraste tu asistencia para esta clase.');
- }
- 
- // 3. Registrar asistencia
- const { error: insertError } = await this.supabase.client
- .from('Asistencia_Clase')
- .insert({
-   id_clase: tokenRow.clase_id,
-   id_cliente: clienteId,
- });
-    if (insertError) {
-      throw new InternalServerErrorException(
-        'No se pudo registrar la asistencia.',
-      );
-    }
+    await this.insertarAsistenciaClase(tokenRow.clase_id, clienteId);
 
     const { data: clase } = await this.supabase.client
       .from('Clase')
@@ -157,6 +131,75 @@ export class AsistenciaService {
             tipo: clase.tipo,
           }
         : null,
+    };
+  }
+
+  async registrarAsistenciaManual(
+    bearerToken: string,
+    dto: RegistrarAsistenciaManualDto,
+  ) {
+    const profesorId = await this.obtenerPersonaId(bearerToken);
+    await this.verificarProfesorDeClase(profesorId, dto.claseId);
+
+    const { data: clase, error: claseError } = await this.supabase.client
+      .from('Clase')
+      .select('id, fecha, hora, tipo')
+      .eq('id', dto.claseId)
+      .single();
+
+    if (claseError || !clase) {
+      throw new NotFoundException('La clase no existe.');
+    }
+
+    const now = new Date();
+    const { expiresAt } = buildAttendanceWindow(clase.fecha, clase.hora);
+
+    if (now > expiresAt) {
+      throw new GoneException(
+        'El tiempo para registrar asistencia de esta clase ya expiró.',
+      );
+    }
+
+    const cliente = await this.buscarClientePorIdentificador(dto.identificador);
+
+    const { data: inscripcion, error: inscripcionError } =
+      await this.supabase.client
+        .from('Se_inscribe')
+        .select('id_cliente, id_clase, estado')
+        .eq('id_cliente', cliente.id)
+        .eq('id_clase', dto.claseId)
+        .maybeSingle();
+
+    if (inscripcionError) {
+      throw new InternalServerErrorException(
+        'No se pudo verificar la inscripción.',
+      );
+    }
+
+    if (!inscripcion) {
+      throw new ForbiddenException(
+        'El cliente no está inscripto en esta clase.',
+      );
+    }
+
+    await this.insertarAsistenciaClase(dto.claseId, cliente.id, {
+      alreadyExistsMessage: 'Este cliente ya tiene asistencia registrada para esta clase.',
+    });
+
+    return {
+      message: 'Asistencia registrada correctamente.',
+      cliente: {
+        id: cliente.id,
+        nombre: cliente.nombre,
+        apellido: cliente.apellido,
+        dni: cliente.dni,
+        mail: cliente.mail,
+      },
+      clase: {
+        fecha: clase.fecha,
+        hora: clase.hora,
+        tipo: clase.tipo,
+      },
     };
   }
 
@@ -244,6 +287,88 @@ export class AsistenciaService {
         ventanaHasta: expiresAt.toISOString(),
       };
     });
+  }
+
+  private async buscarClientePorIdentificador(identificadorRaw: string): Promise<{
+    id: number;
+    nombre: string | null;
+    apellido: string | null;
+    dni: string | null;
+    mail: string | null;
+  }> {
+    const identificador = identificadorRaw.trim();
+    if (!identificador) {
+      throw new BadRequestException('Ingresá el DNI o el mail del cliente.');
+    }
+
+    const esMail = identificador.includes('@');
+    let query = this.supabase.client
+      .from('Persona_')
+      .select('id, nombre, apellido, dni, mail');
+
+    if (esMail) {
+      query = query.ilike('mail', identificador);
+    } else {
+      query = query.eq('dni', identificador);
+    }
+
+    const { data: persona, error } = await query.maybeSingle();
+
+    if (error) {
+      throw new InternalServerErrorException(
+        'No se pudo buscar al cliente.',
+      );
+    }
+
+    if (!persona) {
+      throw new NotFoundException(
+        esMail
+          ? 'No se encontró un cliente con ese mail.'
+          : 'No se encontró un cliente con ese DNI.',
+      );
+    }
+
+    return persona;
+  }
+
+  private async insertarAsistenciaClase(
+    claseId: number,
+    clienteId: number,
+    options?: { alreadyExistsMessage?: string },
+  ): Promise<void> {
+    const { data: asistenciaExistente, error: asistenciaError } =
+      await this.supabase.client
+        .from('Asistencia_Clase')
+        .select('id_cliente')
+        .eq('id_cliente', clienteId)
+        .eq('id_clase', claseId)
+        .maybeSingle();
+
+    if (asistenciaError) {
+      throw new InternalServerErrorException(
+        'No se pudo verificar la asistencia.',
+      );
+    }
+
+    if (asistenciaExistente) {
+      throw new ConflictException(
+        options?.alreadyExistsMessage ??
+          'Ya registraste tu asistencia para esta clase.',
+      );
+    }
+
+    const { error: insertError } = await this.supabase.client
+      .from('Asistencia_Clase')
+      .insert({
+        id_clase: claseId,
+        id_cliente: clienteId,
+      });
+
+    if (insertError) {
+      throw new InternalServerErrorException(
+        'No se pudo registrar la asistencia.',
+      );
+    }
   }
 
   private async obtenerPersonaMail(bearerToken: string): Promise<string> {

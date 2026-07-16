@@ -77,23 +77,25 @@ export function useCurrentUserProfile() {
 
 export function useEstadoCliente() {
   const [estadoCliente, setEstadoCliente] = useState<EstadoCliente | null>(null);
-  useEffect(() => {
-    const fetchEstadoCliente = async () => {
-      const token = localStorage.getItem(TOKEN_KEY);
-      try {
-        const response = await fetch(`${API_BASE}/auth/me/estado-cliente`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await response.json();
-        setEstadoCliente(data as EstadoCliente);
-      } catch (error) {
-        console.error("Error al obtener el estado del cliente:", error);
-      }
-    };
-    fetchEstadoCliente();
+
+  const fetchEstadoCliente = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    try {
+      const response = await fetch(`${API_BASE}/auth/me/estado-cliente`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setEstadoCliente(data as EstadoCliente);
+    } catch (error) {
+      console.error("Error al obtener el estado del cliente:", error);
+    }
   }, []);
 
-  return estadoCliente;
+  useEffect(() => {
+    void fetchEstadoCliente();
+  }, [fetchEstadoCliente]);
+
+  return { estadoCliente, refetchEstadoCliente: fetchEstadoCliente };
 }

@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import {
   generarTokenAsistencia,
   registrarAsistencia,
+  registrarAsistenciaManual,
   getAsistenciaClase,
   getClasesProfesor,
 } from "@/api/asistencia";
@@ -27,6 +28,20 @@ export function useRegistrarAsistencia() {
       token: string;
       authToken: string;
     }) => registrarAsistencia(token, authToken),
+  });
+}
+
+export function useRegistrarAsistenciaManual() {
+  return useMutation({
+    mutationFn: ({
+      claseId,
+      identificador,
+      authToken,
+    }: {
+      claseId: number;
+      identificador: string;
+      authToken: string;
+    }) => registrarAsistenciaManual(claseId, identificador, authToken),
   });
 }
 

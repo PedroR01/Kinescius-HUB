@@ -451,7 +451,7 @@ export class AuthService {
 
     const { data: cuenta, error: cuentaError } = await this.supabaseService.client
       .from('Estado_Cliente')
-      .select('monto_favor, id_pago_abonado, clases_favor')
+      .select('monto_favor, id_pago_abonado, clases_favor, cancelado')
       .eq('id', persona.id)
       .single();
 
@@ -477,6 +477,7 @@ export class AuthService {
         fecha_pago: pagoInfo.fecha,
         fecha_fin: new Date(pagoInfo.fecha).setMonth(new Date(pagoInfo.fecha).getMonth() + 1),
         clases_utilizadas: cuenta.clases_favor,
+        cancelado: Boolean(cuenta.cancelado),
       };
     } else {
       return {
@@ -486,6 +487,7 @@ export class AuthService {
         fecha_pago: null,
         fecha_fin: null,
         clases_utilizadas: null,
+        cancelado: Boolean(cuenta.cancelado),
       };
     }
   }
