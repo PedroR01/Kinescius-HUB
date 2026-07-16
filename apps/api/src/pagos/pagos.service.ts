@@ -238,7 +238,6 @@ export class PagosService implements OnModuleInit {
         }
 
         const datosRegistro = body;
-        const MENSUALIDAD_PRICE = 24
         const frontendUrl = getFrontendUrl();
         const preference = new Preference(this.mpCheckoutProService.client);
         return preference.create({
@@ -247,7 +246,7 @@ export class PagosService implements OnModuleInit {
                     id: "inscripcion-kinescius",
                     title: `Mensualidad Abonado - Kinescius`,
                     quantity: 1,
-                    unit_price: MENSUALIDAD_PRICE,
+                    unit_price: SUBSCRIPTION_PRICE,
                 }],
                 metadata: {
                     tipo: "mensualidad",
@@ -434,6 +433,13 @@ export class PagosService implements OnModuleInit {
                     .from('Pago')
                     .insert(pago)
                 if (errorPago) throw new Error(errorPago.message);
+
+                const { error: errorPagoEstadoCliente } = await this.supabaseService.client
+                    .from('Estado_Cliente')
+                    .update({ id_pago_abonado: Number(paymentId) })
+                    .eq('id', Number(paymentData.id_cliente));
+                if (errorPagoEstadoCliente) throw new Error(errorPagoEstadoCliente.message);
+
             } else {
                 const { error: errorPago } = await this.supabaseService.client
                     .from('Pago')
