@@ -70,8 +70,8 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
       let tipoReembolso: TipoReembolso;
 
       if (esAbonado) {
-        // Abonado fuera de cuota: auto A_FAVOR | Dentro de cuota: NINGUNO
-        tipoReembolso = abonadoFueraDeCuota ? 'A_FAVOR' : 'NINGUNO';
+        // Abonado con antelación (>=48hs): A_FAVOR | Sin antelación (<48hs): NINGUNO
+        tipoReembolso = !sinAntelacionAbonado ? 'A_FAVOR' : 'NINGUNO';
       } else {
         // No abonado: usa la opción seleccionada o NINGUNO si no tiene reembolso
         tipoReembolso = permiteReembolsoNoAbonado
@@ -93,18 +93,6 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
 
   // --- Bloque informativo para abonados ---
   const renderInfoAbonado = () => {
-    if (abonadoFueraDeCuota) {
-      return (
-        <div className="mb-8 p-5 bg-main/5 text-slate-700 rounded-2xl">
-          <p className="font-bold mb-2 text-dark-accent">Clase fuera de tu cuota mensual</p>
-          <p className="text-sm font-medium">
-            Al cancelar, se acreditará el monto a tu saldo a favor automáticamente.
-          </p>
-        </div>
-      );
-    }
-
-    // Dentro de cuota
     if (sinAntelacionAbonado) {
       return (
         <div className="mb-8 p-5 bg-amber-50 text-amber-800 rounded-2xl">
@@ -118,9 +106,9 @@ export const CancelarTurno: React.FC<CancelarTurnoProps> = ({
 
     return (
       <div className="mb-8 p-5 bg-main/5 text-slate-700 rounded-2xl">
-        <p className="font-bold mb-2 text-dark-accent">Clase dentro de tu cuota mensual</p>
+        <p className="font-bold mb-2 text-dark-accent">Cancelación con antelación</p>
         <p className="text-sm font-medium">
-          Esta clase está cubierta por tu abono. Al cancelar, no se efectuará reembolso.
+          Al cancelar, se acreditará el monto a tu saldo a favor automáticamente.
         </p>
       </div>
     );

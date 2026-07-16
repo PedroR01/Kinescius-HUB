@@ -62,11 +62,11 @@ export class ShiftsService {
     // Validación de reembolso solo para no-abonados (los abonados se validan en la strategy)
     if (
       !esAbonado &&
-      inscripcion.estado !== 'pagado' &&
+      inscripcion.estado !== 'reservado' &&
       tipoReembolso !== TipoReembolso.NINGUNO
     ) {
       throw new BadRequestException(
-        'Solo los turnos pagados admiten reembolso o saldo a favor.',
+        'Solo los turnos reservados admiten reembolso o saldo a favor.',
       );
     }
 
@@ -142,6 +142,7 @@ export class ShiftsService {
           .from('Estado_Cliente')
           .update({ penalizado_hasta: penalizadoHasta.toISOString() })
           .eq('id', clienteId);
+        console.log(`⚠️ [PENALIZACIÓN] Cliente ${clienteId} perdió el descuento de abonado. Penalizado hasta: ${penalizadoHasta.toISOString()}`);
       }
 
       await this.notificacionEspera.notificarProximoEnEspera(claseId);
@@ -456,6 +457,7 @@ export class ShiftsService {
         .from('Persona_')
         .select('id, nombre, apellido')
         .in('id', profesorIds);
+        
       if (profesorError) {
         throw new InternalServerErrorException(
           'Error al obtener profesores: ' + profesorError.message,

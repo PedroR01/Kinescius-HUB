@@ -4,11 +4,13 @@ import { ResultadoReembolso } from '../pagos/reembolso.service';
 export function debeEjecutarReembolso(
   tipoReembolso: TipoReembolso,
   estadoInscripcion: string,
+  esAbonado: boolean = false,
 ): boolean {
-  return (
-    estadoInscripcion === 'pagado' &&
-    tipoReembolso !== TipoReembolso.NINGUNO
-  );
+  if (tipoReembolso === TipoReembolso.NINGUNO) return false;
+  // Abonados: siempre se ejecuta monto a favor si la strategy lo indica
+  if (esAbonado) return true;
+  // No abonados: solo si la inscripción fue reservada (pagó la seña)
+  return estadoInscripcion === 'reservado';
 }
 
 export function construirMensajeReembolso(
@@ -24,7 +26,7 @@ export function construirMensajeReembolso(
 
   if (detalle.montoSaldo > 0) {
     partes.push(
-      `Se acreditó $${detalle.montoSaldo.toLocaleString('es-AR')} en tu saldo a favor.`,
+      `Se acreditó $${detalle.montoSaldo.toLocaleString('es-AR')} en su saldo a favor.`,
     );
   }
 

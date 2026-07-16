@@ -37,8 +37,8 @@ export class CancelacionAbonadoStrategy implements EstrategiaCancelacion {
       partes.push('Por cancelar 3 veces o más en un mismo mes, perderás el descuento para las clases de este mes.');
     }
 
-    // Fuera de cuota: auto A_FAVOR | Dentro de cuota: NINGUNO
-    const reembolsoAplicado = esClaseFueraDeCuota
+    // Con antelación (>=48hs): A_FAVOR | Sin antelación (<48hs): NINGUNO
+    const reembolsoAplicado = !sinAntelacion
       ? TipoReembolso.A_FAVOR
       : TipoReembolso.NINGUNO;
 
