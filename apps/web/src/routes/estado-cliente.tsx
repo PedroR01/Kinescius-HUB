@@ -3,9 +3,9 @@ import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout'
 import { createFileRoute } from '@tanstack/react-router'
 import { useCurrentUserProfile, useEstadoCliente } from '@/modules/auth/hooks/useAuthSession'
 import { cn } from '@/lib/utils'
-import { PaymentSummaryModal } from '@/modules/turnos/components/PaymentSummaryModal'
 import { useState } from 'react'
 import { ConfirmSubscriptionCancelModal } from '@/modules/home/components/ConfirmSubscriptionCancelModal'
+import { SubscriptionPaymentModal } from '@/modules/turnos/components/SubscriptionPaymentModal'
 
 
 export const Route = createFileRoute('/estado-cliente')({
@@ -33,40 +33,36 @@ function RouteComponent() {
       <h2 className="text-2xl font-bold">Información suscripción</h2>
       <ul className="flex flex-col gap-2">
         <li className="flex flex-row gap-2 items-center">
-          <p>Estado de la cuenta: <span className="font-bold">{userProfile?.rol === 2 ? 'Abonado' : 'No abonado'}</span></p>
+          <p>Estado de la cuenta: <span className="font-bold">{userProfile?.rol === 3 ? 'Abonado' : 'No abonado'}</span></p>
           <button
             type="button"
-            className={cn(btnBase, userProfile?.rol === 2 ? btnDanger : btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
-            onClick={() => {userProfile?.rol === 2 ? setIsCancelSubscriptionModalOpen(true) : setIsPaymentModalOpen(true)}}
+            className={cn(btnBase, userProfile?.rol === 3 ? btnDanger : btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
+            onClick={() => { userProfile?.rol === 3 ? setIsCancelSubscriptionModalOpen(true) : setIsPaymentModalOpen(true) }}
           >
-            {userProfile?.rol === 2 ? 'Cancelar suscripción' : 'Comprar suscripción'}
+            {userProfile?.rol === 3 ? 'Cancelar suscripción' : 'Comprar suscripción'}
           </button>
-          </li>
-       
-        <li>Fecha de último pago: <span className="font-bold">{ estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago).toLocaleDateString() : 'No tiene pago de suscripciónregistrado'}</span></li>
-        {estadoCliente?.fecha_pago ? 
-        <>
-        <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin).toLocaleDateString()}</span></li>
-        <li>Clases utilizadas: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
-        </>: null}
+        </li>
+
+        <li>Fecha de último pago: <span className="font-bold">{estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago).toLocaleDateString() : 'No tiene pago de suscripción registrado'}</span></li>
+        {estadoCliente?.fecha_pago ?
+          <>
+            <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin).toLocaleDateString()}</span></li>
+            <li>Clases utilizadas: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
+          </> : null}
         <li>Saldo a favor: <span className="font-bold">{estadoCliente?.monto_favor}</span></li>
       </ul>
     </section>
-    <PaymentSummaryModal
-        isOpen={isPaymentModalOpen}
-        items={[]}
-        montoAFavor={0}
-        clienteId={userProfile?.id ?? null}
-        allowRemove={false}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onRemoveItem={() => {}}
-        onPaymentStarted={() => {setIsPaymentModalOpen(false)}}
-        onSuccess={() => {setIsPaymentModalOpen(false)}}
-      />
-      <ConfirmSubscriptionCancelModal
-        isOpen={isCancelSubscriptionModalOpen}
-        onClose={() => setIsCancelSubscriptionModalOpen(false)}
-        onConfirm={() => {handleCancelSubscription()}}
-      />
+    <SubscriptionPaymentModal
+      isOpen={isPaymentModalOpen}
+      clienteId={userProfile?.id ?? null}
+      onClose={() => setIsPaymentModalOpen(false)}
+      onPaymentStarted={() => { setIsPaymentModalOpen(false) }}
+      onSuccess={() => { setIsPaymentModalOpen(false) }}
+    />
+    <ConfirmSubscriptionCancelModal
+      isOpen={isCancelSubscriptionModalOpen}
+      onClose={() => setIsCancelSubscriptionModalOpen(false)}
+      onConfirm={() => { handleCancelSubscription() }}
+    />
   </AuthPageLayout>)
 }

@@ -1,4 +1,4 @@
-export interface UserProfile{
+export interface UserProfile {
     mail: string
     apellido: string
     nombre: string
@@ -7,7 +7,7 @@ export interface UserProfile{
     rol: number;
 }
 
-export interface UserData extends UserProfile{
+export interface UserData extends UserProfile {
     id: number
     estado?: string | null
 }

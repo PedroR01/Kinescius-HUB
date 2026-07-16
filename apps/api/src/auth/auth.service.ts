@@ -414,7 +414,7 @@ export class AuthService {
 
     const { data: persona, error: personaError } = await this.supabaseService.client
       .from('Persona_')
-      .select('nombre, apellido, mail, dni, telefono, rol')
+      .select('id, nombre, apellido, mail, dni, telefono, rol')
       .eq('mail', userData.user.email)
       .single();
 
@@ -423,6 +423,7 @@ export class AuthService {
     }
 
     return {
+      id: persona.id,
       nombre: persona.nombre,
       apellido: persona.apellido,
       mail: persona.mail,
@@ -439,10 +440,10 @@ export class AuthService {
     }
 
     const { data: persona, error: personaError } = await this.supabaseService.client
-    .from('Persona_')
-    .select('id')
-    .eq('mail', userData.user.email)
-    .single();
+      .from('Persona_')
+      .select('id')
+      .eq('mail', userData.user.email)
+      .single();
 
     if (personaError || !persona) {
       throw new UnauthorizedException('No se encontró el perfil del usuario.');
@@ -459,27 +460,27 @@ export class AuthService {
     }
 
     if (cuenta.id_pago_abonado) {
-    const { data: pagoInfo, error: pagoInfoError } = await this.supabaseService.client
-    .from('Pago')
-    .select('fecha')
-    .eq('id_pago', cuenta.id_pago_abonado)
-    .single();
+      const { data: pagoInfo, error: pagoInfoError } = await this.supabaseService.client
+        .from('Pago')
+        .select('fecha')
+        .eq('id_pago', cuenta.id_pago_abonado)
+        .single();
 
-    if (pagoInfoError || !pagoInfo) {
-      throw new UnauthorizedException('No se encontró la información del pago.');
-    }
+      if (pagoInfoError || !pagoInfo) {
+        throw new UnauthorizedException('No se encontró la información del pago.');
+      }
 
-    return {
-      id: persona.id,
-      monto_favor: cuenta.monto_favor,
-      id_pago_abonado: cuenta.id_pago_abonado,
-      fecha_pago: pagoInfo.fecha,
-      fecha_fin: new Date(pagoInfo.fecha).setMonth(new Date(pagoInfo.fecha).getMonth() + 1),
-      clases_utilizadas: cuenta.clases_favor,
-    };
+      return {
+        id: persona.id,
+        monto_favor: cuenta.monto_favor,
+        id_pago_abonado: cuenta.id_pago_abonado,
+        fecha_pago: pagoInfo.fecha,
+        fecha_fin: new Date(pagoInfo.fecha).setMonth(new Date(pagoInfo.fecha).getMonth() + 1),
+        clases_utilizadas: cuenta.clases_favor,
+      };
     } else {
       return {
-      id: persona.id,
+        id: persona.id,
         monto_favor: cuenta.monto_favor,
         id_pago_abonado: null,
         fecha_pago: null,
