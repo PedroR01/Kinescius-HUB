@@ -70,6 +70,7 @@ function RouteComponent() {
   const [viewAnio, setViewAnio] = useState(hoy.getFullYear())
   const [viewMes, setViewMes] = useState(hoy.getMonth()) // 0-indexed
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string | null>(null)
+  const [mostrarCalendario, setMostrarCalendario] = useState(false)
 
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
   const [modal, setModal] = useState<{ clase: Clase; alumnos: Alumno[] } | null>(null)
@@ -105,13 +106,21 @@ function RouteComponent() {
     }
   }
 
+  const volverATodas = () => {
+    setFechaSeleccionada(null)
+    setMostrarCalendario(false)
+  }
+
   const clasesAMostrar = useMemo(() => {
+    // Si está el calendario abierto pero todavía no se eligió fecha, no mostramos nada
+    if (mostrarCalendario && !fechaSeleccionada) return []
+
     const lista = fechaSeleccionada ? clases.filter((c) => c.fecha === fechaSeleccionada) : clases
     return [...lista].sort((a, b) => {
-      if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha)
+      if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha)
       return a.hora.localeCompare(b.hora)
     })
-  }, [clases, fechaSeleccionada])
+  }, [clases, fechaSeleccionada, mostrarCalendario])
 
   // Compara solo por fecha (sin hora) para saber si la clase ya se dio o todavía no
   const claseEsFutura = (clase: { fecha: string }) => {
@@ -162,91 +171,104 @@ function RouteComponent() {
 
       {!loading && !error && (
         <>
+          {/* Control de vista: elegir por fecha / volver a todas */}
+          {mostrarCalendario || fechaSeleccionada ? (
+            <button
+              type="button"
+              onClick={volverATodas}
+              className={`${btnBase} ${btnPrimary} w-full`}
+            >
+              Ver todas las clases
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMostrarCalendario(true)}
+              className={`${btnBase} ${btnPrimary} w-full`}
+            >
+              Elegir por fecha
+            </button>
+          )}
+
           {/* Calendario */}
-          <section className={formCardClass}>
-            <div className="mb-3 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={irMesAnterior}
-                aria-label="Mes anterior"
-                className="flex h-8 w-8 items-center justify-center rounded-ks-full border-none bg-ks-gray-soft text-sm text-ks-gray-text hover:bg-ks-green-pale hover:text-ks-green-dark"
-              >
-                ‹
-              </button>
+          {(mostrarCalendario || fechaSeleccionada) && (
+            <section className={formCardClass}>
+              <div className="mb-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={irMesAnterior}
+                  aria-label="Mes anterior"
+                  className="flex h-8 w-8 items-center justify-center rounded-ks-full border-none bg-ks-gray-soft text-sm text-ks-gray-text hover:bg-ks-green-pale hover:text-ks-green-dark"
+                >
+                  ‹
+                </button>
 
-              <span className="font-outfit text-sm font-bold tracking-[0.5px] text-ks-text-dark">
-                {MESES[viewMes]} {viewAnio}
-              </span>
-
-              <button
-                type="button"
-                onClick={irMesSiguiente}
-                aria-label="Mes siguiente"
-                className="flex h-8 w-8 items-center justify-center rounded-ks-full border-none bg-ks-gray-soft text-sm text-ks-gray-text hover:bg-ks-green-pale hover:text-ks-green-dark"
-              >
-                ›
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {DIAS_SEMANA.map((d, i) => (
-                <span key={i} className="py-1 font-outfit text-[11px] font-bold tracking-[1px] text-ks-gray-text/70">
-                  {d}
+                <span className="font-outfit text-sm font-bold tracking-[0.5px] text-ks-text-dark">
+                  {MESES[viewMes]} {viewAnio}
                 </span>
-              ))}
 
-              {celdas.map((dia, i) => {
-                if (dia === null) return <span key={`vacio-${i}`} />
+                <button
+                  type="button"
+                  onClick={irMesSiguiente}
+                  aria-label="Mes siguiente"
+                  className="flex h-8 w-8 items-center justify-center rounded-ks-full border-none bg-ks-gray-soft text-sm text-ks-gray-text hover:bg-ks-green-pale hover:text-ks-green-dark"
+                >
+                  ›
+                </button>
+              </div>
 
-                const fecha = toFecha(viewAnio, viewMes, dia)
-                const tieneClase = fechasConClase.has(fecha)
-                const seleccionado = fechaSeleccionada === fecha
-                const esHoy = fecha === fechaHoy
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {DIAS_SEMANA.map((d, i) => (
+                  <span key={i} className="py-1 font-outfit text-[11px] font-bold tracking-[1px] text-ks-gray-text/70">
+                    {d}
+                  </span>
+                ))}
 
-                return (
-                  <button
-                    key={fecha}
-                    type="button"
-                    onClick={() => setFechaSeleccionada(seleccionado ? null : fecha)}
-                    className={[
-                      'relative flex h-10 flex-col items-center justify-center gap-0.5 rounded-ks-md text-sm transition-colors',
-                      seleccionado
-                        ? 'bg-ks-green-mid font-semibold text-white'
-                        : esHoy
-                          ? 'border-[1.5px] border-ks-green-mid text-ks-text-dark hover:bg-ks-green-pale'
-                          : 'text-ks-text-dark hover:bg-ks-green-pale',
-                    ].join(' ')}
-                  >
-                    {dia}
-                    <span
+                {celdas.map((dia, i) => {
+                  if (dia === null) return <span key={`vacio-${i}`} />
+
+                  const fecha = toFecha(viewAnio, viewMes, dia)
+                  const tieneClase = fechasConClase.has(fecha)
+                  const seleccionado = fechaSeleccionada === fecha
+                  const esHoy = fecha === fechaHoy
+
+                  return (
+                    <button
+                      key={fecha}
+                      type="button"
+                      onClick={() => setFechaSeleccionada(seleccionado ? null : fecha)}
                       className={[
-                        'h-1 w-1 rounded-full',
-                        tieneClase ? (seleccionado ? 'bg-white' : 'bg-ks-green-mid') : 'bg-transparent',
+                        'relative flex h-10 flex-col items-center justify-center gap-0.5 rounded-ks-md text-sm transition-colors',
+                        seleccionado
+                          ? 'bg-ks-green-mid font-semibold text-white'
+                          : esHoy
+                            ? 'border-[1.5px] border-ks-green-mid text-ks-text-dark hover:bg-ks-green-pale'
+                            : 'text-ks-text-dark hover:bg-ks-green-pale',
                       ].join(' ')}
-                    />
-                  </button>
-                )
-              })}
-            </div>
-
-            {fechaSeleccionada && (
-              <button
-                type="button"
-                onClick={() => setFechaSeleccionada(null)}
-                className="mt-3 text-[13px] font-medium text-ks-green-mid hover:underline"
-              >
-                Ver todas las clases
-              </button>
-            )}
-          </section>
+                    >
+                      {dia}
+                      <span
+                        className={[
+                          'h-1 w-1 rounded-full',
+                          tieneClase ? (seleccionado ? 'bg-white' : 'bg-ks-green-mid') : 'bg-transparent',
+                        ].join(' ')}
+                      />
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Listado de clases */}
           <section className="grid gap-2.5">
             {clasesAMostrar.length === 0 ? (
               <div className={`${formCardClass} text-sm text-ks-gray-text`}>
-                {fechaSeleccionada
-                  ? 'No hay clases registradas para esa fecha.'
-                  : 'Todavía no hay clases registradas.'}
+                {mostrarCalendario && !fechaSeleccionada
+                  ? 'Elegí una fecha en el calendario para ver sus clases.'
+                  : fechaSeleccionada
+                    ? 'No hay clases registradas para esa fecha.'
+                    : 'Todavía no hay clases registradas.'}
               </div>
             ) : (
               clasesAMostrar.map((clase) => (
