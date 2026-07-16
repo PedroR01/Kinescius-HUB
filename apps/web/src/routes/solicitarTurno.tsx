@@ -44,6 +44,7 @@ function RouteComponent() {
     error,
     enrolledClassIds,
     montoAFavor,
+    clasesAFavor,
     setMontoAFavor,
     refresh,
   } = useTurnosData(clienteId);
@@ -214,12 +215,13 @@ function RouteComponent() {
         </section>
       )}
 
-      <CartFloatingBar count={cartCount} onCheckout={handleCartCheckout} />
+      <CartFloatingBar count={cartCount} clasesAFavor={clasesAFavor} onCheckout={handleCartCheckout} />
 
       <PaymentSummaryModal
         isOpen={isPaymentModalOpen}
         items={checkoutItems}
         montoAFavor={montoAFavor}
+        clasesAFavor={clasesAFavor}
         clienteId={clienteId}
         allowRemove={checkoutFromCart}
         onClose={closeCheckout}

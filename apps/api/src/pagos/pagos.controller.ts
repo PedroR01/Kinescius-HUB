@@ -11,6 +11,7 @@ export type CreatePreferenceBody = {
     clases: ClasePayload[];
     clienteId: number;
     montoAFavorAplicado?: number;
+    clasesFavorAplicadas: number;
 };
 
 // Tipo de dato de notificaciones concreto manejado por el webhook de mercadopago.

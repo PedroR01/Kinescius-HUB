@@ -7,17 +7,21 @@ import { useClassFetcher } from "./useClassFetcher";
 export function useTurnosData(clienteId: number | null) {
   const [enrolledClassIds, setEnrolledClassIds] = useState<Set<number>>(() => new Set());
   const [montoAFavor, setMontoAFavor] = useState(0);
+  const [clasesAFavor, setClasesAFavor] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = useCallback(() => {
     setRefreshKey((key) => key + 1);
   }, []);
 
-  const {classes, loading, error} = useClassFetcher();
+  const { classes, loading, error } = useClassFetcher();
 
   useEffect(() => {
     if (!clienteId) return;
-    void fetchMontoAFavor(clienteId).then(setMontoAFavor);
+    void fetchMontoAFavor(clienteId).then((res) => {
+      setMontoAFavor(res.monto_a_favor);
+      setClasesAFavor(res.clases_a_favor);
+    });
   }, [clienteId, refreshKey]);
 
   useEffect(() => {
@@ -44,6 +48,7 @@ export function useTurnosData(clienteId: number | null) {
     error,
     enrolledClassIds,
     montoAFavor,
+    clasesAFavor,
     setMontoAFavor,
     refresh,
   };

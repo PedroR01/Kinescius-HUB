@@ -22,16 +22,20 @@ const ADMIN_ACTIONS: DashboardAction[] = [
     to: "/recordatorios",
     description: "Configurá el horario de envío automático"
   },
-<<<<<<< HEAD
   {
     label: "Enviar notificación",
     to: "/notificacionManual",
     description: "Mandale un mail puntual a un cliente"
-=======
-    {
+  },
+  {
     label: "Ver libro de quejas",
     to: "/ver-libro-de-quejas",
     description: "Consultar comentarios y calificaciones de los clientes"
+  },
+  {
+    label: "Ver presentismo",
+    to: "/verPresentismo",
+    description: "Consultá la asistencia de los alumnos por clase"
 >>>>>>> f5d3d736c8ff94970168a5b3fa926a3fea3a3f63
   }
 ];
