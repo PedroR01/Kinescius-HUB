@@ -278,7 +278,7 @@ export class ShiftsService {
       throw new BadRequestException('No se pudo procesar la inscripción en la nueva clase.');
     }
 
-    // 👇 Al cambiar turno también se libera un cupo en la clase original
+    //Al cambiar turno también se libera un cupo en la clase original
     await this.notificacionEspera.notificarProximoEnEspera(claseActualId);
 
     return {

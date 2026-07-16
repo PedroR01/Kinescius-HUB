@@ -391,6 +391,12 @@ export class PagosService implements OnModuleInit {
             .insert(pago);
         if (pagoError) throw new Error(pagoError.message);
 
+        await this.supabaseService.client
+            .from('Estado_Cliente')
+            .update({ id_pago_abonado: Number(paymentId) })
+            .eq('id', persona.id);
+
+
         return { received: true };
     }
 }
