@@ -23,6 +23,7 @@ export class ShiftsService {
 
   async cancelar(cancelarTurnoDto: CancelarTurnoDto) {
     const { clienteId, claseId, tipoReembolso } = cancelarTurnoDto;
+    console.log(`\n[INIT CANCELACIÓN] Cliente ${clienteId} intenta cancelar clase ${claseId}`);
 
     // 1. Obtener inscripción
     const { data: inscripcion, error: errorInscripcion } = await this.supabase.client
@@ -48,16 +49,9 @@ export class ShiftsService {
       throw new NotFoundException('No se encontró la persona.');
     }
 
-    // Chequear penalización temporal en Estado_Cliente
-    const { data: estadoCliente } = await this.supabase.client
-      .from('Estado_Cliente')
-      .select('penalizado_hasta')
-      .eq('id', clienteId)
-      .single();
+    const esAbonado = persona.rol === 3;
 
-    const penalizacionActiva = estadoCliente?.penalizado_hasta
-      && new Date(estadoCliente.penalizado_hasta) > new Date();
-    const esAbonado = persona.rol === 3 && !penalizacionActiva;
+    console.log(`[Datos Cliente/Clase] Rol: ${persona.rol} (Es Abonado: ${esAbonado}), Estado pago: ${inscripcion.estado}, Pagó con monto a favor: ${Boolean(inscripcion.monto_a_favor)}`);
 
     // Validación de reembolso solo para no-abonados (los abonados se validan en la strategy)
     if (
@@ -73,6 +67,7 @@ export class ShiftsService {
     const datosTurno = {
       fecha: inscripcion.clase.fecha,
       hora: inscripcion.clase.hora,
+      monto_a_favor: Boolean(inscripcion.monto_a_favor),
     };
 
     // 3. Seleccionar estrategia
@@ -90,18 +85,10 @@ export class ShiftsService {
         .gte('Clase.fecha', `${mesClase}-01`)
         .lte('Clase.fecha', `${mesClase}-31`);
 
-      // Contar inscripciones activas del abonado en el mes de la clase
-      const { count: clasesInscriptasEnMes } = await this.supabase.client
-        .from('Se_inscribe')
-        .select('*, Clase!inner(fecha)', { count: 'exact', head: true })
-        .eq('id_cliente', clienteId)
-        .or('historial_estado.eq.Activa,historial_estado.is.null,historial_estado.eq.Completada')
-        .gte('Clase.fecha', `${mesClase}-01`)
-        .lte('Clase.fecha', `${mesClase}-31`);
+      console.log(`[Reglas Abonado] Mes analizado: ${mesClase}, Cancelaciones previas encontradas este mes: ${cancelacionesEnMes}`);
 
       estrategia = new CancelacionAbonadoStrategy(
-        cancelacionesEnMes ?? 0,
-        clasesInscriptasEnMes ?? 0,
+        cancelacionesEnMes ?? 0
       );
     } else {
       estrategia = new CancelacionNoAbonadoStrategy();
@@ -109,11 +96,13 @@ export class ShiftsService {
 
     const resultado = estrategia.evaluarReglas(datosTurno, cancelarTurnoDto);
 
+    console.log(`[Resultado Estrategia] Reembolso: ${resultado.reembolsoAplicado}, Pierde Beneficio Abonado: ${resultado.pierdeBeneficioAbonado}, Mensaje: "${resultado.mensaje}"`);
+
     let detalleReembolso: ResultadoReembolso | null = null;
 
     if (resultado.permitido) {
       // 4. Ejecutar reembolso si corresponde (usar la decisión de la strategy, no del DTO)
-      if (debeEjecutarReembolso(resultado.reembolsoAplicado, inscripcion.estado)) {
+      if (debeEjecutarReembolso(resultado.reembolsoAplicado, inscripcion.estado, esAbonado)) {
         detalleReembolso = await this.reembolsoService.ejecutarReembolso(
           inscripcion,
           resultado.reembolsoAplicado,
@@ -148,7 +137,7 @@ export class ShiftsService {
     }
 
     return {
-      message: construirMensajeReembolso(
+      message: esAbonado ? resultado.mensaje : construirMensajeReembolso(
         resultado.mensaje,
         resultado.reembolsoAplicado,
         detalleReembolso,
@@ -179,6 +168,7 @@ export class ShiftsService {
 
   async procesarCambioTurno(dto: CambiarTurnoDto) {
     const { clienteId, claseActualId, claseNuevaId } = dto;
+    console.log(`\n[INIT CAMBIO] Cliente ${clienteId} intenta cambiar de ${claseActualId} a ${claseNuevaId}`);
 
     const { data: claseActual, error: errorC1 } = await this.supabase.client
       .from('Clase')
@@ -250,6 +240,11 @@ export class ShiftsService {
       throw new BadRequestException('La clase destino no tiene cupos disponibles.');
     }
 
+    console.log(`\n[CAMBIO DE TURNO] ---------------------------------`);
+    console.log(`[Clase A - Original]: ${claseActualId}`);
+    console.log(`[Clase B - Nueva]: ${claseNuevaId}`);
+    console.log(`[Cliente]: ${clienteId}`);
+
     // Marcar la original como Cambiada (soft-delete)
     const { error: errorUpdateOriginal } = await this.supabase.client
       .from('Se_inscribe')
@@ -262,21 +257,56 @@ export class ShiftsService {
       throw new BadRequestException('No se pudo procesar la reasignación del turno original.');
     }
 
-    // Insertar la nueva inscripción copiando los datos relevantes de pago
-    const { error: errorInsertNueva } = await this.supabase.client
-      .from('Se_inscribe')
-      .insert({
-        id_cliente: clienteId,
-        id_clase: claseNuevaId,
-        estado: inscripcionOriginal.estado,
-        id_pago_mp: inscripcionOriginal.id_pago_mp,
-        monto_a_favor: inscripcionOriginal.monto_a_favor,
-        historial_estado: 'Activa'
-      });
+    console.log(`[Clase A] Actualizada a estado 'Cambiada' exitosamente.`);
 
-    if (errorInsertNueva) {
-      throw new BadRequestException('No se pudo procesar la inscripción en la nueva clase.');
+    // Insertar la nueva inscripción copiando los datos relevantes de pago
+    // Como upsert falla a veces con claves compuestas, lo hacemos en dos pasos:
+    const { data: existeNueva } = await this.supabase.client
+      .from('Se_inscribe')
+      .select('id_cliente')
+      .eq('id_cliente', clienteId)
+      .eq('id_clase', claseNuevaId)
+      .maybeSingle();
+
+    console.log(`[Clase B] ¿El cliente ya tenía registro en Clase B?: ${existeNueva ? 'SÍ (haciendo UPDATE)' : 'NO (haciendo INSERT)'}`);
+
+    let errorUpsertNueva;
+
+    if (existeNueva) {
+      const { error } = await this.supabase.client
+        .from('Se_inscribe')
+        .update({
+          estado: inscripcionOriginal.estado,
+          id_pago_mp: inscripcionOriginal.id_pago_mp,
+          monto_a_favor: inscripcionOriginal.monto_a_favor,
+          historial_estado: 'Activa',
+          reembolsado_at: null
+        })
+        .eq('id_cliente', clienteId)
+        .eq('id_clase', claseNuevaId);
+      errorUpsertNueva = error;
+    } else {
+      const { error } = await this.supabase.client
+        .from('Se_inscribe')
+        .insert({
+          id_cliente: clienteId,
+          id_clase: claseNuevaId,
+          estado: inscripcionOriginal.estado,
+          id_pago_mp: inscripcionOriginal.id_pago_mp,
+          monto_a_favor: inscripcionOriginal.monto_a_favor,
+          historial_estado: 'Activa',
+          reembolsado_at: null
+        });
+      errorUpsertNueva = error;
     }
+
+    if (errorUpsertNueva) {
+      console.error('Error al registrar al cliente en la nueva clase:', errorUpsertNueva);
+      throw new BadRequestException('No se pudo procesar la inscripción en la nueva clase: ' + errorUpsertNueva.message);
+    }
+
+    console.log(`[Clase B] Cliente inscripto exitosamente con estado 'Activa'.`);
+    console.log(`[CAMBIO DE TURNO] FIN -----------------------------\n`);
 
     // 👇 Al cambiar turno también se libera un cupo en la clase original
     await this.notificacionEspera.notificarProximoEnEspera(claseActualId);

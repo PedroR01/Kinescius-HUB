@@ -5,8 +5,12 @@ import { SupabaseService } from '../integrations/supabase/supabase.service';
 import { EmailService } from '../email/email.service';
 
 const CRON_TURNO_KEY = 'recordatorio-turno';
+const CRON_PAGO_KEY = 'recordatorio-pago';
 const DEFAULT_HORA = 15;
 const DEFAULT_MINUTO = 45;
+const DIAS_ABONO = 30;
+const DIAS_GRACIA_AVISO = 9;
+const UMBRAL_DIAS = DIAS_ABONO + DIAS_GRACIA_AVISO; // 39
 
 @Injectable()
 export class RecordatoriosService implements OnModuleInit {
@@ -19,16 +23,28 @@ export class RecordatoriosService implements OnModuleInit {
   ) { }
 
   async onModuleInit() {
-    const { hora, minuto } = await this.leerHorarioDesdeBD();
-    this.registrarCronTurno(hora, minuto);
-    this.logger.log(`Cron de recordatorio de turno registrado a las ${hora}:${String(minuto).padStart(2, '0')}`);
+    const horarioTurno = await this.leerHorarioDesdeBD('turno');
+    this.registrarCron(CRON_TURNO_KEY, horarioTurno.hora, horarioTurno.minuto, () => {
+      void this.enviarRecordatoriosDiarios();
+    });
+    this.logger.log(`Cron de recordatorio de turno registrado a las ${horarioTurno.hora}:${String(horarioTurno.minuto).padStart(2, '0')}`);
+
+    const horarioPago = await this.leerHorarioDesdeBD('pago');
+    this.registrarCron(CRON_PAGO_KEY, horarioPago.hora, horarioPago.minuto, () => {
+      void this.enviarRecordatoriosPago();
+    });
+    this.logger.log(`Cron de recordatorio de pago registrado a las ${horarioPago.hora}:${String(horarioPago.minuto).padStart(2, '0')}`);
   }
 
   // ── Configuración ──────────────────────────────────────────────
 
   async obtenerHorarios() {
-    const { hora, minuto } = await this.leerHorarioDesdeBD();
-    return { tipo: 'turno', hora, minuto };
+    const turno = await this.leerHorarioDesdeBD('turno');
+    const pago = await this.leerHorarioDesdeBD('pago');
+    return {
+      turno: { tipo: 'turno', hora: turno.hora, minuto: turno.minuto },
+      pago: { tipo: 'pago', hora: pago.hora, minuto: pago.minuto },
+    };
   }
 
   async actualizarHorario(hora: number, minuto: number) {
@@ -42,29 +58,64 @@ export class RecordatoriosService implements OnModuleInit {
       throw new Error(`Error al actualizar horario: ${error.message}`);
     }
 
-    // Re-registrar el cron con el nuevo horario
     this.eliminarCronSiExiste(CRON_TURNO_KEY);
-    this.registrarCronTurno(hora, minuto);
-    this.logger.log(`Horario de recordatorio actualizado a ${hora}:${String(minuto).padStart(2, '0')}`);
+    this.registrarCron(CRON_TURNO_KEY, hora, minuto, () => {
+      void this.enviarRecordatoriosDiarios();
+    });
+    this.logger.log(`Horario de recordatorio de turno actualizado a ${hora}:${String(minuto).padStart(2, '0')}`);
 
     return { message: 'Horario cambiado con éxito' };
   }
 
+  async actualizarHorarioPago(hora: number, minuto: number) {
+    // Intentar actualizar; si no existe, insertar
+    const { data, error } = await this.supabase.client
+      .from('Configuracion_Recordatorio')
+      .update({ hora, minuto, updated_at: new Date().toISOString() })
+      .eq('tipo', 'pago')
+      .select();
+
+    if (error) {
+      this.logger.error('Error al actualizar horario de pago en BD:', error);
+      throw new Error(`Error al actualizar horario de pago: ${error.message}`);
+    }
+
+    // Si no había registro, insertarlo
+    if (!data || data.length === 0) {
+      const { error: insertError } = await this.supabase.client
+        .from('Configuracion_Recordatorio')
+        .insert({ tipo: 'pago', hora, minuto });
+
+      if (insertError) {
+        this.logger.error('Error al insertar horario de pago en BD:', insertError);
+        throw new Error(`Error al insertar horario de pago: ${insertError.message}`);
+      }
+    }
+
+    this.eliminarCronSiExiste(CRON_PAGO_KEY);
+    this.registrarCron(CRON_PAGO_KEY, hora, minuto, () => {
+      void this.enviarRecordatoriosPago();
+    });
+    this.logger.log(`Horario de recordatorio de pago actualizado a ${hora}:${String(minuto).padStart(2, '0')}`);
+
+    return { message: 'Horario de recordatorio de pago cambiado con éxito' };
+  }
+
   // ── Helpers de cron ────────────────────────────────────────────
 
-  private registrarCronTurno(hora: number, minuto: number) {
+  private registrarCron(key: string, hora: number, minuto: number, callback: () => void) {
     const cronExpression = `0 ${minuto} ${hora} * * *`;
 
     const job = new CronJob(
       cronExpression,
-      () => { void this.enviarRecordatoriosDiarios(); },
+      callback,
       null,
       true,
       'America/Argentina/Buenos_Aires',
     );
 
-    this.eliminarCronSiExiste(CRON_TURNO_KEY);
-    this.schedulerRegistry.addCronJob(CRON_TURNO_KEY, job);
+    this.eliminarCronSiExiste(key);
+    this.schedulerRegistry.addCronJob(key, job);
   }
 
   private eliminarCronSiExiste(name: string) {
@@ -75,15 +126,15 @@ export class RecordatoriosService implements OnModuleInit {
     }
   }
 
-  private async leerHorarioDesdeBD(): Promise<{ hora: number; minuto: number }> {
+  private async leerHorarioDesdeBD(tipo: string): Promise<{ hora: number; minuto: number }> {
     const { data, error } = await this.supabase.client
       .from('Configuracion_Recordatorio')
       .select('hora, minuto')
-      .eq('tipo', 'turno')
+      .eq('tipo', tipo)
       .single();
 
     if (error || !data) {
-      this.logger.warn('No se encontró configuración de horario, usando default 15:45');
+      this.logger.warn(`No se encontró configuración de horario para '${tipo}', usando default ${DEFAULT_HORA}:${String(DEFAULT_MINUTO).padStart(2, '0')}`);
       return { hora: DEFAULT_HORA, minuto: DEFAULT_MINUTO };
     }
 
@@ -113,10 +164,10 @@ export class RecordatoriosService implements OnModuleInit {
     return { id: persona.id, rol: persona.rol };
   }
 
-  // ── Envío de recordatorios ─────────────────────────────────────
+  // ── Envío de recordatorios de turno ───────────────────────────
 
   async enviarRecordatoriosDiarios() {
-    this.logger.log('Iniciando proceso automático de envío de recordatorios...');
+    this.logger.log('Iniciando proceso automático de envío de recordatorios de turno...');
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Argentina/Buenos_Aires',
       year: 'numeric', month: '2-digit', day: '2-digit'
@@ -168,12 +219,10 @@ export class RecordatoriosService implements OnModuleInit {
 
       if (persona?.mail) {
         try {
-          // TODO: Para producción, reemplazar 'correoDestino' por 'persona.mail'
-          // Por el momento se usa el correo verificado en Resend para la demostración.
           const correoDestino = persona.mail;
 
           await this.emailService.enviarCorreo(
-            correoDestino, // <- En producción esto será: persona.mail
+            correoDestino,
             'Recordatorio de tu turno en Kinescius',
             `<p>Hola ${persona.nombre},</p>
            <p>Te recordamos que mañana <strong>${clase.fecha}</strong> a las <strong>${clase.hora.slice(0, 5)} hs</strong> tenés tu sesión de ${clase.tipo}.</p>
@@ -185,5 +234,113 @@ export class RecordatoriosService implements OnModuleInit {
         }
       }
     }
+  }
+
+  // ── Envío de recordatorios de pago ────────────────────────────
+
+  async enviarRecordatoriosPago() {
+    this.logger.log('Iniciando proceso automático de envío de recordatorios de pago...');
+
+    // 1. Obtener todos los abonados (rol = 3)
+    const { data: abonados, error: errorAbonados } = await this.supabase.client
+      .from('Persona_')
+      .select('id, nombre, mail')
+      .eq('rol', 3);
+
+    console.log('[Punto 1] Abonados encontrados:', abonados);
+
+    if (errorAbonados) {
+      this.logger.error('Error al obtener abonados:', errorAbonados);
+      return;
+    }
+
+    if (!abonados || abonados.length === 0) {
+      this.logger.log('No hay abonados registrados.');
+      return;
+    }
+
+    const abonadoIds = abonados.map((a: any) => a.id);
+
+    // 2. Obtener Estado_Cliente con id_pago_abonado para cada abonado
+    const { data: estadosCliente, error: errorEstados } = await this.supabase.client
+      .from('Estado_Cliente')
+      .select('id, id_pago_abonado')
+      .in('id', abonadoIds)
+      .not('id_pago_abonado', 'is', null);
+
+    console.log('[Punto 2] Estados_Cliente encontrados:', estadosCliente);
+
+    if (errorEstados) {
+      this.logger.error('Error al obtener Estado_Cliente:', errorEstados);
+      return;
+    }
+
+    if (!estadosCliente || estadosCliente.length === 0) {
+      this.logger.log('Ningún abonado tiene un pago de abono registrado.');
+      return;
+    }
+
+    // 3. Obtener los pagos correspondientes
+    const pagoIds = estadosCliente.map((e: any) => e.id_pago_abonado);
+    const { data: pagos, error: errorPagos } = await this.supabase.client
+      .from('Pago')
+      .select('id_pago, fecha')
+      .in('id_pago', pagoIds);
+
+    console.log('[Punto 3] Pagos encontrados:', pagos);
+
+    if (errorPagos) {
+      this.logger.error('Error al obtener pagos:', errorPagos);
+      return;
+    }
+
+    const pagoMap = new Map((pagos ?? []).map((p: any) => [p.id_pago, p]));
+    const abonadoMap = new Map(abonados.map((a: any) => [a.id, a]));
+
+    // 4. Calcular diferencia de días y enviar recordatorios
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    let enviados = 0;
+
+    for (const estado of estadosCliente) {
+      const pago = pagoMap.get(estado.id_pago_abonado);
+      if (!pago || !pago.fecha) continue;
+
+      const fechaPago = new Date(pago.fecha);
+      fechaPago.setHours(0, 0, 0, 0);
+
+      const diffMs = hoy.getTime() - fechaPago.getTime();
+      const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24)) - 1;
+
+      console.log(`[Punto 4] Abonado ID ${estado.id} | Fecha Pago DB: ${pago.fecha} | Días transcurridos: ${diffDias}`);
+
+      if (diffDias === UMBRAL_DIAS) {
+        const abonado = abonadoMap.get(estado.id);
+        if (!abonado?.mail) continue;
+
+        try {
+          await this.emailService.enviarCorreo(
+            abonado.mail,
+            'Recordatorio de pago — Kinescius',
+            `
+            <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; color: #0d1f18;">
+              <h2 style="color: #2DBE7F;">Recordatorio de pago</h2>
+              <p>Hola <strong>${abonado.nombre}</strong>,</p>
+              <p>Te informamos que tu abono venció hace <strong>${diffDias - DIAS_ABONO} días</strong>.</p>
+              <p>Si no realizás el pago <strong>antes de mañana</strong>, tu cuenta será suspendida y perderás los beneficios de abonado.</p>
+              <p>Podés abonar desde la aplicación.</p>
+              <p style="color: #888; font-size: 12px; margin-top: 32px;">Este es un mensaje automático, por favor no respondas este email.</p>
+            </div>
+            `
+          );
+          enviados++;
+          this.logger.log(`Recordatorio de pago enviado a ${abonado.nombre} (${abonado.mail}) — ${diffDias} días desde último pago`);
+        } catch (err) {
+          this.logger.error(`Fallo al enviar recordatorio de pago a ${abonado.mail}`, err);
+        }
+      }
+    }
+    this.logger.log(`Proceso de recordatorios de pago finalizado. Enviados: ${enviados}`);
   }
 }

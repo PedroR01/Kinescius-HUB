@@ -36,7 +36,7 @@ const ADMIN_ACTIONS: DashboardAction[] = [
     label: "Ver presentismo",
     to: "/verPresentismo",
     description: "Consultá la asistencia de los alumnos por clase"
->>>>>>> f5d3d736c8ff94970168a5b3fa926a3fea3a3f63
+
   }
 ];
 
