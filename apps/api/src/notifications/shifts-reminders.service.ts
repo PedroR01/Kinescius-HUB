@@ -34,6 +34,12 @@ export class RecordatoriosService implements OnModuleInit {
       void this.enviarRecordatoriosPago();
     });
     this.logger.log(`Cron de recordatorio de pago registrado a las ${horarioPago.hora}:${String(horarioPago.minuto).padStart(2, '0')}`);
+
+    // Cron de suspensión: todos los días a las 00:05
+    this.registrarCron('verificacion-mensualidad', 0, 5, () => {
+      void this.verificarVencimientosMensualidad();
+    });
+    this.logger.log('Cron de verificación de vencimientos registrado a las 00:05');
   }
 
   // ── Configuración ──────────────────────────────────────────────
@@ -66,6 +72,7 @@ export class RecordatoriosService implements OnModuleInit {
 
     return { message: 'Horario cambiado con éxito' };
   }
+
 
   async actualizarHorarioPago(hora: number, minuto: number) {
     // Intentar actualizar; si no existe, insertar
@@ -343,4 +350,37 @@ export class RecordatoriosService implements OnModuleInit {
     }
     this.logger.log(`Proceso de recordatorios de pago finalizado. Enviados: ${enviados}`);
   }
+
+  // ── Suspención de abonados por falta de pago ────────────────────────────
+
+  async verificarVencimientosMensualidad() {
+    // 1. Traer clientes abonados activos con su pago
+    //    JOIN: Estado_Cliente → Pago (via id_pago_abonado)
+    const { data: clientes } = await this.supabase.client
+      .from('Estado_Cliente')
+      .select('id, id_pago_abonado, Pago!inner(fecha)')
+      .not('id_pago_abonado', 'is', null);
+
+    // 2. Para cada cliente, calcular días desde el último pago
+    const hoy = new Date();
+    const clientesAVencer = [];
+
+    for (const cliente of clientes!) {
+      const fechaPago = new Date((cliente as any).Pago.fecha);
+      const diasTranscurridos = (hoy.getTime() - fechaPago.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (diasTranscurridos > 40) {
+        clientesAVencer.push(cliente.id);
+      }
+    }
+
+    // 3. Suspender todos los vencidos de una vez
+    if (clientesAVencer.length > 0) {
+      await this.supabase.client
+        .from('Persona_')
+        .update({ activo: false })
+        .in('id', clientesAVencer);
+    }
+  }
+
 }
