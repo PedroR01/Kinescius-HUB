@@ -18,42 +18,52 @@ const ESTADO_CLASE_CANCELADA = 2;
 export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) { }
 
-  async findAll() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
+async findAll(pasadas = false) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split("T")[0];
 
-    const { data, error } = await this.supabaseService.client
-      .from("Clase")
-      .select(
-        "*, Se_inscribe(count), Profesor:Persona_!Clase_id_profesor_fkey(nombre, apellido)"
-      )
+  let query = this.supabaseService.client
+    .from("Clase")
+    .select(
+      "*, Se_inscribe(count), Profesor:Persona_!Clase_id_profesor_fkey(nombre, apellido)"
+    )
+    .neq("estado", ESTADO_CLASE_CANCELADA);
+
+    if (pasadas) {
+    // Clases que ya se dieron, más reciente primero
+    query = query
+      .lt("fecha", todayStr)
+      .order("fecha", { ascending: false })
+      .order("hora", { ascending: false });
+  } else {
+    // Clases de hoy en adelante (comportamiento original, para turnos)
+    query = query
       .gte("fecha", todayStr)
-      // FIX: antes no se filtraba por "estado", entonces clases canceladas
-      // (estado = 2) seguían apareciendo como disponibles para solicitar turno.
-      // Se excluyen acá, igual que en clasesAdmin/clases.service.Admin.ts.
-      .neq("estado", ESTADO_CLASE_CANCELADA)
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
-
-    if (error) {
-      throw new InternalServerErrorException(
-        `Error al obtener clases: ${error.message}`
-      );
-    }
-
-    return data.map((clase) => {
-      const inscriptos = Number(clase.Se_inscribe?.[0]?.count ?? 0);
-      const persona = clase.Profesor as any;
-      return {
-        ...clase,
-        cupo: (clase.cupo ?? 0) - inscriptos,
-        profesor: persona ? `${persona.nombre} ${persona.apellido}` : null,
-        Se_inscribe: undefined,
-        Profesor: undefined,
-      };
-    });
   }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new InternalServerErrorException(
+      `Error al obtener clases: ${error.message}`
+    );
+  }
+
+  return data.map((clase) => {
+    const inscriptos = Number(clase.Se_inscribe?.[0]?.count ?? 0);
+    const persona = clase.Profesor as any;
+    return {
+      ...clase,
+      cupo: (clase.cupo ?? 0) - inscriptos,
+      profesor: persona ? `${persona.nombre} ${persona.apellido}` : null,
+      Se_inscribe: undefined,
+      Profesor: undefined,
+    };
+  });
+}
 
   async getMontoAFavor(clienteId: number) {
     const { data, error } = await this.supabaseService.client

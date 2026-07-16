@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, BadRequestException } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Query, BadRequestException } from "@nestjs/common";
 import { ClasesService } from "./clases.service";
 import { CreateTurnoDto } from "./dto/create-turno.dto";
 import { InscribirConSaldoDto } from "./dto/inscribir-con-saldo.dto";
@@ -8,8 +8,8 @@ export class ClasesController {
   constructor(private readonly clasesService: ClasesService) {}
 
   @Get()
-  async findAll() {
-    return this.clasesService.findAll();
+  async findAll(@Query("pasadas") pasadas?: string) {
+    return this.clasesService.findAll(pasadas === "true");
   }
 
   @Get("cliente/:id/monto-a-favor")
