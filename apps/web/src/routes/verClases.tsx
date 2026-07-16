@@ -1,10 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { API_BASE } from '@/lib/constants'
-import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
+//import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import DatePicker from '@/components/DatePicker'
 import type { KinesciusClass } from '@/lib/class-interface'
 import { formatDate, formatTime } from '@/lib/utils'
+import { ArrowLeftIcon } from "lucide-react";
 
 export const Route = createFileRoute('/verClases')({
   component: RouteComponent,
@@ -77,7 +78,13 @@ function RouteComponent() {
 
   return (
     <main className='min-h-screen bg-white p-10 box-border'>
-      <BackPreviousRouteButton className="mb-6" />
+      {/* <BackPreviousRouteButton className="mb-6" /> */}
+      <Link
+        to="/home"
+        className="mb-6 inline-block size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
+      >
+        <ArrowLeftIcon className="size-6" />
+      </Link>
       <h1 className='text-(--text-style) mb-6'>Ver clases</h1>
 
       <div className='bg-(--card-style) rounded-2xl p-6 mb-6'>
