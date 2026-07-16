@@ -4,7 +4,7 @@ import { formatDate, formatTime } from '@/lib/utils'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import { btnBase, btnPrimary, formCardClass } from '@/lib/ks-page-styles'
-import { useClassFetcher } from '@/modules/turnos/hooks/useClassFetcher'
+import { useClasesPasadas } from '@/modules/turnos/hooks/useClasesPasadas'  
 
 type EstadoPresentismo = 'presente' | 'ausente'
 
@@ -63,8 +63,7 @@ export const Route = createFileRoute('/verPresentismo')({
 })
 
 function RouteComponent() {
-  const { classes: clases, loading, error } = useClassFetcher()
-
+const { classes: clases, loading, error } = useClasesPasadas()
   const hoy = new Date()
 
   const [viewAnio, setViewAnio] = useState(hoy.getFullYear())

@@ -3,12 +3,15 @@ import { SupabaseService } from '../integrations/supabase/supabase.service';
 
 export type EstadoPresentismo = 'presente' | 'ausente';
 
+const ESTADOS_CANCELADOS = ['cancelada', 'turno cancelado'];
+
 @Injectable()
 export class PresentismoService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async findByClase(claseId: number) {
-    // 1. Inscriptos a la clase (solo los que siguen activos, se excluyen cancelados)
+    // 1. Inscriptos a la clase (se excluyen solo los cancelados; se incluyen
+    // 'Activa', 'Completada', etc.)
     const { data: inscripciones, error: inscripcionesError } =
       await this.supabaseService.client
         .from('Se_inscribe')
@@ -23,9 +26,10 @@ export class PresentismoService {
 
     if (!inscripciones || inscripciones.length === 0) return [];
 
-    const inscriptosActivos = inscripciones.filter(
-      (i: any) => (i.historial_estado ?? 'Activa') === 'Activa',
-    );
+    const inscriptosActivos = inscripciones.filter((i: any) => {
+      const estado = (i.historial_estado ?? 'Activa').toLowerCase();
+      return !ESTADOS_CANCELADOS.includes(estado);
+    });
 
     if (inscriptosActivos.length === 0) return [];
 

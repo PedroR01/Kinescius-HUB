@@ -5,21 +5,27 @@ import { SupabaseService } from "../integrations/supabase/supabase.service";
 export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) { }
 
-  async findAll() {
-    const { data, error } = await this.supabaseService.client
-      .from("Clase")
-      .select("*")
-      .order("fecha", { ascending: true })
-      .order("hora", { ascending: true });
+async findAll() {
+  console.log('🔍 DEBUG findAll() EJECUTADO');
 
-    if (error) {
-      throw new InternalServerErrorException(
-        `Error al obtener clases: ${error.message}`
-      );
-    }
+  const { data, error } = await this.supabaseService.client
+    .from("Clase")
+    .select("*")
+    .order("fecha", { ascending: true })
+    .order("hora", { ascending: true });
 
-    return data;
+  if (error) {
+    throw new InternalServerErrorException(
+      `Error al obtener clases: ${error.message}`
+    );
   }
+
+  console.log('🔍 DEBUG cantidad de clases devueltas:', data?.length);
+  console.log('🔍 DEBUG primera fecha:', data?.[0]?.fecha);
+  console.log('🔍 DEBUG última fecha:', data?.[data.length - 1]?.fecha);
+
+  return data;
+}
 
   async obtenerClasesProfesor(bearerToken: string) {
     const personaId = await this.obtenerPersonaId(bearerToken);
