@@ -10,6 +10,10 @@ import { InscribirConSaldoDto } from "./dto/inscribir-con-saldo.dto";
 import { CLASS_UNIT_PRICE } from "../pagos/class-price.constant";
 import { inscripcionSoloSaldo } from "../pagos/inscripcion-desglose.util";
 
+// ID de la tabla "estado_clase" que corresponde a "Cancelada".
+// Debe coincidir con ESTADO_CLASE_CANCELADA de clases-admin.service.ts
+const ESTADO_CLASE_CANCELADA = 2;
+
 @Injectable()
 export class ClasesService {
   constructor(private readonly supabaseService: SupabaseService) { }
@@ -25,6 +29,10 @@ export class ClasesService {
         "*, Se_inscribe(count), Profesor:Persona_!Clase_id_profesor_fkey(nombre, apellido)"
       )
       .gte("fecha", todayStr)
+      // FIX: antes no se filtraba por "estado", entonces clases canceladas
+      // (estado = 2) seguían apareciendo como disponibles para solicitar turno.
+      // Se excluyen acá, igual que en clasesAdmin/clases.service.Admin.ts.
+      .neq("estado", ESTADO_CLASE_CANCELADA)
       .order("fecha", { ascending: true })
       .order("hora", { ascending: true });
 
@@ -50,7 +58,7 @@ export class ClasesService {
   async getMontoAFavor(clienteId: number) {
     const { data, error } = await this.supabaseService.client
       .from("Estado_Cliente")
-      .select("monto_favor")
+      .select("monto_favor, clases_favor")
       .eq("id", clienteId)
       .single();
 
@@ -60,7 +68,7 @@ export class ClasesService {
       );
     }
 
-    return { monto_a_favor: data.monto_favor };
+    return { monto_a_favor: data.monto_favor, clases_a_favor: data.clases_favor };
   }
 
   private async verificarConflictoHorario(clienteId: number, claseId: number): Promise<void> {
@@ -94,6 +102,30 @@ export class ClasesService {
   }
 
   async createTurno(claseId: number, dto: CreateTurnoDto) {
+    // FIX: antes se permitía crear un turno para cualquier clase existente,
+    // sin chequear si esa clase estaba cancelada. Ahora se valida el estado
+    // de la clase antes de aceptar la inscripción, por si el request llega
+    // directo al endpoint (sin pasar por el listado ya filtrado del frontend).
+    const { data: claseData, error: claseError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id, estado")
+      .eq("id", claseId)
+      .maybeSingle();
+
+    if (claseError) {
+      throw new InternalServerErrorException(
+        `Error al verificar la clase: ${claseError.message}`
+      );
+    }
+
+    if (!claseData) {
+      throw new BadRequestException(`La clase ${claseId} no existe.`);
+    }
+
+    if (claseData.estado === ESTADO_CLASE_CANCELADA) {
+      throw new BadRequestException("No se puede reservar turno: la clase está cancelada.");
+    }
+
     const { data: existing, error: selectError } = await this.supabaseService.client
       .from("Se_inscribe")
       .select("id_cliente,id_clase")
@@ -145,28 +177,44 @@ export class ClasesService {
   }
 
   async inscribirConSaldo(dto: InscribirConSaldoDto) {
-    const { clienteId, clases, montoAFavorAplicado } = dto;
+    const { clienteId, clases, montoAFavorAplicado, clasesFavorAplicadas } = dto;
 
     if (!clases.length) {
       throw new BadRequestException("Debe incluir al menos una clase.");
     }
 
-    const subtotal = clases.length * CLASS_UNIT_PRICE;
-    if (montoAFavorAplicado < subtotal) {
-      throw new BadRequestException(
-        "El monto a favor debe cubrir el total para inscribir sin Mercado Pago."
-      );
-    }
-
     const { data: cliente, error: clienteError } = await this.supabaseService.client
       .from("Estado_Cliente")
-      .select("monto_favor")
+      .select("monto_favor, clases_favor")
       .eq("id", clienteId)
       .single();
 
     if (clienteError || !cliente) {
       throw new InternalServerErrorException(
         `Error al obtener saldo del cliente: ${clienteError?.message}`
+      );
+    }
+
+    const clasesFavorDisponibles = cliente.clases_favor || 0;
+    const clasesFavorUsadas = Math.min(clases.length, clasesFavorDisponibles);
+
+    const subtotal = (clases.length - clasesFavorUsadas) * CLASS_UNIT_PRICE;
+    const clasesActualizadas = clasesFavorDisponibles - clasesFavorUsadas;
+
+    if (montoAFavorAplicado < subtotal) {
+      throw new BadRequestException(
+        "El monto a favor debe cubrir el total para inscribir sin Mercado Pago."
+      );
+    }
+
+    const { error: errorActualizacion } = await this.supabaseService.client
+      .from("Estado_Cliente")
+      .update({ clases_favor: clasesActualizadas })
+      .eq("id", clienteId);
+
+    if (errorActualizacion) {
+      throw new InternalServerErrorException(
+        `No se pudo actualizar la cantidad de clases a favor: ${errorActualizacion.message}`
       );
     }
 
@@ -178,12 +226,18 @@ export class ClasesService {
     for (const clase of clases) {
       const { data: claseData, error: claseError } = await this.supabaseService.client
         .from("Clase")
-        .select("id, cupo")
+        .select("id, cupo, estado")
         .eq("id", clase.id)
         .single();
 
       if (claseError || !claseData) {
         throw new BadRequestException(`La clase ${clase.id} no existe.`);
+      }
+
+      // FIX: mismo chequeo que en createTurno, para que tampoco se pueda
+      // inscribir con saldo a favor en una clase cancelada.
+      if (claseData.estado === ESTADO_CLASE_CANCELADA) {
+        throw new BadRequestException(`La clase ${clase.id} está cancelada.`);
       }
 
       const { count: inscriptos, error: countError } = await this.supabaseService.client
@@ -227,7 +281,7 @@ export class ClasesService {
     const inscripciones = clases.map((clase) => ({
       id_cliente: clienteId,
       id_clase: clase.id,
-      estado: "pagado",
+      estado: "reservado",
       id_pago_mp: datosPago.id_pago_mp,
       monto_a_favor: datosPago.monto_a_favor,
     }));

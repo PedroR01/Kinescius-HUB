@@ -5,12 +5,14 @@ export type CreatePreferencePayload = {
   clases: ClasePayload[];
   clienteId: number;
   montoAFavorAplicado?: number;
+  clasesFavorAplicadas?: number;
 };
 
 export type InscribirConSaldoPayload = {
   clienteId: number;
   clases: { id: number }[];
   montoAFavorAplicado: number;
+  clasesFavorAplicadas?: number;
 };
 
 export type InscribirConSaldoResponse = {
@@ -73,11 +75,17 @@ export async function inscribirConSaldoAFavor(
   return response.json();
 }
 
-export async function fetchMontoAFavor(clienteId: number): Promise<number> {
+export async function fetchMontoAFavor(clienteId: number): Promise<{ monto_a_favor: number; clases_a_favor: number }> {
   const response = await fetch(`${API_BASE}/clases/cliente/${clienteId}/monto-a-favor`);
-  if (!response.ok) return 0;
-  const data = (await response.json()) as { monto_a_favor?: number };
-  return Number(data.monto_a_favor) ?? 0;
+  //Agrego el uso de las clases a favor
+  if (!response.ok) return { monto_a_favor: 0, clases_a_favor: 0 };
+
+  const data = (await response.json()) as { monto_a_favor?: number, clases_a_favor?: number };
+
+  return {
+    monto_a_favor: Number(data.monto_a_favor) || 0,
+    clases_a_favor: Number(data.clases_a_favor) || 0,
+  };
 }
 
 export async function createMensualidadPreference(payload: CreateMensualidadPayload) {

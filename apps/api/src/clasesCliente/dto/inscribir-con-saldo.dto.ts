@@ -23,4 +23,9 @@ export class InscribirConSaldoDto {
   @IsInt()
   @Min(0)
   montoAFavorAplicado!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  clasesFavorAplicadas!: number;
 }
