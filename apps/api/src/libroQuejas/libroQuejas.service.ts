@@ -15,6 +15,9 @@ import { CreateQuejaDto } from './dto/crear-queja.dto';
 // DTO de salida del historial
 import { HistorialClaseDto } from './dto/historial-clase.dto';
 
+import { EditarQuejaDto } from './dto/editar-queja.dto';
+
+
 // Estados de Se_inscribe que significan que la inscripción NO cuenta como asistida
 const ESTADOS_NO_VALIDOS = [
   'Cancelada por cliente',
@@ -399,5 +402,67 @@ private mapComentarios(data: any[]) {
   });
 
 }
+/**
+   * Cliente edita su propio comentario
+   */
+  async editarComentario(
+    idCliente: number,
+    idClase: number,
+    dto: EditarQuejaDto,
+  ) {
+    await this.verificarComentarioExiste(idCliente, idClase);
 
+    const { error } = await this.db
+      .from('LibroDeQuejas')
+      .update({
+        comentario: dto.comentario,
+        calificacion: dto.calificacion,
+      })
+      .eq('id_cliente', idCliente)
+      .eq('id_clase', idClase);
+
+    if (error) {
+      throw new BadRequestException('No se pudo editar el comentario');
+    }
+
+    return { mensaje: 'Comentario actualizado' };
+  }
+
+  /**
+   * Cliente elimina su propio comentario
+   */
+  async eliminarComentario(idCliente: number, idClase: number) {
+    await this.verificarComentarioExiste(idCliente, idClase);
+
+    const { error } = await this.db
+      .from('LibroDeQuejas')
+      .delete()
+      .eq('id_cliente', idCliente)
+      .eq('id_clase', idClase);
+
+    if (error) {
+      throw new BadRequestException('No se pudo eliminar el comentario');
+    }
+
+    return { mensaje: 'Comentario eliminado' };
+  }
+
+  /**
+   * Verifica que exista un comentario del cliente para esa clase
+   * (se usa antes de editar o eliminar)
+   */
+  private async verificarComentarioExiste(idCliente: number, idClase: number) {
+    const { data } = await this.db
+      .from('LibroDeQuejas')
+      .select('id')
+      .eq('id_cliente', idCliente)
+      .eq('id_clase', idClase)
+      .maybeSingle();
+
+    if (!data) {
+      throw new BadRequestException(
+        'No existe un comentario para editar o eliminar',
+      );
+    }
+  }
 }

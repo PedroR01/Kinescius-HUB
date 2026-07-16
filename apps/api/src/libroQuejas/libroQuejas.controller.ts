@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
+  Delete,
   Post,
   BadRequestException,
   ForbiddenException,
@@ -12,6 +14,7 @@ import {
 
 import { LibroQuejasService } from './libroQuejas.service';
 import { CreateQuejaDto } from './dto/crear-queja.dto';
+import { EditarQuejaDto } from './dto/editar-queja.dto';
 import { RecordatoriosService } from '../notifications/shifts-reminders.service';
 
 
@@ -103,6 +106,75 @@ export class LibroQuejasController {
 
 
 
+  // CLIENTE EDITA SU PROPIO COMENTARIO
+  @Patch('cliente/:idCliente/clase/:idClase/comentario')
+  async editarComentario(
+    @Param('idCliente') idCliente: string,
+    @Param('idClase') idClase: string,
+    @Body() dto: EditarQuejaDto,
+    @Headers('authorization') authHeader: string,
+  ) {
+
+    const clienteId = Number(idCliente);
+    const claseId = Number(idClase);
+
+    if (Number.isNaN(clienteId) || Number.isNaN(claseId)) {
+      throw new BadRequestException('ID inválido');
+    }
+
+    const usuario =
+      await this.resolverUsuarioDesdeToken(authHeader);
+
+    if (usuario.id !== clienteId) {
+      throw new ForbiddenException(
+        'No podés editar el comentario de otro cliente',
+      );
+    }
+
+    return this.libroQuejasService.editarComentario(
+      clienteId,
+      claseId,
+      dto,
+    );
+
+  }
+
+
+
+
+  // CLIENTE ELIMINA SU PROPIO COMENTARIO
+  @Delete('cliente/:idCliente/clase/:idClase/comentario')
+  async eliminarComentario(
+    @Param('idCliente') idCliente: string,
+    @Param('idClase') idClase: string,
+    @Headers('authorization') authHeader: string,
+  ) {
+
+    const clienteId = Number(idCliente);
+    const claseId = Number(idClase);
+
+    if (Number.isNaN(clienteId) || Number.isNaN(claseId)) {
+      throw new BadRequestException('ID inválido');
+    }
+
+    const usuario =
+      await this.resolverUsuarioDesdeToken(authHeader);
+
+    if (usuario.id !== clienteId) {
+      throw new ForbiddenException(
+        'No podés eliminar el comentario de otro cliente',
+      );
+    }
+
+    return this.libroQuejasService.eliminarComentario(
+      clienteId,
+      claseId,
+    );
+
+  }
+
+
+
 
   // ADMIN VE TODAS LAS QUEJAS (sin auth, igual que ListaEsperaController)
   @Get('admin/comentarios')
@@ -111,7 +183,6 @@ export class LibroQuejasController {
     return this.libroQuejasService.obtenerTodosLosComentariosSinAuth();
 
   }
-
 
 
 

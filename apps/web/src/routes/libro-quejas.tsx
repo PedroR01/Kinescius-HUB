@@ -166,14 +166,21 @@ export default function LibroDeQuejas() {
 
                                     <div className="p-4 pt-0 mt-auto">
                                         {item.calificacion !== null ? (
-                                            <div className="flex flex-col gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setClaseSeleccionada(item)}
+                                                className="w-full text-left flex flex-col gap-1 rounded-xl p-2 -m-2 hover:bg-main/5 transition-colors"
+                                            >
                                                 <StarRating value={item.calificacion} readOnly size={16} />
                                                 {item.comentario && (
                                                     <p className="text-xs text-slate-500 italic line-clamp-2">
                                                         "{item.comentario}"
                                                     </p>
                                                 )}
-                                            </div>
+                                                <span className="text-[11px] font-semibold text-main mt-1">
+                                                    Editar comentario
+                                                </span>
+                                            </button>
                                         ) : (
                                             <button
                                                 className="w-full rounded-xl text-xs font-semibold py-2 bg-main/10 text-main hover:bg-main/20 transition-colors"
@@ -204,10 +211,17 @@ export default function LibroDeQuejas() {
                             idClase={claseSeleccionada.idClase}
                             claseNombre={claseSeleccionada.tipo ?? undefined}
                             claseFecha={formatDate(claseSeleccionada.fecha)}
+                            comentarioExistente={claseSeleccionada.comentario ?? undefined}
+                            calificacionExistente={claseSeleccionada.calificacion ?? undefined}
                             onSuccess={() => {
                                 setMensajeExito('Gracias por su comentario');
                                 cargarHistorial();
                                 setTimeout(() => setClaseSeleccionada(null), 1800);
+                            }}
+                            onEliminado={() => {
+                                setMensajeExito('Comentario eliminado');
+                                cargarHistorial();
+                                setClaseSeleccionada(null);
                             }}
                         />
                     </div>
