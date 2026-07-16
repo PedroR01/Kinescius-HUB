@@ -15,6 +15,10 @@ type Persona = {
    mail: string
 }
 
+function ordenarPorMasReciente(personas: Persona[]) {
+   return [...personas].sort((a, b) => b.id - a.id)
+}
+
 function PersonaCard({ persona }: { persona: Persona }) {
    return (
       <div className="rounded-[24px] bg-white p-5 shadow-sm">
@@ -57,8 +61,8 @@ function RouteComponent() {
 
          const data = await response.json()
 
-         setAbonados(data.abonados ?? [])
-         setNoAbonados(data.noAbonados ?? [])
+         setAbonados(ordenarPorMasReciente(data.abonados ?? []))
+         setNoAbonados(ordenarPorMasReciente(data.noAbonados ?? []))
       } catch (err) {
          setError(err instanceof Error ? err.message : 'Error desconocido')
          setAbonados([])
