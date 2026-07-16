@@ -354,32 +354,51 @@ export class RecordatoriosService implements OnModuleInit {
   // ── Suspención de abonados por falta de pago ────────────────────────────
 
   async verificarVencimientosMensualidad() {
-    // 1. Traer clientes abonados activos con su pago
+    // 1. Traer clientes abonados activos con su pago y estado de cancelación
     //    JOIN: Estado_Cliente → Pago (via id_pago_abonado)
     const { data: clientes } = await this.supabase.client
       .from('Estado_Cliente')
-      .select('id, id_pago_abonado, Pago!inner(fecha)')
+      .select('id, cancelado, id_pago_abonado, Pago!inner(fecha)')
       .not('id_pago_abonado', 'is', null);
 
     // 2. Para cada cliente, calcular días desde el último pago
     const hoy = new Date();
     const clientesAVencer = [];
+    const clientesADegradar = [];
 
-    for (const cliente of clientes!) {
+    for (const cliente of (clientes || [])) {
       const fechaPago = new Date((cliente as any).Pago.fecha);
       const diasTranscurridos = (hoy.getTime() - fechaPago.getTime()) / (1000 * 60 * 60 * 24);
 
-      if (diasTranscurridos > 40) {
+      if (cliente.cancelado && diasTranscurridos >= 30) {
+        // Si canceló y ya pasó el mes, vuelve a ser Cliente normal
+        clientesADegradar.push(cliente.id);
+      } else if (diasTranscurridos > 40) {
+        // Si no canceló pero pasaron más de 40 días, se lo suspende por falta de pago
         clientesAVencer.push(cliente.id);
       }
     }
 
-    // 3. Suspender todos los vencidos de una vez
+    // 3. Ejecutar las actualizaciones en batch
     if (clientesAVencer.length > 0) {
       await this.supabase.client
         .from('Persona_')
         .update({ activo: false })
         .in('id', clientesAVencer);
+    }
+
+    if (clientesADegradar.length > 0) {
+      // Degradar a rol 2 (Cliente no abonado)
+      await this.supabase.client
+        .from('Persona_')
+        .update({ rol: 2 })
+        .in('id', clientesADegradar);
+      
+      // Limpiar los atributos de abonado en Estado_Cliente para que no vuelva a entrar a este cron
+      await this.supabase.client
+        .from('Estado_Cliente')
+        .update({ cancelado: false, id_pago_abonado: null, clases_favor: 0 })
+        .in('id', clientesADegradar);
     }
   }
 
