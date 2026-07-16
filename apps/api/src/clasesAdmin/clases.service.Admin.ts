@@ -1020,124 +1020,173 @@ export class ClasesAdminService {
     };
   }
 
-// ...
+  /**
+   * Estadísticas generales del mes: cuántos abonados pagaron (según lo que
+   * ya carga el webhook de Mercado Pago en "Pago"), cuáles faltan, y qué
+   * actividad tuvo más inscriptos reales. No modifica ninguna tabla, solo lee.
+   *
+   * "hayInformacionPagos": se calcula a nivel sistema (no por abonado), en
+   * base a la fecha del pago más antiguo registrado en toda la tabla "Pago".
+   * Si el mes consultado es anterior a ese mes, se considera que el sistema
+   * todavía no tenía pagos cargados, y se evita mostrar a los abonados
+   * actuales como "deudores" de un período en el que no había registros.
+   *
+   * OJO: esto es una heurística global, no por abonado. Si un abonado se dio
+   * de alta después de ese mes más antiguo con pagos, igual puede aparecer
+   * como "falta pagar" en meses donde ni siquiera era cliente. Para resolver
+   * eso con precisión haría falta una fecha de alta por abonado en Persona_.
+   */
+  async getEstadisticasGenerales(mes?: string) {
+    const mesTarget = mes ?? new Date().toISOString().slice(0, 7); // 'YYYY-MM'
 
-/**
- * Estadísticas generales del mes: cuántos abonados pagaron (según lo que
- * ya carga el webhook de Mercado Pago en "Pago"), cuáles faltan, y qué
- * actividad tuvo más inscriptos reales. No modifica ninguna tabla, solo lee.
- */
-async getEstadisticasGenerales(mes?: string) {
-  const mesTarget = mes ?? new Date().toISOString().slice(0, 7); // 'YYYY-MM'
-
-  if (!REGEX_MES.test(mesTarget)) {
-    throw new BadRequestException("El mes debe tener el formato YYYY-MM");
-  }
-
-  const [anio, mesNumero] = mesTarget.split("-").map(Number);
-  const primerDia = `${mesTarget}-01`;
-  const ultimoDiaNum = new Date(anio, mesNumero, 0).getDate();
-  const ultimoDia = `${mesTarget}-${String(ultimoDiaNum).padStart(2, "0")}`;
-
-  // 1. Abonados activos
-  const { data: abonados, error: abonadosError } = await this.supabaseService.client
-    .from("Persona_")
-    .select("id, nombre, apellido, mail")
-    .eq("rol", ROL_CLIENTE_ABONADO_ID)
-    .eq("activo", true);
-
-  if (abonadosError) {
-    throw new InternalServerErrorException(
-      `Error al obtener abonados: ${abonadosError.message}`
-    );
-  }
-
-  const abonadosIds = (abonados ?? []).map((a: any) => a.id);
-
-  // 2. Pagos ya existentes en el mes para esos abonados (solo lectura)
-  let idsPagaron = new Set<number>();
-
-  if (abonadosIds.length > 0) {
-    const { data: pagos, error: pagosError } = await this.supabaseService.client
-      .from("Pago")
-      .select("id_cliente, fecha")
-      .in("id_cliente", abonadosIds)
-      .gte("fecha", primerDia)
-      .lte("fecha", ultimoDia);
-
-    if (pagosError) {
-      throw new InternalServerErrorException(
-        `Error al obtener pagos: ${pagosError.message}`
-      );
+    if (!REGEX_MES.test(mesTarget)) {
+      throw new BadRequestException("El mes debe tener el formato YYYY-MM");
     }
 
-    idsPagaron = new Set((pagos ?? []).map((p: any) => p.id_cliente));
-  }
+    const [anio, mesNumero] = mesTarget.split("-").map(Number);
+    const primerDia = `${mesTarget}-01`;
+    const ultimoDiaNum = new Date(anio, mesNumero, 0).getDate();
+    const ultimoDia = `${mesTarget}-${String(ultimoDiaNum).padStart(2, "0")}`;
 
-  const pagaron = (abonados ?? []).filter((a: any) => idsPagaron.has(a.id));
-  const faltantes = (abonados ?? []).filter((a: any) => !idsPagaron.has(a.id));
+const hoy = new Date().toISOString().split("T")[0];
 
-  // 3. Actividad más concurrida del mes (Se_inscribe + Clase)
-  const { data: clasesDelMes, error: clasesError } = await this.supabaseService.client
-    .from("Clase")
-    .select("id, tipo")
-    .gte("fecha", primerDia)
-    .lte("fecha", ultimoDia)
-    .neq("estado", ESTADO_CLASE_CANCELADA);
+// 0.a Si el mes consultado es un mes futuro que ni siquiera empezó, no
+// puede haber información de pagos. El mes actual (en curso) sí puede
+// tener información parcial y no se bloquea.
+const mesEsFuturo = primerDia > hoy;
 
-  if (clasesError) {
-    throw new InternalServerErrorException(
-      `Error al obtener clases del mes: ${clasesError.message}`
-    );
-  }
+// 0.b Determinar si hay información de pagos para este mes: buscamos
+// el pago más antiguo registrado en todo el sistema.
+const { data: pagoMasAntiguo, error: pagoMasAntiguoError } =
+  await this.supabaseService.client
+    .from("Pago")
+    .select("fecha")
+    .order("fecha", { ascending: true })
+    .limit(1)
+    .maybeSingle();
 
-  const tipoPorClaseId = new Map<number, string>();
-  (clasesDelMes ?? []).forEach((c: any) => {
-    tipoPorClaseId.set(c.id, c.tipo ?? "Sin tipo");
-  });
-
-  const claseIdsDelMes = [...tipoPorClaseId.keys()];
-  const conteoPorTipo = new Map<string, number>();
-  [...new Set(tipoPorClaseId.values())].forEach((tipo) => {
-  conteoPorTipo.set(tipo, 0);
-});
-
-  if (claseIdsDelMes.length > 0) {
-    const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
-      .from("Se_inscribe")
-      .select("id_clase")
-      .in("id_clase", claseIdsDelMes);
-
-    if (inscripcionesError) {
-      throw new InternalServerErrorException(
-        `Error al obtener inscripciones del mes: ${inscripcionesError.message}`
-      );
-    }
-
-    (inscripciones ?? []).forEach((i: any) => {
-      const tipo = tipoPorClaseId.get(i.id_clase) ?? "Sin tipo";
-      conteoPorTipo.set(tipo, (conteoPorTipo.get(tipo) ?? 0) + 1);
-    });
-  }
-
-  const actividadPorConcurrencia = [...conteoPorTipo.entries()]
-    .map(([tipo, inscriptos]) => ({ tipo, inscriptos }))
-    .sort((a, b) => b.inscriptos - a.inscriptos);
-
-  return {
-    mes: mesTarget,
-    pagos: {
-      totalAbonados: abonados?.length ?? 0,
-      pagaron: pagaron.map((p: any) => ({
-        id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
-      })),
-      faltantes: faltantes.map((p: any) => ({
-        id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
-      })),
-    },
-    actividadPorConcurrencia,
-  };
+if (pagoMasAntiguoError) {
+  throw new InternalServerErrorException(
+    `Error al obtener el pago más antiguo: ${pagoMasAntiguoError.message}`
+  );
 }
+
+const mesDelPagoMasAntiguo = pagoMasAntiguo
+  ? pagoMasAntiguo.fecha.slice(0, 7)
+  : null;
+
+const hayInformacionPagos =
+  !mesEsFuturo &&
+  mesDelPagoMasAntiguo !== null &&
+  mesTarget >= mesDelPagoMasAntiguo;
+
+    // 1. Abonados activos
+    const { data: abonados, error: abonadosError } = await this.supabaseService.client
+      .from("Persona_")
+      .select("id, nombre, apellido, mail")
+      .eq("rol", ROL_CLIENTE_ABONADO_ID)
+      .eq("activo", true);
+
+    if (abonadosError) {
+      throw new InternalServerErrorException(
+        `Error al obtener abonados: ${abonadosError.message}`
+      );
+    }
+
+    const abonadosIds = (abonados ?? []).map((a: any) => a.id);
+
+    // 2. Pagos ya existentes en el mes para esos abonados (solo lectura).
+    // Sólo tiene sentido buscarlos si hay información para ese mes.
+    let idsPagaron = new Set<number>();
+
+    if (hayInformacionPagos && abonadosIds.length > 0) {
+      const { data: pagos, error: pagosError } = await this.supabaseService.client
+        .from("Pago")
+        .select("id_cliente, fecha")
+        .in("id_cliente", abonadosIds)
+        .gte("fecha", primerDia)
+        .lte("fecha", ultimoDia);
+
+      if (pagosError) {
+        throw new InternalServerErrorException(
+          `Error al obtener pagos: ${pagosError.message}`
+        );
+      }
+
+      idsPagaron = new Set((pagos ?? []).map((p: any) => p.id_cliente));
+    }
+
+    const pagaron = hayInformacionPagos
+      ? (abonados ?? []).filter((a: any) => idsPagaron.has(a.id))
+      : [];
+
+    const faltantes = hayInformacionPagos
+      ? (abonados ?? []).filter((a: any) => !idsPagaron.has(a.id))
+      : [];
+
+    // 3. Actividad más concurrida del mes (Se_inscribe + Clase)
+    const { data: clasesDelMes, error: clasesError } = await this.supabaseService.client
+      .from("Clase")
+      .select("id, tipo")
+      .gte("fecha", primerDia)
+      .lte("fecha", ultimoDia)
+      .neq("estado", ESTADO_CLASE_CANCELADA);
+
+    if (clasesError) {
+      throw new InternalServerErrorException(
+        `Error al obtener clases del mes: ${clasesError.message}`
+      );
+    }
+
+    const tipoPorClaseId = new Map<number, string>();
+    (clasesDelMes ?? []).forEach((c: any) => {
+      tipoPorClaseId.set(c.id, c.tipo ?? "Sin tipo");
+    });
+
+    const claseIdsDelMes = [...tipoPorClaseId.keys()];
+    const conteoPorTipo = new Map<string, number>();
+    [...new Set(tipoPorClaseId.values())].forEach((tipo) => {
+      conteoPorTipo.set(tipo, 0);
+    });
+
+    if (claseIdsDelMes.length > 0) {
+      const { data: inscripciones, error: inscripcionesError } = await this.supabaseService.client
+        .from("Se_inscribe")
+        .select("id_clase")
+        .in("id_clase", claseIdsDelMes);
+
+      if (inscripcionesError) {
+        throw new InternalServerErrorException(
+          `Error al obtener inscripciones del mes: ${inscripcionesError.message}`
+        );
+      }
+
+      (inscripciones ?? []).forEach((i: any) => {
+        const tipo = tipoPorClaseId.get(i.id_clase) ?? "Sin tipo";
+        conteoPorTipo.set(tipo, (conteoPorTipo.get(tipo) ?? 0) + 1);
+      });
+    }
+
+    const actividadPorConcurrencia = [...conteoPorTipo.entries()]
+      .map(([tipo, inscriptos]) => ({ tipo, inscriptos }))
+      .sort((a, b) => b.inscriptos - a.inscriptos);
+
+    return {
+      mes: mesTarget,
+      pagos: {
+        hayInformacionPagos,
+        totalAbonados: abonados?.length ?? 0,
+        pagaron: pagaron.map((p: any) => ({
+          id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
+        })),
+        faltantes: faltantes.map((p: any) => ({
+          id: p.id, nombre: p.nombre, apellido: p.apellido, mail: p.mail,
+        })),
+      },
+      actividadPorConcurrencia,
+    };
+  }
+
   async getEstadisticas(claseId: number) {
     if (!Number.isInteger(claseId) || claseId <= 0) {
       throw new BadRequestException("El id de la clase debe ser mayor a 0");
