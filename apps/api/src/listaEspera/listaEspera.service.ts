@@ -107,6 +107,12 @@ export class ListaEsperaService {
       (personas ?? []).map((p: any) => [p.id, p]),
     );
 
+    // DEBUG temporal: ver qué filas de lista de espera no encontraron persona
+    const sinPersona = data.filter((fila: any) => !personaPorId.has(fila.id_cliente));
+    console.log("clienteIds pedidos:", clienteIds);
+    console.log("personas encontradas:", (personas ?? []).map((p: any) => p.id));
+    console.log("filas SIN persona asociada:", sinPersona);
+
     const listaCompleta = data
       .map((fila: any) => {
         const persona = personaPorId.get(fila.id_cliente);
