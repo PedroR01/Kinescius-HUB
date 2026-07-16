@@ -190,10 +190,10 @@ function RecordatoriosPage() {
           {/* ── Sección: Recordatorio de Pago ── */}
           <section className={cn(formCardClass, 'mt-6')}>
             <h3 className="m-0 mb-4 font-outfit text-[17px] font-bold tracking-tight text-ks-text-dark">
-              Recordatorio de pago de abono
+              Recordatorio de pago
             </h3>
             <p className="m-0 mb-2 text-[14px] leading-relaxed text-ks-gray-text">
-              Se envía automáticamente un email a los abonados que estén a 1 día de que se les suspenda la cuenta por falta de pago.
+
             </p>
             <p className="m-0 mb-5 text-[15px] leading-relaxed text-ks-gray-text">
               Horario actual de envío:{' '}
