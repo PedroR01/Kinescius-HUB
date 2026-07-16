@@ -45,7 +45,7 @@ export class ReembolsoService {
     if (tipo === TipoReembolso.REEMBOLSO) {
       if (pagoConMontoAFavor) {
         throw new BadRequestException(
-          'Esta inscripción se abonó con saldo a favor; solo podés solicitar reembolso como monto a favor.',
+          'Esta inscripción se abonó con monto a favor; solo podés solicitar reembolso como monto a favor.',
         );
       }
       if (!inscripcion.id_pago_mp) {

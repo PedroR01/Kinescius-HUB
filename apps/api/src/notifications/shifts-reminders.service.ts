@@ -73,6 +73,7 @@ export class RecordatoriosService implements OnModuleInit {
     return { message: 'Horario cambiado con éxito' };
   }
 
+
   async actualizarHorarioPago(hora: number, minuto: number) {
     // Intentar actualizar; si no existe, insertar
     const { data, error } = await this.supabase.client
