@@ -2,7 +2,7 @@ import type { KinesciusClass } from "@/lib/class-interface";
 import { API_BASE } from "@/lib/constants";
 import { useEffect, useState } from "react";
 
-export function useClasesPasadas() {
+export function useClasesPresentismo() {
   const [classes, setClasses] = useState<KinesciusClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,10 +12,18 @@ export function useClasesPasadas() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_BASE}/clases?pasadas=true`);
-        if (!response.ok) throw new Error(`Error al cargar clases: ${response.status}`);
-        const data = (await response.json()) as KinesciusClass[];
-        setClasses(data);
+        const [pasadasRes, futurasRes] = await Promise.all([
+          fetch(`${API_BASE}/clases?pasadas=true`),
+          fetch(`${API_BASE}/clases`),
+        ]);
+
+        if (!pasadasRes.ok) throw new Error(`Error al cargar clases pasadas: ${pasadasRes.status}`);
+        if (!futurasRes.ok) throw new Error(`Error al cargar clases futuras: ${futurasRes.status}`);
+
+        const pasadas = (await pasadasRes.json()) as KinesciusClass[];
+        const futuras = (await futurasRes.json()) as KinesciusClass[];
+
+        setClasses([...pasadas, ...futuras]);
       } catch (fetchError) {
         setError(
           fetchError instanceof Error ? fetchError.message : "Error al intentar cargar clases"

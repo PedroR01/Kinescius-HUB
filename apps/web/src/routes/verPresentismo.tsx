@@ -4,7 +4,7 @@ import { formatDate, formatTime } from '@/lib/utils'
 import { API_BASE } from '@/lib/constants'
 import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
 import { btnBase, btnPrimary, formCardClass } from '@/lib/ks-page-styles'
-import { useClasesPasadas } from '@/modules/turnos/hooks/useClasesPasadas'  
+import { useClasesPresentismo } from '@/modules/turnos/hooks/useClasesPresentismo'
 
 type EstadoPresentismo = 'presente' | 'ausente'
 
@@ -63,7 +63,7 @@ export const Route = createFileRoute('/verPresentismo')({
 })
 
 function RouteComponent() {
-const { classes: clases, loading, error } = useClasesPasadas()
+  const { classes: clases, loading, error } = useClasesPresentismo()
   const hoy = new Date()
 
   const [viewAnio, setViewAnio] = useState(hoy.getFullYear())
@@ -129,19 +129,19 @@ const { classes: clases, loading, error } = useClasesPasadas()
     return fechaClase > hoyMedianoche
   }
 
-  const handleVerPresentismo = async (clase: Clase) => {
-    setActionLoadingId(clase.id)
-    try {
-      const res = await fetch(`${API_BASE}/presentismo/clase/${clase.id}`)
-      if (!res.ok) throw new Error('Error al consultar presentismo')
-      const alumnos = (await res.json()) as Alumno[]
-      setModal({ clase, alumnos })
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setActionLoadingId(null)
-    }
+const handleVerPresentismo = async (clase: Clase) => {
+  setActionLoadingId(clase.id)
+  try {
+    const res = await fetch(`${API_BASE}/presentismo/clase/${clase.id}`)
+    if (!res.ok) throw new Error('Error al consultar presentismo')
+    const alumnos = (await res.json()) as Alumno[]
+    setModal({ clase, alumnos })
+  } catch (err) {
+    console.error(err)
+  } finally {
+    setActionLoadingId(null)
   }
+}
 
   return (
     <main className="mx-auto grid min-h-svh max-w-[760px] gap-4 px-6 pt-10 pb-16 font-dm-sans text-ks-gray-text antialiased max-sm:px-4 max-sm:pt-5 max-sm:pb-12">
