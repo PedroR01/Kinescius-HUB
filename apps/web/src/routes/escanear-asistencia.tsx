@@ -8,30 +8,40 @@ import { useRegistrarAsistencia } from "@/modules/asistencia/hooks/useAsistencia
 import { formCardClass } from "@/lib/ks-page-styles";
 
 export const Route = createFileRoute("/escanear-asistencia")({
-  component: EscanearAsistenciaPage,
+  component: EscanearAsistenciaPage
 });
 
 function EscanearAsistenciaPage() {
   const { isAuthenticated } = useAuthSession();
   const registrarMutation = useRegistrarAsistencia();
+  const { isPending, isSuccess, mutate } = registrarMutation;
   const [scanError, setScanError] = useState<string | null>(null);
+  const [rescanNonce, setRescanNonce] = useState(0);
 
   const handleScan = useCallback(
     (token: string) => {
+      if (isPending || isSuccess) {
+        return;
+      }
+
       const authToken = localStorage.getItem("miToken");
       if (!authToken) {
         setScanError("Debés iniciar sesión para registrar asistencia.");
         return;
       }
 
-      registrarMutation.mutate(
+      setScanError(null);
+      mutate(
         { token, authToken },
         {
-          onError: (error) => setScanError(error.message),
-        },
+          onError: (error) => {
+            setScanError(error.message);
+            setRescanNonce((current) => current + 1);
+          }
+        }
       );
     },
-    [registrarMutation],
+    [isPending, isSuccess, mutate]
   );
 
   if (!isAuthenticated) {
@@ -45,7 +55,6 @@ function EscanearAsistenciaPage() {
     );
   }
 
-  // TODO: Unificar los casos de error en el mismo return y componente.
   if (registrarMutation.isSuccess) {
     return (
       <AuthPageLayout title="Escanear asistencia" subtitle="Lectura completada" showBackButton>
@@ -68,10 +77,9 @@ function EscanearAsistenciaPage() {
         <QRScanner
           onScan={handleScan}
           onError={(message) => setScanError(message)}
+          rescanNonce={rescanNonce}
         />
-        {scanError && (
-          <p className="mt-4 text-sm text-red-700">{scanError}</p>
-        )}
+        {scanError && <p className="mt-4 text-sm text-red-700">{scanError}</p>}
         {registrarMutation.isPending && (
           <p className="mt-4 text-sm text-ks-gray-text">Registrando asistencia...</p>
         )}

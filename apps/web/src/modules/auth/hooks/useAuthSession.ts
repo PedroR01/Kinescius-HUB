@@ -53,6 +53,7 @@ export function useAuthSession() {
 
 export function useCurrentUserProfile() {
   const [userProfile, setUserProfile] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -67,16 +68,19 @@ export function useCurrentUserProfile() {
         setUserProfile(data as UserData);
       } catch (error) {
         console.error("Error al obtener el perfil del usuario:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchUserProfile();
+    void fetchUserProfile();
   }, []);
 
-  return userProfile;
+  return { userProfile, isLoading };
 }
 
 export function useEstadoCliente() {
   const [estadoCliente, setEstadoCliente] = useState<EstadoCliente | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchEstadoCliente = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -90,6 +94,8 @@ export function useEstadoCliente() {
       setEstadoCliente(data as EstadoCliente);
     } catch (error) {
       console.error("Error al obtener el estado del cliente:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -97,5 +103,5 @@ export function useEstadoCliente() {
     void fetchEstadoCliente();
   }, [fetchEstadoCliente]);
 
-  return { estadoCliente, refetchEstadoCliente: fetchEstadoCliente };
+  return { estadoCliente, isLoading, refetchEstadoCliente: fetchEstadoCliente };
 }

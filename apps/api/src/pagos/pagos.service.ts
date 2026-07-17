@@ -447,7 +447,7 @@ export class PagosService implements OnModuleInit {
                         fecha: new Date().toISOString().split('T')[0],
                         hora: new Date().toTimeString().split(' ')[0],
                     })
-                    .eq('id', estadoCliente.id_pago_abonado)
+                    .eq('id_pago', estadoCliente.id_pago_abonado)
                     .single();
                 if (errorPago) throw new Error(errorPago.message);
             }

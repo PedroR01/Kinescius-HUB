@@ -12,7 +12,7 @@ export function UserDashboard() {
   const navigate = useNavigate();
   const { isAuthenticated, role, isHydrated, clearSession } = useAuthSession();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const userProfile = useCurrentUserProfile();
+  const { userProfile } = useCurrentUserProfile();
   useEffect(() => {
     if (isHydrated && !isAuthenticated) {
       navigate({ to: "/iniciarSesion", search: { redirect: undefined }, replace: true });

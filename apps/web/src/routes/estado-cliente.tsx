@@ -24,13 +24,49 @@ function daysSincePayment(fechaPago: string | null | undefined): number | null {
   return Math.floor(diffMs / MS_PER_DAY)
 }
 
+function SkeletonLine({ className }: { className?: string }) {
+  return <div className={cn('h-4 rounded bg-ks-gray-soft', className)} />
+}
+
+function EstadoClienteSkeleton() {
+  return (
+    <section className={formCardClass} aria-busy="true" aria-label="Cargando estado de cuenta">
+      <div className="flex flex-col gap-6 animate-pulse">
+        <div className="flex flex-col gap-3">
+          <SkeletonLine className="h-7 w-52" />
+          <ul className="grid grid-cols-2 gap-3">
+            <SkeletonLine className="w-full" />
+            <SkeletonLine className="w-3/4" />
+            <SkeletonLine className="w-5/6" />
+            <SkeletonLine className="w-2/3" />
+          </ul>
+        </div>
+        <div className="flex flex-col gap-3">
+          <SkeletonLine className="h-7 w-56" />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <SkeletonLine className="w-40" />
+              <SkeletonLine className="h-8 w-36 rounded-full" />
+              <SkeletonLine className="h-8 w-40 rounded-full" />
+            </div>
+            <SkeletonLine className="w-64" />
+            <SkeletonLine className="w-52" />
+            <SkeletonLine className="w-44" />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function RouteComponent() {
-  const userProfile = useCurrentUserProfile();
-  const { estadoCliente, refetchEstadoCliente } = useEstadoCliente();
+  const { userProfile, isLoading: isLoadingProfile } = useCurrentUserProfile();
+  const { estadoCliente, isLoading: isLoadingEstado, refetchEstadoCliente } = useEstadoCliente();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isCancelSubscriptionModalOpen, setIsCancelSubscriptionModalOpen] = useState(false);
   const [isAbortingCancel, setIsAbortingCancel] = useState(false);
 
+  const isLoading = isLoadingProfile || isLoadingEstado;
   const isAbonado = userProfile?.rol === 3;
   const hasPendingCancel = Boolean(estadoCliente?.cancelado);
   const daysSinceLastPayment = useMemo(
@@ -61,67 +97,71 @@ function RouteComponent() {
   };
 
   return (<AuthPageLayout title="Estado de cuenta" subtitle="Ver información y estado de tu cuenta" showBackButton={true}>
-    <section className={formCardClass}>
-      <h2 className="text-2xl font-bold">Información personal</h2>
-      <ul className="grid grid-cols-2 gap-2">
-        <li>Apellido y nombre: <span className="font-bold">{userProfile?.apellido} {userProfile?.nombre}</span></li>
-        <li>DNI: <span className="font-bold">{userProfile?.dni}</span></li>
-        <li>Email: <span className="font-bold">{userProfile?.mail}</span></li>
-        <li>Teléfono: <span className="font-bold">{userProfile?.telefono || 'No tiene teléfono registrado'}</span></li>
-      </ul>
-      <h2 className="text-2xl font-bold">Información suscripción</h2>
-      <ul className="flex flex-col gap-2">
-        <li className="flex flex-row flex-wrap gap-2 items-center">
-          <p>Estado de la cuenta: <span className="font-bold">{isAbonado ? 'Abonado' : 'No abonado'}</span></p>
-          {isAbonado && hasPendingCancel ? (
-            <button
-              type="button"
-              className={cn(btnBase, btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
-              onClick={() => void handleAbortCancel()}
-              disabled={isAbortingCancel}
-            >
-              {isAbortingCancel ? 'Procesando...' : 'Abortar cancelación'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={cn(btnBase, isAbonado ? btnDanger : btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
-              onClick={() => { isAbonado ? setIsCancelSubscriptionModalOpen(true) : setIsPaymentModalOpen(true) }}
-            >
-              {isAbonado ? 'Cancelar suscripción' : 'Comprar suscripción'}
-            </button>
-          )}
-          {isAbonado ? (
-            <button
-              type="button"
-              className={cn(btnBase, btnPrimary, "size-4 text-xs w-fit flex items-center justify-center")}
-              onClick={() => setIsPaymentModalOpen(true)}
-              disabled={!canRenewSubscription}
-              title={
-                canRenewSubscription
-                  ? undefined
-                  : `Podés renovar a partir de ${MIN_DAYS_TO_RENEW} días desde el último pago`
-              }
-            >
-              Renovar suscripción
-            </button>
-          ) : null}
-        </li>
-        {isAbonado && hasPendingCancel ? (
-          <li className="text-sm text-ks-gray-text">
-            Tenés una cancelación solicitada. Se efectuará al vencimiento de tu suscripción.
+    {isLoading ? (
+      <EstadoClienteSkeleton />
+    ) : (
+      <section className={formCardClass}>
+        <h2 className="text-2xl font-bold">Información personal</h2>
+        <ul className="grid grid-cols-2 gap-2">
+          <li>Apellido y nombre: <span className="font-bold">{userProfile?.apellido} {userProfile?.nombre}</span></li>
+          <li>DNI: <span className="font-bold">{userProfile?.dni}</span></li>
+          <li>Email: <span className="font-bold">{userProfile?.mail}</span></li>
+          <li>Teléfono: <span className="font-bold">{userProfile?.telefono || 'No tiene teléfono registrado'}</span></li>
+        </ul>
+        <h2 className="text-2xl font-bold">Información suscripción</h2>
+        <ul className="flex flex-col gap-2">
+          <li className="flex flex-row flex-wrap gap-2 items-center">
+            <p>Estado de la cuenta: <span className="font-bold">{isAbonado ? 'Abonado' : 'No abonado'}</span></p>
+            {isAbonado && hasPendingCancel ? (
+              <button
+                type="button"
+                className={cn(btnBase, btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
+                onClick={() => void handleAbortCancel()}
+                disabled={isAbortingCancel}
+              >
+                {isAbortingCancel ? 'Procesando...' : 'Abortar cancelación'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={cn(btnBase, isAbonado ? btnDanger : btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
+                onClick={() => { isAbonado ? setIsCancelSubscriptionModalOpen(true) : setIsPaymentModalOpen(true) }}
+              >
+                {isAbonado ? 'Cancelar suscripción' : 'Comprar suscripción'}
+              </button>
+            )}
+            {isAbonado ? (
+              <button
+                type="button"
+                className={cn(btnBase, btnPrimary, "size-4 text-xs w-fit flex items-center justify-center")}
+                onClick={() => setIsPaymentModalOpen(true)}
+                disabled={!canRenewSubscription}
+                title={
+                  canRenewSubscription
+                    ? undefined
+                    : `Podés renovar a partir de ${MIN_DAYS_TO_RENEW} días desde el último pago`
+                }
+              >
+                Renovar suscripción
+              </button>
+            ) : null}
           </li>
-        ) : null}
+          {isAbonado && hasPendingCancel ? (
+            <li className="text-sm text-ks-gray-text">
+              Tenés una cancelación solicitada. Se efectuará al vencimiento de tu suscripción.
+            </li>
+          ) : null}
 
-        <li>Fecha de último pago: <span className="font-bold">{estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago).toLocaleDateString() : 'No tiene pago de suscripción registrado'}</span></li>
-        {estadoCliente?.fecha_pago ?
-          <>
-            <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin).toLocaleDateString()}</span></li>
-            <li>Clases a favor sin usar: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
-          </> : null}
-        <li>Saldo a favor: <span className="font-bold">{estadoCliente?.monto_favor}</span></li>
-      </ul>
-    </section>
+          <li>Fecha de último pago: <span className="font-bold">{estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago).toLocaleDateString() : 'No tiene pago de suscripción registrado'}</span></li>
+          {estadoCliente?.fecha_pago ?
+            <>
+              <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin).toLocaleDateString()}</span></li>
+              <li>Clases a favor sin usar: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
+            </> : null}
+          <li>Saldo a favor: <span className="font-bold">{estadoCliente?.monto_favor}</span></li>
+        </ul>
+      </section>
+    )}
     <SubscriptionPaymentModal
       isOpen={isPaymentModalOpen}
       clienteId={userProfile?.id ?? null}
