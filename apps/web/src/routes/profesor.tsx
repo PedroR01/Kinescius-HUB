@@ -134,7 +134,7 @@ function ProfesorPage() {
 
     console.log("100 minutos antes de la clase y 100 minutos después de la clase");
     // Habilitado desde 100 min antes hasta 100 min después del inicio (no tiene en cuenta los dias, para testear la asistencia)
-    return diferencia >= -100 && diferencia <= 100;
+    return diferencia >= -300 && diferencia <= 300;
   };
 
   return (
@@ -181,7 +181,7 @@ function ProfesorPage() {
                     <button
                       type="button"
                       disabled={
-                        !clase.puedeGenerarQr ||
+                        !horarioHabilitadoQR(clase.hora) ||
                         generarTokenMutation.isPending ||
                         qrActivo !== null
                       }
@@ -200,7 +200,7 @@ function ProfesorPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={!clase.puedeGenerarQr}
+                      disabled={!horarioHabilitadoQR(clase.hora)}
                       onClick={() => setClaseAsistenciaManual(clase)}
                       className={cn(btnBase, btnSecondary)}
                     >
