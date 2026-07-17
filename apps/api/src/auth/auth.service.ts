@@ -491,7 +491,7 @@ export class AuthService {
         monto_favor: cuenta.monto_favor,
         id_pago_abonado: cuenta.id_pago_abonado,
         fecha_pago: pagoInfo.fecha,
-        fecha_fin: new Date(pagoInfo.fecha).setMonth(new Date(pagoInfo.fecha).getMonth() + 1),
+        fecha_fin: (() => { const d = new Date(pagoInfo.fecha + 'T00:00:00'); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0]; })(),
         clases_utilizadas: cuenta.clases_favor,
         cancelado: Boolean(cuenta.cancelado),
       };

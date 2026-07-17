@@ -113,10 +113,10 @@ function RouteComponent() {
           </li>
         ) : null}
 
-        <li>Fecha de último pago: <span className="font-bold">{estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago).toLocaleDateString() : 'No tiene pago de suscripción registrado'}</span></li>
+        <li>Fecha de último pago: <span className="font-bold">{estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago + 'T00:00:00').toLocaleDateString() : 'No tiene pago de suscripción registrado'}</span></li>
         {estadoCliente?.fecha_pago ?
           <>
-            <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin).toLocaleDateString()}</span></li>
+            <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin + 'T00:00:00').toLocaleDateString()}</span></li>
             <li>Clases a favor sin usar: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
           </> : null}
         <li>Saldo a favor: <span className="font-bold">{estadoCliente?.monto_favor}</span></li>

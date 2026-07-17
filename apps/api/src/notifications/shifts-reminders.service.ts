@@ -36,10 +36,11 @@ export class RecordatoriosService implements OnModuleInit {
     this.logger.log(`Cron de recordatorio de pago registrado a las ${horarioPago.hora}:${String(horarioPago.minuto).padStart(2, '0')}`);
 
     // Cron de suspensión: todos los días a las 00:05
-    this.registrarCron('verificacion-mensualidad', 0, 5, () => {
+    this.registrarCron('verificacion-mensualidad', 16, 10, () => {
       void this.verificarVencimientosMensualidad();
     });
-    this.logger.log('Cron de verificación de vencimientos registrado a las 00:05');
+    this.logger.log('Cron de verificación de vencimientos registrado a las 16:10');
+    console.log ('Cron de verificación de vencimientos registrado a las 16:10');
   }
 
   // ── Configuración ──────────────────────────────────────────────
@@ -369,10 +370,12 @@ export class RecordatoriosService implements OnModuleInit {
     for (const cliente of (clientes || [])) {
       const fechaPago = new Date((cliente as any).Pago.fecha);
       const diasTranscurridos = (hoy.getTime() - fechaPago.getTime()) / (1000 * 60 * 60 * 24);
-
+      console.log ('Se va a degradar al cliente con información: ', cliente);
+      console.log ('diasTranscurridos es: ', diasTranscurridos);
       if (cliente.cancelado && diasTranscurridos >= 30) {
         // Si canceló y ya pasó el mes, vuelve a ser Cliente normal
         clientesADegradar.push(cliente.id);
+        console.log ('Se va a degradar al cliente con id', cliente.id);
       } else if (diasTranscurridos > 40) {
         // Si no canceló pero pasaron más de 40 días, se lo suspende por falta de pago
         clientesAVencer.push(cliente.id);
@@ -393,7 +396,7 @@ export class RecordatoriosService implements OnModuleInit {
         .from('Persona_')
         .update({ rol: 2 })
         .in('id', clientesADegradar);
-      
+      console.log ('Cron de verificación de vencimientos registrado a las 11:26 loool');
       // Limpiar los atributos de abonado en Estado_Cliente para que no vuelva a entrar a este cron
       await this.supabase.client
         .from('Estado_Cliente')
