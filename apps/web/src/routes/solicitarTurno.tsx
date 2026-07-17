@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn, formatDate, formatDateLabel, formatDayLabel, formatTime } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { useTurnosData } from "@/modules/turnos/hooks/useTurnosData";
 import { useWaitList } from "@/modules/turnos/hooks/useWaitList";
 import { useClienteId } from "@/hooks/useClienteId";
 import { CLASS_PRICE } from "@/lib/constants";
+import { ArrowLeftIcon } from "lucide-react";
 import {
   pageMainClass,
   heroSectionClass,
@@ -121,7 +122,13 @@ function RouteComponent() {
 
   return (
     <main className={pageMainClass}>
-      <BackPreviousRouteButton />
+      {/* <BackPreviousRouteButton /> */}
+      <Link
+              to="/home"
+              className="mb-6 inline-block size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
+            >
+              <ArrowLeftIcon className="size-6" />
+            </Link>
 
       <section className={heroSectionClass}>
         <h1 className="relative m-0 mb-2 font-outfit text-[38px] font-bold tracking-[-1px] text-white max-sm:text-[28px]">
@@ -133,6 +140,9 @@ function RouteComponent() {
         <p className="relative mt-3 text-[14px] font-medium text-white/90">
           Todas las clases tienen el mismo valor:{" "}
           <strong className="text-white">${(CLASS_PRICE * 2).toLocaleString("es-AR")}</strong>
+          <span className="mt-1 block text-[13px] font-light text-white/72">
+            * En caso de ser abonado se le aplicará un 20% de descuento al pagar la totalidad de la clase presencialmente.
+          </span>
         </p>
         <p className="relative mt-3 text-[14px] font-medium text-white/90">
           La reserva del turno tiene un costo de seña inicial del 50% del valor de la clase:{" "}

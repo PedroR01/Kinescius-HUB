@@ -300,9 +300,7 @@ export class ShiftsService {
       errorUpsertNueva = error;
     }
 
-<<<<<<< HEAD
     //Al cambiar turno también se libera un cupo en la clase original
-=======
     if (errorUpsertNueva) {
       console.error('Error al registrar al cliente en la nueva clase:', errorUpsertNueva);
       throw new BadRequestException('No se pudo procesar la inscripción en la nueva clase: ' + errorUpsertNueva.message);
@@ -312,7 +310,6 @@ export class ShiftsService {
     console.log(`[CAMBIO DE TURNO] FIN -----------------------------\n`);
 
     // 👇 Al cambiar turno también se libera un cupo en la clase original
->>>>>>> dev
     await this.notificacionEspera.notificarProximoEnEspera(claseActualId);
 
     return {
