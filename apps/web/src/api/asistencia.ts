@@ -116,3 +116,37 @@ export async function getClasesProfesor(authToken: string): Promise<ClaseProfeso
 
   return response.json();
 }
+
+export type RegistrarAsistenciaManualResponse = {
+  message: string;
+  cliente: {
+    id: number;
+    nombre: string | null;
+    apellido: string | null;
+    dni: string | null;
+    mail: string | null;
+  };
+  clase: {
+    fecha: string;
+    hora: string;
+    tipo: string | null;
+  };
+};
+
+export async function registrarAsistenciaManual(
+  claseId: number,
+  identificador: string,
+  authToken: string,
+): Promise<RegistrarAsistenciaManualResponse> {
+  const response = await fetch(`${API_BASE}/asistencia/registrar-manual`, {
+    method: "POST",
+    headers: authHeaders(authToken),
+    body: JSON.stringify({ claseId, identificador }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json();
+}

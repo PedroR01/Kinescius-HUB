@@ -18,4 +18,5 @@ export interface EstadoCliente {
     fecha_pago: string
     fecha_fin: string
     clases_utilizadas: number
+    cancelado: boolean
 }

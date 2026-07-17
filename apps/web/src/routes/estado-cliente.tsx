@@ -1,26 +1,65 @@
-import { btnBase, btnDanger, btnSecondary, formCardClass } from '@/lib/ks-page-styles'
+import { updateSuscripcionCancelada } from '@/api/payments'
+import { btnBase, btnDanger, btnPrimary, btnSecondary, formCardClass } from '@/lib/ks-page-styles'
 import { AuthPageLayout } from '@/modules/auth/components/AuthPageLayout'
 import { createFileRoute } from '@tanstack/react-router'
 import { useCurrentUserProfile, useEstadoCliente } from '@/modules/auth/hooks/useAuthSession'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ConfirmSubscriptionCancelModal } from '@/modules/home/components/ConfirmSubscriptionCancelModal'
 import { SubscriptionPaymentModal } from '@/modules/turnos/components/SubscriptionPaymentModal'
-
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/estado-cliente')({
   component: RouteComponent,
 })
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+const MIN_DAYS_TO_RENEW = 30
+
+function daysSincePayment(fechaPago: string | null | undefined): number | null {
+  if (!fechaPago) return null
+  const paymentDate = new Date(fechaPago)
+  if (Number.isNaN(paymentDate.getTime())) return null
+  const diffMs = Date.now() - paymentDate.getTime()
+  return Math.floor(diffMs / MS_PER_DAY)
+}
+
 function RouteComponent() {
   const userProfile = useCurrentUserProfile();
-  const estadoCliente = useEstadoCliente();
+  const { estadoCliente, refetchEstadoCliente } = useEstadoCliente();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isCancelSubscriptionModalOpen, setIsCancelSubscriptionModalOpen] = useState(false);
+  const [isAbortingCancel, setIsAbortingCancel] = useState(false);
 
-  const handleCancelSubscription = () => {
-    setIsCancelSubscriptionModalOpen(true);
-  }
+  const isAbonado = userProfile?.rol === 3;
+  const hasPendingCancel = Boolean(estadoCliente?.cancelado);
+  const daysSinceLastPayment = useMemo(
+    () => daysSincePayment(estadoCliente?.fecha_pago),
+    [estadoCliente?.fecha_pago],
+  );
+  const canRenewSubscription =
+    isAbonado && daysSinceLastPayment !== null && daysSinceLastPayment >= MIN_DAYS_TO_RENEW;
+
+  const handleAbortCancel = async () => {
+    if (!userProfile?.id) {
+      toast.error("No se pudo identificar tu cuenta. Por favor, iniciá sesión.");
+      return;
+    }
+
+    setIsAbortingCancel(true);
+    try {
+      await updateSuscripcionCancelada(userProfile.id, false);
+      toast.success("Cancelación abortada. Tu suscripción sigue activa.");
+      await refetchEstadoCliente();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "No se pudo abortar la cancelación. Intentá de nuevo.";
+      toast.error(message);
+    } finally {
+      setIsAbortingCancel(false);
+    }
+  };
+
   return (<AuthPageLayout title="Estado de cuenta" subtitle="Ver información y estado de tu cuenta" showBackButton={true}>
     <section className={formCardClass}>
       <h2 className="text-2xl font-bold">Información personal</h2>
@@ -32,22 +71,53 @@ function RouteComponent() {
       </ul>
       <h2 className="text-2xl font-bold">Información suscripción</h2>
       <ul className="flex flex-col gap-2">
-        <li className="flex flex-row gap-2 items-center">
-          <p>Estado de la cuenta: <span className="font-bold">{userProfile?.rol === 3 ? 'Abonado' : 'No abonado'}</span></p>
-          <button
-            type="button"
-            className={cn(btnBase, userProfile?.rol === 3 ? btnDanger : btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
-            onClick={() => { userProfile?.rol === 3 ? setIsCancelSubscriptionModalOpen(true) : setIsPaymentModalOpen(true) }}
-          >
-            {userProfile?.rol === 3 ? 'Cancelar suscripción' : 'Comprar suscripción'}
-          </button>
+        <li className="flex flex-row flex-wrap gap-2 items-center">
+          <p>Estado de la cuenta: <span className="font-bold">{isAbonado ? 'Abonado' : 'No abonado'}</span></p>
+          {isAbonado && hasPendingCancel ? (
+            <button
+              type="button"
+              className={cn(btnBase, btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
+              onClick={() => void handleAbortCancel()}
+              disabled={isAbortingCancel}
+            >
+              {isAbortingCancel ? 'Procesando...' : 'Abortar cancelación'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={cn(btnBase, isAbonado ? btnDanger : btnSecondary, "size-4 text-xs w-fit flex items-center justify-center")}
+              onClick={() => { isAbonado ? setIsCancelSubscriptionModalOpen(true) : setIsPaymentModalOpen(true) }}
+            >
+              {isAbonado ? 'Cancelar suscripción' : 'Comprar suscripción'}
+            </button>
+          )}
+          {isAbonado ? (
+            <button
+              type="button"
+              className={cn(btnBase, btnPrimary, "size-4 text-xs w-fit flex items-center justify-center")}
+              onClick={() => setIsPaymentModalOpen(true)}
+              disabled={!canRenewSubscription}
+              title={
+                canRenewSubscription
+                  ? undefined
+                  : `Podés renovar a partir de ${MIN_DAYS_TO_RENEW} días desde el último pago`
+              }
+            >
+              Renovar suscripción
+            </button>
+          ) : null}
         </li>
+        {isAbonado && hasPendingCancel ? (
+          <li className="text-sm text-ks-gray-text">
+            Tenés una cancelación solicitada. Se efectuará al vencimiento de tu suscripción.
+          </li>
+        ) : null}
 
         <li>Fecha de último pago: <span className="font-bold">{estadoCliente?.fecha_pago ? new Date(estadoCliente.fecha_pago).toLocaleDateString() : 'No tiene pago de suscripción registrado'}</span></li>
         {estadoCliente?.fecha_pago ?
           <>
             <li>Fecha de fin de la suscripción: <span className="font-bold">{new Date(estadoCliente.fecha_fin).toLocaleDateString()}</span></li>
-            <li>Clases utilizadas: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
+            <li>Clases a favor sin usar: <span className="font-bold">{estadoCliente?.clases_utilizadas}/3</span></li>
           </> : null}
         <li>Saldo a favor: <span className="font-bold">{estadoCliente?.monto_favor}</span></li>
       </ul>
@@ -57,12 +127,15 @@ function RouteComponent() {
       clienteId={userProfile?.id ?? null}
       onClose={() => setIsPaymentModalOpen(false)}
       onPaymentStarted={() => { setIsPaymentModalOpen(false) }}
-      onSuccess={() => { setIsPaymentModalOpen(false) }}
     />
     <ConfirmSubscriptionCancelModal
       isOpen={isCancelSubscriptionModalOpen}
+      clienteId={userProfile?.id ?? null}
       onClose={() => setIsCancelSubscriptionModalOpen(false)}
-      onConfirm={() => { handleCancelSubscription() }}
+      onConfirm={() => {
+        setIsCancelSubscriptionModalOpen(false);
+        void refetchEstadoCliente();
+      }}
     />
   </AuthPageLayout>)
 }

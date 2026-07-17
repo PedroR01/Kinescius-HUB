@@ -56,6 +56,11 @@ export class PagosController {
         return this.pagosService.createSuscripcionPreference(body.id_cliente);
     }
 
+    @Post("suscripcion/cancelacion")
+    async setSuscripcionCancelada(@Body() body: { id_cliente: number; cancelado: boolean }) {
+        return this.pagosService.setSuscripcionCancelada(body.id_cliente, body.cancelado);
+    }
+
     @Post("notificacion")
     async preferenceNotification(@Body() body: WebhookNotification) {
         return this.pagosService.handlePreferenceNotification(body.data.id);
