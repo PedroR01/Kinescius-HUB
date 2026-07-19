@@ -1,74 +1,102 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { API_BASE } from "@/lib/constants";
+//import { BackPreviousRouteButton } from '@/components/BackPreviousRouteButton'
+import type { UserData } from "@/lib/user-interface";
+import { ArrowLeftIcon } from "lucide-react";
 
-export const Route = createFileRoute('/clientes')({
-  component: RouteComponent,
-})
-
-type Cliente = {
-  clienteId: number
-  nombre: string
-  apellido: string
-  dni: string
-  mail: string
-}
+export const Route = createFileRoute("/clientes")({
+  component: RouteComponent
+});
 
 function RouteComponent() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [clientes, setClientes] = useState<UserData[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const loadClientes = async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('http://localhost:3000/admin/clases/clientes')
+      const response = await fetch(`${API_BASE}/admin/clases/clientes`);
 
       if (!response.ok) {
-        throw new Error('Error al obtener clientes')
+        throw new Error("Error al obtener clientes");
       }
 
-      const data = await response.json()
+      const data = await response.json();
 
-      const clientesData = Array.isArray(data)
-        ? data
-        : data.clientes ?? []
+      const clientesData = Array.isArray(data) ? data : (data.clientes ?? []);
 
-      setClientes(clientesData)
+      setClientes(clientesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
-      setClientes([])
+      setError(err instanceof Error ? err.message : "Error desconocido");
+      setClientes([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const suspencionHandler = async (id: number) => {
+    console.log("Se ejecuta el Handler de suspencion para el id " + id);
+    try {
+      const response = await fetch(`${API_BASE}/admin/clases/cambiarEstadoUsuario`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ id, activo: false })
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al suspender el cliente");
+      }
+
+      const data = await response.json();
+      await loadClientes();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+      return null;
+    }
+  };
 
   useEffect(() => {
-    loadClientes()
-  }, [])
+    loadClientes();
+  }, []);
 
   return (
     <main className="min-h-screen bg-white px-8 py-14">
+      {/* <BackPreviousRouteButton className="mb-6" /> */}
+      <Link
+        to="/home"
+        className="mb-6 inline-block size-fit rounded-full p-4 text-ks-green-dark transition-all duration-300 hover:bg-ks-gray-soft"
+      >
+        <ArrowLeftIcon className="size-6" />
+      </Link>
 
       <section className="mx-auto max-w-7xl">
         <div className="mb-20 text-center">
           <div className="mx-auto mb-6 h-2 w-40 rounded-full bg-[#2DBE7F]" />
 
-          <h1 className="text-6xl font-black tracking-tight text-[#0d1f18]">
-            Clientes
-          </h1>
+          <h1 className="text-6xl font-black tracking-tight text-[#0d1f18]">Clientes</h1>
 
-          <p className="mt-5 text-xl text-[#0d1f18]/70">
-            Centro de rehabilitación Kinescius
-          </p>
+          <p className="mt-5 text-xl text-[#0d1f18]/70">Centro de rehabilitación Kinescius</p>
 
           <button
             onClick={loadClientes}
             disabled={loading}
             className="mt-10 rounded-full bg-[#2DBE7F] px-10 py-4 text-lg font-bold text-[#0d1f18] shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl disabled:opacity-50"
           >
-            {loading ? 'Cargando...' : 'Actualizar lista'}
+            {loading ? "Cargando..." : "Actualizar lista"}
+          </button>
+          <button
+            onClick={() => navigate({ to: "/clientesSuspendidos" })}
+            className="mt-10 rounded-full bg-[#2DBE7F] px-10 py-4 text-lg font-bold text-[#0d1f18] shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl disabled:opacity-50"
+          >
+            Ver clientes suspendidos
           </button>
         </div>
 
@@ -78,23 +106,7 @@ function RouteComponent() {
           </div>
         )}
 
-        {!loading && clientes.length === 0 && (
-          <div className="rounded-[40px] bg-[#f0faf5] p-24 text-center shadow-xl">
-            <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-white text-4xl">
-              👤
-            </div>
-
-            <h2 className="text-3xl font-bold text-[#0d1f18]">
-              No hay clientes inscriptos
-            </h2>
-
-            <p className="mt-4 text-[#0d1f18]/70">
-              Cuando existan clientes registrados aparecerán aquí.
-            </p>
-          </div>
-        )}
-
-        {clientes.length > 0 && (
+        {!loading && (
           <div className="mb-12 flex justify-center">
             <div className="rounded-full bg-[#f0faf5] px-8 py-4 text-sm font-bold text-[#2DBE7F] shadow-md">
               Total de clientes: {clientes.length}
@@ -104,8 +116,8 @@ function RouteComponent() {
 
         <div className="grid grid-cols-1 gap-14 md:grid-cols-2 xl:grid-cols-3">
           {clientes.map((cliente) => (
-            <button
-              key={cliente.clienteId}
+            <div
+              key={cliente.id}
               className="group relative overflow-hidden rounded-[42px] bg-[#f0faf5] p-10 text-left shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
             >
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#2DBE7F]/15 blur-3xl transition-all duration-500 group-hover:scale-150"></div>
@@ -117,13 +129,9 @@ function RouteComponent() {
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-black text-[#0d1f18]">
-                    {cliente.nombre}
-                  </h2>
+                  <h2 className="text-2xl font-black text-[#0d1f18]">{cliente.nombre}</h2>
 
-                  <p className="mt-1 text-sm font-medium text-[#0d1f18]/70">
-                    {cliente.apellido}
-                  </p>
+                  <p className="mt-1 text-sm font-medium text-[#0d1f18]/70">{cliente.apellido}</p>
                 </div>
               </div>
 
@@ -135,9 +143,7 @@ function RouteComponent() {
                     DNI
                   </p>
 
-                  <p className="mt-2 text-lg font-semibold text-[#0d1f18]">
-                    {cliente.dni}
-                  </p>
+                  <p className="mt-2 text-lg font-semibold text-[#0d1f18]">{cliente.dni}</p>
                 </div>
 
                 <div className="rounded-[24px] bg-white p-5">
@@ -149,19 +155,26 @@ function RouteComponent() {
                     {cliente.mail}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm("¿Desea suspender al cliente?")) {
+                      suspencionHandler(cliente.id);
+                    }
+                  }}
+                  className="mt-2 w-full rounded-[16px] bg-red-300 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-md transition-all duration-300 hover:bg-red-600 hover:shadow-lg"
+                >
+                  Suspender cliente
+                </button>
               </div>
 
-              <div className="relative z-10 mt-8 flex items-center justify-between">
-                <span className="rounded-full bg-white px-5 py-2 text-xs font-black text-[#0d1f18]">
-                  Cliente #{cliente.clienteId}
-                </span>
-
+              <div className="relative z-10 mt-8 flex justify-end">
                 <div className="h-4 w-4 rounded-full bg-[#2DBE7F] shadow-lg shadow-[#2DBE7F]"></div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </section>
     </main>
-  )
+  );
 }

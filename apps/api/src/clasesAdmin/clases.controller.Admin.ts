@@ -12,10 +12,12 @@ import {
 
 import { ClasesAdminService } from "./clases.service.Admin";
 import { CreateClaseDto } from "./dto/create-clase..Admin.dto";
+import { CrearProfesorDto } from "./dto/crear-profesor.dto";
+import { EnviarNotificacionDto } from "./dto/enviar-notificacion.dto";
 
 @Controller("admin/clases")
 export class ClasesAdminController {
-  constructor(private readonly clasesService: ClasesAdminService) {}
+  constructor(private readonly clasesService: ClasesAdminService) { }
 
   @Get()
   async findAll(
@@ -57,9 +59,24 @@ export class ClasesAdminController {
     return this.clasesService.getProfesoresDisponibles(fecha, hora);
   }
 
+  @Get("profesores/activos")
+  async findProfesoresActivos() {
+    return this.clasesService.getProfesoresActivos();
+  }
+
   @Get("profesores")
   async findProfesores() {
     return this.clasesService.getProfesores();
+  }
+
+  @Post("profesores")
+  async crearProfesor(@Body() dto: CrearProfesorDto) {
+    return this.clasesService.crearProfesor(dto);
+  }
+
+  @Patch("profesores/:id/eliminar")
+  async eliminarProfesor(@Param("id", ParseIntPipe) id: number) {
+    return this.clasesService.eliminarProfesor(id);
   }
 
   @Post()
@@ -81,5 +98,42 @@ export class ClasesAdminController {
       throw new BadRequestException("El profesorId es obligatorio");
     }
     return this.clasesService.cambiarProfesor(id, profesorId);
+  }
+
+  @Post('cambiarEstadoUsuario')
+  cambiarEstadoUsuario(@Body('id') id: number, @Body('activo') activo: boolean) {
+    return this.clasesService.cambiarEstadoUsuario(id, activo);
+  }
+
+  @Get("clientesSuspendidos")
+  async findClentesSuspendidos() {
+    return this.clasesService.getClientesSuspendidos();
+  }
+  //lo nuevooooooooooooooo
+  @Get("estadoSuscripcion")
+  async findEstadoSuscripcion() {
+    return this.clasesService.getEstadoSuscripcion();
+  }
+  @Get(":id/estadisticas")
+  async findEstadisticas(@Param("id", ParseIntPipe) id: number) {
+    return this.clasesService.getEstadisticas(id);
+  }
+  @Get('estadisticas-generales')
+  getEstadisticasGenerales(@Query('mes') mes?: string) {
+    return this.clasesService.getEstadisticasGenerales(mes);
+  }
+
+  @Post("notificacion-manual")
+  async enviarNotificacionManual(@Body() dto: EnviarNotificacionDto) {
+    if (!dto?.clienteId) {
+      throw new BadRequestException("El clienteId es obligatorio");
+    }
+    if (!dto?.asunto) {
+      throw new BadRequestException("El asunto es obligatorio");
+    }
+    if (!dto?.mensaje) {
+      throw new BadRequestException("El mensaje es obligatorio");
+    }
+    return this.clasesService.enviarNotificacionManual(dto);
   }
 }

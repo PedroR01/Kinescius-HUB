@@ -23,7 +23,11 @@ function SuccessPage() {
         </p>
       </div>
       <Link
+<<<<<<< HEAD
         to="/PagarClase"
+=======
+        to="/solicitarTurno"
+>>>>>>> dev
         className="button button-primary"
       >
         Volver a clases

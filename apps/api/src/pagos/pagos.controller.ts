@@ -9,6 +9,9 @@ export type ClasePayload = {
 
 export type CreatePreferenceBody = {
     clases: ClasePayload[];
+    clienteId: number;
+    montoAFavorAplicado?: number;
+    clasesFavorAplicadas: number;
 };
 
 // Tipo de dato de notificaciones concreto manejado por el webhook de mercadopago.
@@ -25,18 +28,42 @@ export type WebhookNotification = {
     };
 };
 
+export type CreateMensualidadPreferenceBody = {
+    nombre: string;
+    apellido: string;
+    email: string;
+    dni: string;
+    telefono?: string;
+    rol: number;
+}
+
 @Controller("api/mercadopago")
 export class PagosController {
     constructor(private readonly pagosService: PagosService) { }
 
     @Post()
     async createPreference(@Body() body: CreatePreferenceBody) {
-        return this.pagosService.createPreference(body.clases);
+        return this.pagosService.createPreference(body);
+    }
+
+    @Post("mensualidad")
+    async CreateMensualidadPreference(@Body() body: CreateMensualidadPreferenceBody) {
+        return this.pagosService.createMensualidadPreference(body);
+    }
+
+    @Post("suscripcion")
+    async CreateSuscripcionPreference(@Body() body: { id_cliente: number }) {
+        return this.pagosService.createSuscripcionPreference(body.id_cliente);
+    }
+
+    @Post("suscripcion/cancelacion")
+    async setSuscripcionCancelada(@Body() body: { id_cliente: number; cancelado: boolean }) {
+        return this.pagosService.setSuscripcionCancelada(body.id_cliente, body.cancelado);
     }
 
     @Post("notificacion")
     async preferenceNotification(@Body() body: WebhookNotification) {
-        return this.pagosService.preferenceNotification(body.data.id);
+        return this.pagosService.handlePreferenceNotification(body.data.id);
     }
 
     @Post("reembolsos")
@@ -48,6 +75,4 @@ export class PagosController {
     async getAllRefunds(@Query("idPago") idPago: string) {
         return this.pagosService.getAllRefunds(idPago);
     }
-
-
 }

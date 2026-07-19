@@ -8,4 +8,4 @@ import { EmailModule } from "../email/email.module";
   controllers: [ClasesAdminController],
   providers: [ClasesAdminService]
 })
-export class ClasesModule {}
+export class ClasesModule { }

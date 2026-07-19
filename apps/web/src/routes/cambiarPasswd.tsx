@@ -1,31 +1,42 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import React, { useState, useEffect } from 'react';
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import React, { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import {
+  btnBase,
+  btnPrimary,
+  btnSecondary,
+  fieldStackClass,
+  formCardClass
+} from "@/lib/ks-page-styles";
+import { AuthPageLayout } from "@/modules/auth/components/AuthPageLayout";
+import { AuthFormField } from "@/modules/auth/components/AuthFormField";
+import { AuthFeedback } from "@/modules/auth/components/AuthFeedback";
+import { API_BASE } from "@/lib/constants";
 
 type FormData = {
   passwdActual: string;
   passwdNueva: string;
-  passwdConfirmacion: string; 
+  passwdConfirmacion: string;
 };
 
-
 const CambiarPasswd = () => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   const [estaLogueado, setEstaLogueado] = useState(false);
-     useEffect(() => {
-      const token = localStorage.getItem('miToken');
-      if (token) {
-        setEstaLogueado(true);
-      }
-    })
+  useEffect(() => {
+    const token = localStorage.getItem("miToken");
+    if (token) {
+      setEstaLogueado(true);
+    }
+  });
 
   const [formData, setFormData] = useState<FormData>({
-    passwdActual: '',
-    passwdNueva: '',
-    passwdConfirmacion: ''
+    passwdActual: "",
+    passwdNueva: "",
+    passwdConfirmacion: ""
   });
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   //esta función toma el dato ingresado y lo registra
@@ -35,97 +46,138 @@ const CambiarPasswd = () => {
 
   //envío de los datos al backend
   const handleCambioPasswd = async () => {
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
 
     //-----Validaciones previas: que ingrese todo, y que las passwd sean iguales
     if (!formData.passwdActual || !formData.passwdNueva || !formData.passwdConfirmacion) {
-      setError('Debe completar todos los campos.');
+      setError("Debe completar todos los campos.");
       return;
     }
     if (formData.passwdNueva !== formData.passwdConfirmacion) {
-      setError('Las contraseñas nuevas no coinciden.');
+      setError("Las contraseñas nuevas no coinciden.");
       return;
     }
     if (formData.passwdNueva.length < 6) {
-      setError('La nueva contraseña debe tener al menos 6 caracteres.');
+      setError("La nueva contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     setIsProcessing(true);
     try {
       // Agarro el token de la sesión actual
-      const token = localStorage.getItem('miToken');
+      const token = localStorage.getItem("miToken");
 
-      const response = await fetch('http://localhost:3000/auth/cambiar-password', {
-        method: 'POST',
+      const response = await fetch(`${API_BASE}/auth/cambiar-password`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           passwdActual: formData.passwdActual,
-          passwdNueva: formData.passwdNueva 
-        }),
+          passwdNueva: formData.passwdNueva
+        })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('¡Contraseña actualizada con éxito!');
-        //Si hay éxito, borramos los campos 
-        setFormData({ passwdActual: '', passwdNueva: '', passwdConfirmacion: '' });
+        setMessage("¡Contraseña actualizada con éxito!");
+        //Si hay éxito, borramos los campos
+        setFormData({ passwdActual: "", passwdNueva: "", passwdConfirmacion: "" });
       } else {
-        setError(data.message || 'Hubo un error al cambiar la contraseña.');
+        setError(data.message || "Hubo un error al cambiar la contraseña.");
       }
     } catch (err) {
-      console.error('Error de red:', err);
-      setError('No se pudo conectar con el servidor.');
+      console.error("Error de red:", err);
+      setError("No se pudo conectar con el servidor.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div>
-      <button onClick={() => navigate({to: "/"})}>Volver a la página principal</button>
+    <AuthPageLayout
+      title="Cambio de contraseña"
+      subtitle="Por favor ingrese su contraseña actual, y la nueva contraseña para actualizarla."
+      showBackButton
+    >
       {estaLogueado ? (
-        <>
-          <h1>Cambio de contraseña</h1>
-          <p>Por favor ingrese su contraseña actual, y la nueva contraseña en los dos campos que la solicitan.</p>
+        <section className={formCardClass}>
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div className={fieldStackClass}>
+              <AuthFormField
+                label="Contraseña actual:"
+                name="passwdActual"
+                type="password"
+                value={formData.passwdActual}
+                onChange={handleChange}
+                required
+              />
+              <AuthFormField
+                label="Contraseña nueva:"
+                name="passwdNueva"
+                type="password"
+                value={formData.passwdNueva}
+                onChange={handleChange}
+                required
+              />
+              <AuthFormField
+                label="Vuelva a ingresar su nueva contraseña:"
+                name="passwdConfirmacion"
+                type="password"
+                value={formData.passwdConfirmacion}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
-          <form onSubmit={e => e.preventDefault()}>
-            <label>Contraseña actual:</label>
-            <input type="password" name="passwdActual" value={formData.passwdActual} onChange={handleChange} required />
-            <br />
-            <label>Contraseña nueva:</label>
-            <input type="password" name="passwdNueva" value={formData.passwdNueva} onChange={handleChange} required />
-            <br />
-            <label>Vuelva a ingresar su nueva contraseña:</label>
-            <input type="password" name="passwdConfirmacion" value={formData.passwdConfirmacion} onChange={handleChange} required />
-            <br />
-            <div style={{ marginTop: '1rem' }}>
-              <button type="button" onClick={handleCambioPasswd} disabled={isProcessing}>
-                {isProcessing ? 'Procesando...' : 'Cambiar contraseña'}
+            <div className="mt-4 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleCambioPasswd}
+                disabled={isProcessing}
+                className={cn(btnBase, btnPrimary, "w-full")}
+              >
+                {isProcessing ? "Procesando..." : "Cambiar contraseña"}
+              </button>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/" })}
+                className={cn(btnBase, btnSecondary, "w-full")}
+              >
+                Volver a la página principal
               </button>
             </div>
           </form>
-        </>
+        </section>
       ) : (
-        <>
-          <h1>No iniciaste sesión!</h1>
-          <p>Vuelve a la página principal e inicia sesión para cambiar tu contraseña.</p>
-        </>
-        
+        <section className={formCardClass}>
+          <h2 className="m-0 mb-2 font-outfit text-[22px] font-bold tracking-[-0.5px] text-ks-text-dark">
+            No iniciaste sesión!
+          </h2>
+          <p className="m-0 mb-6 text-[15px] leading-relaxed text-ks-gray-text">
+            Vuelve a la página principal e inicia sesión para cambiar tu contraseña.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/" })}
+            className={cn(btnBase, btnSecondary, "w-full")}
+          >
+            Volver a la página principal
+          </button>
+        </section>
       )}
-      
 
-      {message && <p style={{ color: 'green', marginTop: '1rem' }}>{message}</p>}
-      {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
-    </div>
+      <AuthFeedback message={message} error={error} />
+    </AuthPageLayout>
   );
-}
+};
 
-export const Route = createFileRoute('/cambiarPasswd')({
-  component: CambiarPasswd,
+export const Route = createFileRoute("/cambiarPasswd")({
+  component: CambiarPasswd
 });

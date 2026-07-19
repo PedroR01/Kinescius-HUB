@@ -13,6 +13,8 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+qr-scanner-worker.min.js
+
 
 # vite
 vite.config.ts.timestamp-*

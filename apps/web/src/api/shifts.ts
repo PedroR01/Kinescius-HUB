@@ -1,10 +1,18 @@
-import { z } from 'zod';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE } from '@/lib/constants';
 
 export interface CancelarTurnoPayload {
   clienteId: number;
   claseId: number;
   tipoReembolso: 'REEMBOLSO' | 'A_FAVOR' | 'NINGUNO';
+}
+
+export interface CancelarTurnoResponse {
+  message: string;
+  reembolso: 'REEMBOLSO' | 'A_FAVOR' | 'NINGUNO';
+  detalleReembolso?: {
+    montoMp: number;
+    montoSaldo: number;
+  };
 }
 
 export interface CambiarTurnoPayload {
@@ -22,7 +30,7 @@ export interface ClaseDisponible {
 }
 
 export const obtenerClasesDisponiblesRequest = async (): Promise<ClaseDisponible[]> => {
-  const response = await fetch(`${API_URL}/shifts`, {
+  const response = await fetch(`${API_BASE}/shifts`, {
     method: 'GET',
   });
 
@@ -34,7 +42,7 @@ export const obtenerClasesDisponiblesRequest = async (): Promise<ClaseDisponible
 };
 
 export const cambiarTurnoRequest = async (payload: CambiarTurnoPayload) => {
-  const response = await fetch(`${API_URL}/shifts/cambiar`, {
+  const response = await fetch(`${API_BASE}/shifts/cambiar`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -47,14 +55,19 @@ export const cambiarTurnoRequest = async (payload: CambiarTurnoPayload) => {
     throw new Error(errorData.message || 'Error al cambiar el turno');
   }
 
-  return response.json(); 
+  return response.json();
 };
 
-export const cancelarTurnoRequest = async (payload: CancelarTurnoPayload) => {
-  const response = await fetch(`${API_URL}/shifts/cancelar`, {
+export const cancelarTurnoRequest = async (
+  payload: CancelarTurnoPayload,
+  authToken?: string | null,
+): Promise<CancelarTurnoResponse> => {
+  const token = authToken ?? localStorage.getItem('miToken');
+  const response = await fetch(`${API_BASE}/shifts/cancelar`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(payload),
   });

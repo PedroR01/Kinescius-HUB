@@ -1,21 +1,43 @@
 import {
   Injectable,
   InternalServerErrorException,
+  ConflictException,
 } from "@nestjs/common";
 
 import { SupabaseService } from "../integrations/supabase/supabase.service";
+
+// Rol de cliente abonado (confirmado en Supabase: 3 = cliente abonado)
+const ROL_CLIENTE_ABONADO_ID = 3;
 
 @Injectable()
 export class ListaEsperaService {
   constructor(
     private readonly supabaseService: SupabaseService
-  ) {}
+  ) { }
 
   async findAll() {
+    const hoy = new Date().toISOString().split("T")[0];
+
+    const { data: clasesHoy, error: claseError } =
+      await this.supabaseService.client
+        .from("Clase")
+        .select("id")
+        .gte("fecha", hoy);
+
+    if (claseError) {
+      throw new InternalServerErrorException(
+        `Error clases: ${claseError.message}`
+      );
+    }
+
+    const claseIds = clasesHoy?.map(c => c.id) ?? [];
+    if (claseIds.length === 0) return [];
+
     const { data, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("*");
+        .select("*")
+        .in("id_clase", claseIds);
 
     if (error) {
       throw new InternalServerErrorException(
@@ -26,15 +48,11 @@ export class ListaEsperaService {
     return data;
   }
 
-  // ✅ Tu countByClase original, sin cambios
   async countByClase(claseId: number) {
     const { count, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("*", {
-          count: "exact",
-          head: true,
-        })
+        .select("*", { count: "exact", head: true })
         .eq("id_clase", claseId);
 
     if (error) {
@@ -46,44 +64,35 @@ export class ListaEsperaService {
     return count ?? 0;
   }
 
-  // ✅ findByClase actualizado para devolver datos de persona
+  /**
+   * Devuelve la lista de espera de una clase, ordenada con los
+   * clientes abonados primero (prioridad de reserva) y, dentro de
+   * cada grupo, por orden de llegada (fecha de inscripción a la
+   * lista de espera, y luego por id como criterio de desempate).
+   */
   async findByClase(claseId: number) {
-    const { data: listas, error: listaError } =
+    // traigo también el id para poder desempatar por orden de inserción
+    const { data, error } =
       await this.supabaseService.client
         .from("Lista de espera")
-        .select("id")
+        .select("id, id_cliente, fecha")
         .eq("id_clase", claseId);
 
-    if (listaError) {
+    if (error) {
       throw new InternalServerErrorException(
-        `Error lista: ${listaError.message}`
+        `Error lista: ${error.message}`
       );
     }
 
-    if (!listas || listas.length === 0) return [];
+    if (!data || data.length === 0) return [];
 
-    const listaEsperaId = listas[0].id;
+    const clienteIds = data.map(d => d.id_cliente).filter(Boolean);
 
-    const { data: clientesEnEspera, error: clientesError } =
-      await this.supabaseService.client
-        .from("No abonado")
-        .select("id_cliente")
-        .eq("id_listaEspera", listaEsperaId);
-
-    if (clientesError) {
-      throw new InternalServerErrorException(
-        `Error clientes: ${clientesError.message}`
-      );
-    }
-
-    if (!clientesEnEspera || clientesEnEspera.length === 0) return [];
-
-    const clienteIds = clientesEnEspera.map(c => c.id_cliente);
-
+    // fix: la tabla es "Persona_", no "Persona"
     const { data: personas, error: personasError } =
       await this.supabaseService.client
-        .from("Persona")
-        .select("id, nombre, apellido, dni, mail")
+        .from("Persona_")
+        .select("id, nombre, apellido, dni, mail, rol")
         .in("id", clienteIds);
 
     if (personasError) {
@@ -92,11 +101,79 @@ export class ListaEsperaService {
       );
     }
 
-    return personas.map(p => ({
-      nombre: p.nombre,
-      apellido: p.apellido,
-      dni: p.dni,
-      email: p.mail,
-    }));
+    // armo mapa de persona por id para poder cruzar con la fecha/orden
+    // de la fila de "Lista de espera"
+    const personaPorId = new Map(
+      (personas ?? []).map((p: any) => [p.id, p]),
+    );
+
+    // DEBUG temporal: ver qué filas de lista de espera no encontraron persona
+    const sinPersona = data.filter((fila: any) => !personaPorId.has(fila.id_cliente));
+    console.log("clienteIds pedidos:", clienteIds);
+    console.log("personas encontradas:", (personas ?? []).map((p: any) => p.id));
+    console.log("filas SIN persona asociada:", sinPersona);
+
+    const listaCompleta = data
+      .map((fila: any) => {
+        const persona = personaPorId.get(fila.id_cliente);
+        if (!persona) return null;
+
+        return {
+          idListaEspera: fila.id,
+          fecha: fila.fecha,
+          nombre: persona.nombre,
+          apellido: persona.apellido,
+          dni: persona.dni,
+          mail: persona.mail,
+          esAbonado: persona.rol === ROL_CLIENTE_ABONADO_ID,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    // ordeno: abonados primero, después por fecha de inscripción,
+    // y como desempate final por id (orden de llegada real)
+    return listaCompleta.sort((a, b) => {
+      if (a.esAbonado !== b.esAbonado) {
+        return a.esAbonado ? -1 : 1;
+      }
+      if (a.fecha !== b.fecha) {
+        return a.fecha.localeCompare(b.fecha);
+      }
+      return a.idListaEspera - b.idListaEspera;
+    });
+  }
+
+  async joinListaEspera(claseId: number, clienteId: number) {
+    const { data: existing } =
+      await this.supabaseService.client
+        .from("Lista de espera")
+        .select("id")
+        .eq("id_clase", claseId)
+        .eq("id_cliente", clienteId)
+        .maybeSingle();
+
+    if (existing) {
+      throw new ConflictException("Ya estás en la lista de espera.");
+    }
+
+    const hoy = new Date().toISOString().split("T")[0];
+
+    const { error: insertError } =
+      await this.supabaseService.client
+        .from("Lista de espera")
+        .insert({
+          id_clase: claseId,
+          id_cliente: clienteId,
+          fecha: hoy,
+        });
+
+    if (insertError) {
+      console.error("Error al insertar en lista de espera:", insertError);
+      throw new InternalServerErrorException(
+        `Error al unirse a lista de espera: ${insertError.message}`
+      );
+    }
+
+    return { message: "Fuiste agregado a la lista de espera." };
   }
 }

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
+import { ScheduleModule } from "@nestjs/schedule";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { SupabaseModule } from "./integrations/supabase/supabase.module";
@@ -13,6 +14,11 @@ import { ShiftsModule } from "./shifts/shifts.module";
 import { ConfirmarTurnoModule } from "./confirmarTurno/confirmarTurno.module";
 import { PagosModule } from "./pagos/pagos.module";
 import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { AsistenciaModule } from "./asistencia/asistencia.module";
+import { LibroQuejasModule } from "./libroQuejas/libroQuejas.module"; //  nuevo
+import { PresentismoModule } from "./verPresentismo/verPresentismo.module"; //  nuevo!!!!
+
 
 @Module({
   imports: [
@@ -20,6 +26,7 @@ import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60, limit: 60 }]
     }),
+    ScheduleModule.forRoot(),
     SupabaseModule,
     AuthModule,
     ClasesModule,
@@ -28,12 +35,15 @@ import { MpCheckoutProModule } from "./integrations/mercado-pago/mp-checkoutPro.
     ListaEsperaModule,
     ShiftsModule,
     ConfirmarTurnoModule,
-    ShiftsModule,
-    ConfirmarTurnoModule,
+    AsistenciaModule,
     MpCheckoutProModule,
-    PagosModule
+    PagosModule,
+    NotificationsModule,
+    LibroQuejasModule, //  nuevo
+    PresentismoModule //  nuevo
+
   ],
   controllers: [AppController],
   providers: [AppService]
 })
-export class AppModule {}
+export class AppModule { }
